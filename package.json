@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "pnpm --parallel -r run dev",
     "dev:server": "pnpm --filter server dev",
-    "dev:client": "pnpm --filter client dev"
+    "dev:client": "pnpm --filter client dev",
+    "story:dev": "pnpm --filter client story:dev"
   }
 }

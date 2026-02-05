@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useSocket } from '../composables/useSocket'
+import BaseButton from '../components/ui/BaseButton.vue'
 
 const { connected, connectionError, connect, disconnect, joinRoom } = useSocket()
 
@@ -43,9 +44,9 @@ onUnmounted(() => {
             maxlength="10"
             autocomplete="off"
           />
-          <button type="submit" class="btn-primary" :disabled="!nickname.trim() || !connected">
+          <BaseButton type="submit" :disabled="!nickname.trim() || !connected" block>
             加入房间
-          </button>
+          </BaseButton>
         </form>
       </template>
 
@@ -63,9 +64,9 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <button class="btn-primary btn-start" disabled>
+        <BaseButton :disabled="true" block>
           开始游戏（至少4人）
-        </button>
+        </BaseButton>
       </template>
 
       <p v-if="connectionError" class="error">{{ connectionError }}</p>
@@ -197,25 +198,6 @@ onUnmounted(() => {
   border-radius: 4px;
 }
 
-.btn-primary {
-  width: 100%;
-  padding: 14px;
-  background: var(--color-crimson);
-  color: var(--color-text);
-  border-radius: var(--border-radius);
-  font-size: 1rem;
-  font-weight: 600;
-  transition: opacity 0.2s;
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-start {
-  margin-top: 16px;
-}
 
 .error {
   color: var(--color-crimson-light);

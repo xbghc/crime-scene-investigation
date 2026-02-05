@@ -2,3 +2,6 @@ node_modules/
 dist/
 .env
 *.log
+.histoire/
+.lostpixel/current/
+.lostpixel/difference/

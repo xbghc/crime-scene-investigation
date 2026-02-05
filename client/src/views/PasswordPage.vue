@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import BaseButton from '../components/ui/BaseButton.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -45,9 +46,9 @@ async function handleSubmit() {
           :disabled="loading"
         />
         <p v-if="error" class="error">{{ error }}</p>
-        <button type="submit" class="btn-primary" :disabled="loading || !password.trim()">
-          {{ loading ? '验证中...' : '进入' }}
-        </button>
+        <BaseButton type="submit" :loading="loading" :disabled="!password.trim()" block>
+          进入
+        </BaseButton>
       </form>
     </div>
   </div>
@@ -115,23 +116,4 @@ async function handleSubmit() {
   font-size: 0.875rem;
 }
 
-.btn-primary {
-  width: 100%;
-  padding: 14px;
-  background: var(--color-crimson);
-  color: var(--color-text);
-  border-radius: var(--border-radius);
-  font-size: 1rem;
-  font-weight: 600;
-  transition: opacity 0.2s;
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary:not(:disabled):active {
-  opacity: 0.8;
-}
 </style>
