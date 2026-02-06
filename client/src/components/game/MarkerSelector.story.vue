@@ -7,7 +7,7 @@ const someUsed = ref<number | null>(3)
 </script>
 
 <template>
-  <Story title="game/MarkerSelector" group="game">
+  <Story title="选项物选择器" group="game">
     <Variant title="All Available">
       <div style="padding: 20px; background: var(--bg-primary);">
         <MarkerSelector

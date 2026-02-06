@@ -3,7 +3,7 @@ import BaseBadge from './BaseBadge.vue'
 </script>
 
 <template>
-  <Story title="ui/BaseBadge" group="ui">
+  <Story title="基础标签" group="ui">
     <Variant title="Witness">
       <BaseBadge variant="witness" label="目击者" />
     </Variant>

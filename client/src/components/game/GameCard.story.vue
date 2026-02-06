@@ -3,7 +3,7 @@ import GameCard from './GameCard.vue'
 </script>
 
 <template>
-  <Story title="game/GameCard" group="game">
+  <Story title="游戏卡牌" group="game">
     <Variant title="Means Card">
       <div style="padding: 20px; background: var(--bg-primary);">
         <GameCard type="means" name="刀" />

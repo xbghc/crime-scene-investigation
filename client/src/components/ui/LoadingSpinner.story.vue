@@ -3,7 +3,7 @@ import LoadingSpinner from './LoadingSpinner.vue'
 </script>
 
 <template>
-  <Story title="ui/LoadingSpinner" group="ui">
+  <Story title="加载动画" group="ui">
     <Variant title="Default">
       <LoadingSpinner />
     </Variant>

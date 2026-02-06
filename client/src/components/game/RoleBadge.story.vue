@@ -3,7 +3,7 @@ import RoleBadge from './RoleBadge.vue'
 </script>
 
 <template>
-  <Story title="game/RoleBadge" group="game">
+  <Story title="角色标识" group="game">
     <Variant title="Witness">
       <div style="padding: 20px; background: var(--bg-primary); display: flex; gap: 12px; align-items: center;">
         <RoleBadge role="witness" />

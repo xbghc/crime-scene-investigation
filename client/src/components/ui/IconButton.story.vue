@@ -3,7 +3,7 @@ import IconButton from './IconButton.vue'
 </script>
 
 <template>
-  <Story title="ui/IconButton" group="ui">
+  <Story title="图标按钮" group="ui">
     <Variant title="Icon Left (default)">
       <IconButton icon="key">进入档案</IconButton>
     </Variant>

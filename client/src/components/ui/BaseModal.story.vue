@@ -8,7 +8,7 @@ const showModalWithFooter = ref(false)
 </script>
 
 <template>
-  <Story title="ui/BaseModal" group="ui">
+  <Story title="基础弹窗" group="ui">
     <Variant title="Basic">
       <BaseButton @click="showModal = true">打开弹窗</BaseButton>
       <BaseModal v-model="showModal" title="提示信息">

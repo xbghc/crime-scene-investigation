@@ -3,7 +3,7 @@ import PasswordPage from './PasswordPage.vue'
 </script>
 
 <template>
-  <Story title="pages/PasswordPage" group="pages" :layout="{ type: 'single', iframe: true }">
+  <Story title="密码验证页" group="pages" :layout="{ type: 'single', iframe: true }">
     <Variant title="Default">
       <PasswordPage />
     </Variant>

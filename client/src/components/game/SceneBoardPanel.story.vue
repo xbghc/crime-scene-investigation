@@ -8,22 +8,22 @@ function onSelectOption(payload: { optionIndex: number }) {
 </script>
 
 <template>
-  <Story title="game/SceneBoardPanel" group="game">
+  <Story title="场景板面板" group="game">
     <Variant title="Read-only with Marker">
       <div style="padding: 20px; background: var(--bg-primary); max-width: 320px;">
-        <SceneBoardPanel :board="mockBoards[0]" @select-option="onSelectOption" />
+        <SceneBoardPanel :board="mockBoards[0]!" @select-option="onSelectOption" />
       </div>
     </Variant>
 
     <Variant title="Editable">
       <div style="padding: 20px; background: var(--bg-primary); max-width: 320px;">
-        <SceneBoardPanel :board="mockBoards[1]" :editable="true" @select-option="onSelectOption" />
+        <SceneBoardPanel :board="mockBoards[1]!" :editable="true" @select-option="onSelectOption" />
       </div>
     </Variant>
 
     <Variant title="Hidden (Blackout)">
       <div style="padding: 20px; background: var(--bg-primary); max-width: 320px;">
-        <SceneBoardPanel :board="mockBoards[2]" :hidden="true" @select-option="onSelectOption" />
+        <SceneBoardPanel :board="mockBoards[2]!" :hidden="true" @select-option="onSelectOption" />
       </div>
     </Variant>
 

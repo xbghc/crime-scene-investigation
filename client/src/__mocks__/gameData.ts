@@ -37,12 +37,12 @@ export const mockClueCards: ClueCard[] = [
 
 export const mockPlayers: Player[] = [
   {
-    id: 'p1', nickname: '小明', color: PLAYER_COLORS[0], isHost: true,
+    id: 'p1', nickname: '小明', color: PLAYER_COLORS[0]!, isHost: true,
     role: 'witness', status: 'alive', hasSolveRight: false,
     meansCards: [], clueCards: [],
   },
   {
-    id: 'p2', nickname: '小红', color: PLAYER_COLORS[1], isHost: false,
+    id: 'p2', nickname: '小红', color: PLAYER_COLORS[1]!, isHost: false,
     role: 'murderer', status: 'alive', hasSolveRight: true,
     meansCards: [
       { id: 'M01', name: '刀' }, { id: 'M05', name: '斧头' },
@@ -54,7 +54,7 @@ export const mockPlayers: Player[] = [
     ],
   },
   {
-    id: 'p3', nickname: '小刚', color: PLAYER_COLORS[2], isHost: false,
+    id: 'p3', nickname: '小刚', color: PLAYER_COLORS[2]!, isHost: false,
     role: 'accomplice', status: 'alive', hasSolveRight: true,
     meansCards: [
       { id: 'M08', name: '针筒' }, { id: 'M09', name: '电击器' },
@@ -66,7 +66,7 @@ export const mockPlayers: Player[] = [
     ],
   },
   {
-    id: 'p4', nickname: '小花', color: PLAYER_COLORS[3], isHost: false,
+    id: 'p4', nickname: '小花', color: PLAYER_COLORS[3]!, isHost: false,
     role: 'detective', status: 'alive', hasSolveRight: true,
     meansCards: [
       { id: 'M12', name: '铁管' }, { id: 'M13', name: '棒球棍' },
@@ -78,7 +78,7 @@ export const mockPlayers: Player[] = [
     ],
   },
   {
-    id: 'p5', nickname: '阿强', color: PLAYER_COLORS[4], isHost: false,
+    id: 'p5', nickname: '阿强', color: PLAYER_COLORS[4]!, isHost: false,
     role: 'detective', status: 'alive', hasSolveRight: true,
     meansCards: [
       { id: 'M16', name: '螺丝刀' }, { id: 'M17', name: '扳手' },
@@ -90,7 +90,7 @@ export const mockPlayers: Player[] = [
     ],
   },
   {
-    id: 'p6', nickname: '小美', color: PLAYER_COLORS[5], isHost: false,
+    id: 'p6', nickname: '小美', color: PLAYER_COLORS[5]!, isHost: false,
     role: 'detective', status: 'dead', hasSolveRight: false,
     meansCards: [
       { id: 'M20', name: '高尔夫球杆' }, { id: 'M21', name: '花瓶' },
@@ -102,7 +102,7 @@ export const mockPlayers: Player[] = [
     ],
   },
   {
-    id: 'p7', nickname: '大壮', color: PLAYER_COLORS[6], isHost: false,
+    id: 'p7', nickname: '大壮', color: PLAYER_COLORS[6]!, isHost: false,
     role: 'detective', status: 'alive', hasSolveRight: false,
     meansCards: [
       { id: 'M24', name: '菜刀' }, { id: 'M25', name: '冰锥' },

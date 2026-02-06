@@ -9,7 +9,7 @@ const showError = ref(false)
 </script>
 
 <template>
-  <Story title="ui/BaseToast" group="ui">
+  <Story title="基础提示" group="ui">
     <Variant title="Info">
       <BaseButton variant="secondary" @click="showInfo = true">显示信息提示</BaseButton>
       <BaseToast

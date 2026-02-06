@@ -3,7 +3,7 @@ import BaseButton from './BaseButton.vue'
 </script>
 
 <template>
-  <Story title="ui/BaseButton" group="ui">
+  <Story title="基础按钮" group="ui">
     <Variant title="Primary">
       <BaseButton>主要按钮</BaseButton>
     </Variant>

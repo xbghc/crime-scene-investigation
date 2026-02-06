@@ -64,7 +64,7 @@ let nextId = 4
 function addPlayer(state: { players: Player[] }) {
   if (state.players.length >= maxPlayers) return
   const idx = state.players.length
-  const net = networkPresets[Math.floor(Math.random() * networkPresets.length)]
+  const net = networkPresets[Math.floor(Math.random() * networkPresets.length)]!
   state.players.push({
     id: String(nextId++),
     nickname: presetNames[idx] ?? `玩家${idx + 1}`,
@@ -82,7 +82,7 @@ function removeLastPlayer(state: { players: Player[] }) {
 </script>
 
 <template>
-  <Story title="pages/LobbyPage" group="pages" :layout="{ type: 'single', iframe: true }">
+  <Story title="游戏大厅页" group="pages" :layout="{ type: 'single', iframe: true }">
 
     <!-- Variant 1: Not joined -->
     <Variant title="未加入 — 昵称输入">
@@ -94,10 +94,10 @@ function removeLastPlayer(state: { players: Player[] }) {
       title="已加入 — 大厅"
       :init-state="() => ({
         players: [
-          { id: '1', nickname: '探长老王', isHost: true, ready: true, network: 'good', ping: 12 },
-          { id: '2', nickname: '神探小李', isHost: false, ready: true, network: 'fair', ping: 87 },
-          { id: '3', nickname: 'Sherlock', isHost: false, ready: false, network: 'poor', ping: 342 },
-        ],
+          { id: '1', nickname: '探长老王', isHost: true, ready: true, network: 'good' as NetworkQuality, ping: 12 },
+          { id: '2', nickname: '神探小李', isHost: false, ready: true, network: 'fair' as NetworkQuality, ping: 87 },
+          { id: '3', nickname: 'Sherlock', isHost: false, ready: false, network: 'poor' as NetworkQuality, ping: 342 },
+        ] as Player[],
         connectionError: '',
       })"
     >
@@ -150,10 +150,10 @@ function removeLastPlayer(state: { players: Player[] }) {
                   </span>
                   <span
                     class="network-indicator"
-                    :class="networkColor[player.network]"
+                    :class="networkColor[player.network as NetworkQuality]"
                     @click="togglePing(player.id)"
                   >
-                    <span class="material-symbols-outlined text-base">{{ networkIcon[player.network] }}</span>
+                    <span class="material-symbols-outlined text-base">{{ networkIcon[player.network as NetworkQuality] }}</span>
                     <Transition name="ping-fade">
                       <span v-if="showPingId === player.id" class="ping-tooltip">{{ player.ping }}ms</span>
                     </Transition>
