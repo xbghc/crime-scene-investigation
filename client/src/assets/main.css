@@ -69,12 +69,12 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Tailwind v4 preflight 已包含 box-sizing reset，不再手写 margin/padding reset
+   否则会因 CSS 层叠顺序覆盖 Tailwind 的 margin/padding 工具类 */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 html {
