@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import BaseButton from '../components/ui/BaseButton.vue'
+import IconButton from '../components/ui/IconButton.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -64,10 +64,9 @@ async function handleSubmit() {
 
         <p v-if="error" class="text-crimson-light text-sm text-center">{{ error }}</p>
 
-        <BaseButton type="submit" :loading="loading" :disabled="!password.trim()" block>
-          <span class="material-symbols-outlined text-lg">key</span>
+        <IconButton type="submit" icon="key" :loading="loading" :disabled="!password.trim()" block>
           进入档案
-        </BaseButton>
+        </IconButton>
       </form>
 
       <!-- Footer hint -->

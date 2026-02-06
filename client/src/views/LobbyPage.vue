@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useSocket } from '../composables/useSocket'
-import BaseButton from '../components/ui/BaseButton.vue'
+import IconButton from '../components/ui/IconButton.vue'
 
 const { connected, connectionError, connect, disconnect, joinRoom } = useSocket()
 
@@ -76,10 +76,9 @@ onUnmounted(() => {
           maxlength="10"
           autocomplete="off"
         />
-        <BaseButton type="submit" :disabled="!nickname.trim() || !connected" block>
+        <IconButton type="submit" icon="arrow_forward" icon-position="right" :disabled="!nickname.trim() || !connected" block>
           加入调查
-          <span class="material-symbols-outlined text-lg">arrow_forward</span>
-        </BaseButton>
+        </IconButton>
       </form>
 
       <!-- Connection status -->
@@ -162,15 +161,13 @@ onUnmounted(() => {
     <footer class="fixed bottom-0 left-0 right-0 z-20 px-4 pt-3 bg-bg-primary/95 backdrop-blur-sm border-t border-border"
             :style="{ paddingBottom: 'calc(16px + var(--safe-area-bottom))' }">
       <div class="max-w-md mx-auto flex flex-col gap-3">
-        <BaseButton :disabled="!canStart" block>
-          <span class="material-symbols-outlined text-lg">play_arrow</span>
+        <IconButton icon="play_arrow" :disabled="!canStart" block>
           {{ canStart ? '开始调查' : `开始调查（至少${minPlayers}人）` }}
-        </BaseButton>
+        </IconButton>
 
-        <button class="flex items-center justify-center gap-1.5 text-amber-accent text-sm py-1">
-          <span class="material-symbols-outlined text-lg">share</span>
+        <IconButton icon="share" variant="ghost" block>
           邀请侦探
-        </button>
+        </IconButton>
       </div>
     </footer>
 

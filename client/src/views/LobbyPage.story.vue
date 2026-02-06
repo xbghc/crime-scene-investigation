@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import LobbyPage from './LobbyPage.vue'
-import BaseButton from '../components/ui/BaseButton.vue'
+import IconButton from '../components/ui/IconButton.vue'
 
 const mockPlayers = [
   { id: '1', nickname: '探长老王', isHost: true, ready: true },
@@ -91,15 +91,13 @@ const emptySlots = minPlayers - mockPlayers.length
         <!-- Fixed footer -->
         <footer class="fixed bottom-0 left-0 right-0 z-20 px-4 pt-3 pb-4 bg-bg-primary/95 backdrop-blur-sm border-t border-border">
           <div class="max-w-md mx-auto flex flex-col gap-3">
-            <BaseButton :disabled="true" block>
-              <span class="material-symbols-outlined text-lg">play_arrow</span>
+            <IconButton icon="play_arrow" :disabled="true" block>
               开始调查（至少{{ minPlayers }}人）
-            </BaseButton>
+            </IconButton>
 
-            <button class="flex items-center justify-center gap-1.5 text-amber-accent text-sm py-1">
-              <span class="material-symbols-outlined text-lg">share</span>
+            <IconButton icon="share" variant="ghost" block>
               邀请侦探
-            </button>
+            </IconButton>
           </div>
         </footer>
       </div>
