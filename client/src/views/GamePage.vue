@@ -90,8 +90,20 @@ function handleMurdererConfirm(payload: { meansCardId: string; clueCardId: strin
 }
 
 // Witness accuse actions
-function handleSetMarker(payload: { boardId: string; optionIndex: number; markerNumber: number }) {
-  witnessSetMarker(payload.boardId, payload.optionIndex, payload.markerNumber)
+function handleSelectOption(payload: { boardId: string; optionIndex: number }) {
+  const boardIndex = game.boards.findIndex(b => b.id === payload.boardId)
+  if (boardIndex < 0) return
+  const markerNumber = boardIndex + 1
+  if (payload.optionIndex < 0) {
+    // Deselect: set marker to a sentinel the backend can interpret
+    witnessSetMarker(payload.boardId, -1, markerNumber)
+  } else {
+    witnessSetMarker(payload.boardId, payload.optionIndex, markerNumber)
+  }
+}
+
+function handleReorderBoards(boardIds: string[]) {
+  game.reorderBoards(boardIds)
 }
 
 function handleWitnessConfirm() {
@@ -211,7 +223,8 @@ function handleToastDismiss() {
                 :boards="game.boards"
                 :murderer-selection="game.murdererSelection"
                 :murderer-player="murdererPlayer"
-                @set-marker="handleSetMarker"
+                @select-option="handleSelectOption"
+                @reorder="handleReorderBoards"
                 @confirm="handleWitnessConfirm"
               />
             </template>

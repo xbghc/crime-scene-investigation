@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import type { SceneBoard, MurdererSelection, Player } from '../../types'
 import SceneBoardPanel from '../game/SceneBoardPanel.vue'
-import MarkerSelector from '../game/MarkerSelector.vue'
 
 interface Props {
   boards: SceneBoard[]
@@ -13,24 +12,23 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  'set-marker': [payload: { boardId: string; optionIndex: number; markerNumber: number }]
+  'select-option': [payload: { boardId: string; optionIndex: number }]
+  'reorder': [boardIds: string[]]
   confirm: []
 }>()
 
-const selectedMarker = ref<number | null>(null)
-const selectedBoardId = ref<string | null>(null)
-
-const usedMarkers = computed(() =>
-  props.boards
-    .filter(b => b.marker)
-    .map(b => b.marker!.markerNumber)
+// Derive marker numbers from board position (top=1, bottom=6)
+const displayBoards = computed(() =>
+  props.boards.map((board, index) => ({
+    ...board,
+    marker: board.marker
+      ? { ...board.marker, markerNumber: index + 1 }
+      : undefined,
+  }))
 )
 
-const availableMarkers = computed(() =>
-  [1, 2, 3, 4, 5, 6].filter(n => !usedMarkers.value.includes(n))
-)
-
-const allMarkersPlaced = computed(() => usedMarkers.value.length === 6)
+const markedCount = computed(() => props.boards.filter(b => b.marker).length)
+const allMarkersPlaced = computed(() => markedCount.value === props.boards.length)
 
 const selectedMeansName = computed(() => {
   if (!props.murdererSelection || !props.murdererPlayer) return null
@@ -43,11 +41,28 @@ const selectedClueName = computed(() => {
 })
 
 function handleSelectOption(boardId: string, optionIndex: number) {
-  if (selectedMarker.value === null) return
-  selectedBoardId.value = boardId
-  emit('set-marker', { boardId, optionIndex, markerNumber: selectedMarker.value })
-  selectedMarker.value = null
-  selectedBoardId.value = null
+  const board = props.boards.find(b => b.id === boardId)
+  if (!board) return
+
+  // Clicking the already-marked option: deselect it
+  if (board.marker && board.marker.optionIndex === optionIndex) {
+    emit('select-option', { boardId, optionIndex: -1 })
+    return
+  }
+
+  // Select (or change) the option on this board
+  emit('select-option', { boardId, optionIndex })
+}
+
+function moveBoard(index: number, direction: 'up' | 'down') {
+  const targetIndex = direction === 'up' ? index - 1 : index + 1
+  if (targetIndex < 0 || targetIndex >= props.boards.length) return
+
+  const ids = props.boards.map(b => b.id)
+  const temp = ids[index]!
+  ids[index] = ids[targetIndex]!
+  ids[targetIndex] = temp
+  emit('reorder', ids)
 }
 </script>
 
@@ -62,25 +77,49 @@ function handleSelectOption(boardId: string, optionIndex: number) {
       <span class="witness-accuse__hint-clue">{{ selectedClueName || '?' }}</span>
     </div>
 
-    <!-- Marker selector -->
-    <div class="witness-accuse__selector">
-      <p class="witness-accuse__selector-label">选择选项物编号后，点击场景板上的选项</p>
-      <MarkerSelector
-        :available-markers="availableMarkers"
-        :model-value="selectedMarker"
-        @update:model-value="selectedMarker = $event"
-      />
+    <!-- Instruction -->
+    <div class="witness-accuse__instruction">
+      <p class="witness-accuse__instruction-text">
+        点击选项标记线索，上下拖动调整选项物优先级（上方 = 高优先）
+      </p>
+      <span class="witness-accuse__progress">{{ markedCount }}/{{ boards.length }}</span>
     </div>
 
-    <!-- Boards -->
+    <!-- Boards with reorder controls -->
     <div class="witness-accuse__boards">
-      <SceneBoardPanel
-        v-for="board in boards"
+      <div
+        v-for="(board, index) in displayBoards"
         :key="board.id"
-        :board="board"
-        :editable="selectedMarker !== null"
-        @select-option="handleSelectOption(board.id, $event.optionIndex)"
-      />
+        class="witness-accuse__board-row"
+      >
+        <!-- Position & reorder controls -->
+        <div class="witness-accuse__reorder">
+          <span class="witness-accuse__position">{{ index + 1 }}</span>
+          <button
+            class="witness-accuse__arrow"
+            :disabled="index === 0"
+            @click="moveBoard(index, 'up')"
+          >
+            <span class="material-symbols-outlined" style="font-size: 18px">keyboard_arrow_up</span>
+          </button>
+          <button
+            class="witness-accuse__arrow"
+            :disabled="index === displayBoards.length - 1"
+            @click="moveBoard(index, 'down')"
+          >
+            <span class="material-symbols-outlined" style="font-size: 18px">keyboard_arrow_down</span>
+          </button>
+        </div>
+
+        <!-- Board panel -->
+        <div class="witness-accuse__board-content">
+          <SceneBoardPanel
+            :board="board"
+            :editable="true"
+            @select-option="handleSelectOption(board.id, $event.optionIndex)"
+          />
+        </div>
+      </div>
     </div>
 
     <!-- Confirm button -->
@@ -128,22 +167,101 @@ function handleSelectOption(boardId: string, optionIndex: number) {
   font-weight: 600;
 }
 
-.witness-accuse__selector {
-  padding: 12px 16px;
+.witness-accuse__instruction {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
   background: var(--bg-secondary);
   border-radius: 8px;
 }
 
-.witness-accuse__selector-label {
+.witness-accuse__instruction-text {
   font-size: 0.75rem;
   color: var(--color-text-muted);
-  margin: 0 0 10px;
+  margin: 0;
+  flex: 1;
+}
+
+.witness-accuse__progress {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-amber);
+  padding: 2px 8px;
+  border: 1px solid rgba(212, 168, 71, 0.3);
+  background: rgba(212, 168, 71, 0.1);
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-left: 12px;
 }
 
 .witness-accuse__boards {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.witness-accuse__board-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.witness-accuse__reorder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  width: 32px;
+}
+
+.witness-accuse__position {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-amber);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.witness-accuse__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.witness-accuse__arrow:not(:disabled):hover {
+  background: rgba(212, 168, 71, 0.15);
+  border-color: var(--color-amber);
+  color: var(--color-amber);
+}
+
+.witness-accuse__arrow:not(:disabled):active {
+  background: rgba(212, 168, 71, 0.25);
+}
+
+.witness-accuse__arrow:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+.witness-accuse__board-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .witness-accuse__footer {

@@ -195,6 +195,13 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  function reorderBoards(boardIds: string[]) {
+    const boardMap = new Map(boards.value.map(b => [b.id, b]))
+    boards.value = boardIds
+      .map(id => boardMap.get(id))
+      .filter((b): b is SceneBoard => !!b)
+  }
+
   function replaceBoard(oldBoardId: string, newBoard: SceneBoard) {
     const idx = boards.value.findIndex(b => b.id === oldBoardId)
     if (idx !== -1) {
@@ -278,6 +285,7 @@ export const useGameStore = defineStore('game', () => {
     setSystemMessage,
     clearSystemMessage,
     updateMarker,
+    reorderBoards,
     replaceBoard,
     setBlackout,
     reset,
