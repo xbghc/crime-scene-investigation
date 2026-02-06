@@ -31,67 +31,65 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="password-page">
-    <div class="content">
-      <h1 class="title">犯罪现场</h1>
-      <p class="subtitle">Crime Scene Investigation</p>
+  <div class="vignette min-h-dvh flex flex-col items-center justify-center px-6 bg-bg-primary">
+    <!-- Content (above vignette) -->
+    <div class="relative z-10 w-full max-w-xs flex flex-col items-center">
 
-      <form class="form" @submit.prevent="handleSubmit">
+      <!-- Top badge -->
+      <div class="flex items-center gap-2 mb-6">
+        <span class="material-symbols-outlined text-crimson-light text-2xl">lock</span>
+        <span class="text-crimson-light text-xs font-semibold tracking-[0.2em] uppercase">Restricted</span>
+      </div>
+
+      <!-- Clearance level -->
+      <p class="text-text-dim text-[0.7rem] tracking-[0.25em] uppercase mb-10">Level 4 Clearance Required</p>
+
+      <!-- Main title area with fingerprint watermark -->
+      <div class="relative mb-10 text-center">
+        <span class="fingerprint-bg material-symbols-outlined">fingerprint</span>
+        <h1 class="text-2xl font-bold tracking-[0.08em] text-text-primary mb-1">DECRYPT CASE FILE</h1>
+        <p class="text-text-muted text-sm tracking-[0.1em]">犯罪现场调查</p>
+      </div>
+
+      <!-- Form -->
+      <form class="w-full flex flex-col gap-4" @submit.prevent="handleSubmit">
         <input
           v-model="password"
           type="password"
-          class="input"
-          placeholder="输入密码"
+          class="auth-input"
+          placeholder="输入访问密码"
           autocomplete="off"
           :disabled="loading"
         />
-        <p v-if="error" class="error">{{ error }}</p>
+
+        <p v-if="error" class="text-crimson-light text-sm text-center">{{ error }}</p>
+
         <BaseButton type="submit" :loading="loading" :disabled="!password.trim()" block>
-          进入
+          <span class="material-symbols-outlined text-lg">key</span>
+          进入档案
         </BaseButton>
       </form>
+
+      <!-- Footer hint -->
+      <p class="mt-10 text-text-dim text-xs">连接有问题？</p>
     </div>
   </div>
 </template>
 
 <style scoped>
-.password-page {
-  min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
+.fingerprint-bg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 8rem;
+  color: var(--color-text-dim);
+  opacity: 0.08;
+  pointer-events: none;
+  user-select: none;
 }
 
-.content {
-  width: 100%;
-  max-width: 320px;
-  text-align: center;
-}
-
-.title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--color-crimson-light);
-  letter-spacing: 0.1em;
-  margin-bottom: 4px;
-}
-
-.subtitle {
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-  margin-bottom: 48px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.input {
+.auth-input {
   width: 100%;
   padding: 14px 16px;
   background: var(--bg-secondary);
@@ -99,21 +97,17 @@ async function handleSubmit() {
   border-radius: var(--border-radius);
   color: var(--color-text);
   font-size: 1rem;
+  font-family: inherit;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.input:focus {
-  border-color: var(--color-amber);
+.auth-input:focus {
+  border-color: var(--color-crimson-light);
+  box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.15);
 }
 
-.input::placeholder {
+.auth-input::placeholder {
   color: var(--color-text-dim);
 }
-
-.error {
-  color: var(--color-crimson-light);
-  font-size: 0.875rem;
-}
-
 </style>

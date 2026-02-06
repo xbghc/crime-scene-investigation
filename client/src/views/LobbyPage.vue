@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useSocket } from '../composables/useSocket'
 import BaseButton from '../components/ui/BaseButton.vue'
 
@@ -8,10 +8,43 @@ const { connected, connectionError, connect, disconnect, joinRoom } = useSocket(
 const nickname = ref('')
 const joined = ref(false)
 
+const minPlayers = 4
+const maxPlayers = 10
+
+interface Player {
+  id: string
+  nickname: string
+  isHost: boolean
+  ready: boolean
+}
+
+// For now, only the current player; Phase 3 will populate via socket
+const players = ref<Player[]>([])
+
+const canStart = computed(() => players.value.length >= minPlayers)
+
+const emptySlots = computed(() => {
+  const count = minPlayers - players.value.length
+  return count > 0 ? count : 0
+})
+
+const playerColors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16']
+
+function getPlayerColor(index: number) {
+  return playerColors[index % playerColors.length]
+}
+
+function getInitial(name: string) {
+  return name.charAt(0).toUpperCase()
+}
+
 function handleJoin() {
   if (!nickname.value.trim()) return
   joinRoom(nickname.value.trim())
   joined.value = true
+  players.value = [
+    { id: 'self', nickname: nickname.value.trim(), isHost: true, ready: true }
+  ]
 }
 
 onMounted(() => {
@@ -24,109 +57,135 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="lobby-page">
-    <div class="header">
-      <h1 class="title">犯罪现场</h1>
-      <div class="connection-status">
-        <span class="dot" :class="{ online: connected }" />
-        <span class="status-text">{{ connected ? '已连接' : '连接中...' }}</span>
+  <!-- State 1: Not joined — nickname input -->
+  <div v-if="!joined" class="vignette min-h-dvh flex flex-col items-center justify-center px-6 bg-bg-primary">
+    <div class="relative z-10 w-full max-w-xs flex flex-col items-center">
+
+      <!-- Icon + Title -->
+      <span class="material-symbols-outlined text-amber-accent text-4xl mb-4">shield</span>
+      <h1 class="text-xl font-bold tracking-[0.08em] text-text-primary mb-1">Join Investigation</h1>
+      <p class="text-text-muted text-sm mb-8">输入你的代号</p>
+
+      <!-- Form -->
+      <form class="w-full flex flex-col gap-4" @submit.prevent="handleJoin">
+        <input
+          v-model="nickname"
+          type="text"
+          class="lobby-input"
+          placeholder="代号（最多10个字符）"
+          maxlength="10"
+          autocomplete="off"
+        />
+        <BaseButton type="submit" :disabled="!nickname.trim() || !connected" block>
+          加入调查
+          <span class="material-symbols-outlined text-lg">arrow_forward</span>
+        </BaseButton>
+      </form>
+
+      <!-- Connection status -->
+      <div class="flex items-center gap-2 mt-8">
+        <span
+          class="inline-block w-2 h-2 rounded-full"
+          :class="connected ? 'bg-success' : 'bg-text-dim'"
+        />
+        <span class="text-text-muted text-xs">{{ connected ? '服务器已连接' : '正在连接...' }}</span>
       </div>
     </div>
+  </div>
 
-    <div class="content">
-      <template v-if="!joined">
-        <form class="nickname-form" @submit.prevent="handleJoin">
-          <input
-            v-model="nickname"
-            type="text"
-            class="input"
-            placeholder="输入你的昵称"
-            maxlength="10"
-            autocomplete="off"
-          />
-          <BaseButton type="submit" :disabled="!nickname.trim() || !connected" block>
-            加入房间
-          </BaseButton>
-        </form>
-      </template>
+  <!-- State 2: Joined — lobby -->
+  <div v-else class="min-h-dvh flex flex-col bg-bg-primary">
 
-      <template v-else>
-        <div class="room-info">
-          <h2>等待其他玩家加入...</h2>
-          <p class="hint">需要 4-10 人开始游戏</p>
-        </div>
+    <!-- Sticky header -->
+    <header class="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-bg-secondary/90 backdrop-blur-sm border-b border-border"
+            :style="{ paddingTop: 'calc(12px + var(--safe-area-top))' }">
+      <div class="flex items-center gap-2">
+        <span class="pulse-dot" />
+        <span class="text-text-primary text-sm font-semibold tracking-wide">Lobby Active</span>
+      </div>
+      <div class="flex items-center gap-1.5 text-text-muted text-sm">
+        <span class="material-symbols-outlined text-lg">groups</span>
+        <span>{{ players.length }}/{{ maxPlayers }}</span>
+      </div>
+    </header>
 
-        <div class="player-list">
-          <div class="player-item">
-            <span class="player-color" style="background: #ef4444" />
-            <span class="player-name">{{ nickname }}</span>
-            <span class="host-badge">房主</span>
+    <!-- Scrollable player list -->
+    <main class="flex-1 overflow-y-auto px-4 py-4 pb-36">
+      <div class="max-w-md mx-auto flex flex-col gap-3">
+
+        <!-- Players -->
+        <div
+          v-for="(player, index) in players"
+          :key="player.id"
+          class="player-card"
+          :class="{ 'player-card--host': player.isHost }"
+        >
+          <!-- Avatar -->
+          <div
+            class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+            :style="{ backgroundColor: getPlayerColor(index) + '20', color: getPlayerColor(index) }"
+          >
+            <span v-if="player.isHost" class="material-symbols-outlined text-xl">local_police</span>
+            <template v-else>{{ getInitial(player.nickname) }}</template>
           </div>
+
+          <!-- Info -->
+          <div class="flex-1 min-w-0">
+            <p class="text-text-primary text-sm font-semibold truncate">{{ player.nickname }}</p>
+            <p v-if="player.isHost" class="text-amber-accent text-xs">Lead Investigator</p>
+          </div>
+
+          <!-- Status badge -->
+          <span
+            class="text-xs px-2 py-0.5 rounded-full"
+            :class="player.ready
+              ? 'bg-success/15 text-success'
+              : 'bg-text-dim/15 text-text-muted'"
+          >
+            {{ player.ready ? 'Ready' : 'Pending' }}
+          </span>
         </div>
 
-        <BaseButton :disabled="true" block>
-          开始游戏（至少4人）
-        </BaseButton>
-      </template>
+        <!-- Empty slots -->
+        <div
+          v-for="n in emptySlots"
+          :key="'empty-' + n"
+          class="empty-slot"
+        >
+          <span class="material-symbols-outlined text-xl text-text-dim">person_add</span>
+          <span class="text-text-dim text-sm">等待玩家加入...</span>
+        </div>
+      </div>
+    </main>
 
-      <p v-if="connectionError" class="error">{{ connectionError }}</p>
+    <!-- Fixed footer -->
+    <footer class="fixed bottom-0 left-0 right-0 z-20 px-4 pt-3 bg-bg-primary/95 backdrop-blur-sm border-t border-border"
+            :style="{ paddingBottom: 'calc(16px + var(--safe-area-bottom))' }">
+      <div class="max-w-md mx-auto flex flex-col gap-3">
+        <BaseButton :disabled="!canStart" block>
+          <span class="material-symbols-outlined text-lg">play_arrow</span>
+          {{ canStart ? '开始调查' : `开始调查（至少${minPlayers}人）` }}
+        </BaseButton>
+
+        <button class="flex items-center justify-center gap-1.5 text-amber-accent text-sm py-1">
+          <span class="material-symbols-outlined text-lg">share</span>
+          邀请侦探
+        </button>
+      </div>
+    </footer>
+
+    <!-- Connection error toast -->
+    <div
+      v-if="connectionError"
+      class="fixed bottom-24 left-4 right-4 z-30 bg-crimson/90 text-text-primary text-sm text-center px-4 py-3 rounded-lg backdrop-blur-sm"
+    >
+      {{ connectionError }}
     </div>
   </div>
 </template>
 
 <style scoped>
-.lobby-page {
-  min-height: 100dvh;
-  padding: 24px;
-  padding-top: calc(24px + var(--safe-area-top));
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 32px;
-}
-
-.title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-crimson-light);
-}
-
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-text-dim);
-  transition: background 0.3s;
-}
-
-.dot.online {
-  background: var(--color-detective);
-}
-
-.content {
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-.nickname-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 40%;
-}
-
-.input {
+.lobby-input {
   width: 100%;
   padding: 14px 16px;
   background: var(--bg-secondary);
@@ -134,75 +193,68 @@ onUnmounted(() => {
   border-radius: var(--border-radius);
   color: var(--color-text);
   font-size: 1rem;
+  font-family: inherit;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.input:focus {
+.lobby-input:focus {
   border-color: var(--color-amber);
+  box-shadow: 0 0 0 3px rgba(212, 168, 71, 0.15);
 }
 
-.input::placeholder {
+.lobby-input::placeholder {
   color: var(--color-text-dim);
 }
 
-.room-info {
-  text-align: center;
-  margin-bottom: 24px;
+/* Pulse dot */
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-crimson-light);
+  animation: pulse 2s ease-in-out infinite;
 }
 
-.room-info h2 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 4px;
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
-.hint {
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-}
-
-.player-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 32px;
-}
-
-.player-item {
+/* Player card */
+.player-card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   padding: 12px 16px;
   background: var(--bg-secondary);
   border-radius: var(--border-radius);
+  border-left: 3px solid transparent;
+  animation: slideIn 0.3s ease-out;
 }
 
-.player-color {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.player-card--host {
+  border-left-color: var(--color-amber);
 }
 
-.player-name {
-  flex: 1;
-  font-weight: 500;
+/* Empty slot */
+.empty-slot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--border-radius);
 }
 
-.host-badge {
-  font-size: 0.75rem;
-  color: var(--color-amber);
-  border: 1px solid var(--color-amber);
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-
-.error {
-  color: var(--color-crimson-light);
-  font-size: 0.875rem;
-  text-align: center;
-  margin-top: 16px;
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
