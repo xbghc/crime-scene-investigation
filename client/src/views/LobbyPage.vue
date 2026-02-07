@@ -11,7 +11,8 @@ const game = useGameStore()
 const auth = useAuthStore()
 const { connected, connectionError, connect, disconnect, joinRoom, startGame } = useSocket()
 
-const nickname = ref('')
+const NICKNAME_KEY = 'csi_nickname'
+const nickname = ref(localStorage.getItem(NICKNAME_KEY) || '')
 const joined = ref(false)
 
 const minPlayers = 4
@@ -26,8 +27,10 @@ function getInitial(name: string) {
 }
 
 function handleJoin() {
-  if (!nickname.value.trim()) return
-  joinRoom(nickname.value.trim())
+  const name = nickname.value.trim()
+  if (!name) return
+  localStorage.setItem(NICKNAME_KEY, name)
+  joinRoom(name)
   joined.value = true
 }
 
@@ -44,6 +47,17 @@ watch(() => game.phase, (phase) => {
 
 onMounted(() => {
   connect()
+  // Auto-join if nickname was saved
+  const saved = nickname.value
+  if (saved) {
+    const stop = watch(connected, (isConnected) => {
+      if (isConnected) {
+        joinRoom(saved)
+        joined.value = true
+        stop()
+      }
+    }, { immediate: true })
+  }
 })
 </script>
 

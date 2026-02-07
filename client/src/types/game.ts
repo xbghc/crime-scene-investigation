@@ -82,8 +82,8 @@ export interface SolveResult {
 // === 完整游戏状态 ===
 
 export interface MurdererSelection {
-  meansCardId: string
-  clueCardId: string
+  meansCard: MeansCard
+  clueCard: ClueCard
 }
 
 export interface GameState {

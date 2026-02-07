@@ -230,7 +230,6 @@ function handleToastDismiss() {
       />
       <NightWitnessView
         v-else-if="nightView === 'witness'"
-        :murderer-player="murdererPlayer"
         :selection="game.murdererSelection"
         @confirm-murder="handleWitnessConfirmMurder"
       />
@@ -272,7 +271,6 @@ function handleToastDismiss() {
               <WitnessAccuseView
                 :boards="game.boards"
                 :murderer-selection="game.murdererSelection"
-                :murderer-player="murdererPlayer"
                 @select-option="handleSelectOption"
                 @reorder="handleReorderBoards"
                 @confirm="handleWitnessConfirm"

@@ -18,8 +18,8 @@ interface PlayerLeftPayload {
 interface AccomplicePromptPayload {}
 
 interface MurdererSelectionUpdatePayload {
-  selectedMeansId: string
-  selectedClueId: string
+  meansCard: { id: string; name: string }
+  clueCard: { id: string; name: string }
   confirmed: boolean
 }
 
@@ -39,8 +39,8 @@ interface NightPhasePayload {
 }
 
 interface MurdererSelectedPayload {
-  meansCardId: string
-  clueCardId: string
+  meansCard: { id: string; name: string }
+  clueCard: { id: string; name: string }
 }
 
 interface PhaseChangePayload {
@@ -76,7 +76,8 @@ interface EffectCardPayload {
 }
 
 interface ClueReplacedPayload {
-  newClueCardId: string
+  oldClueCardId: string
+  newClueCard: { id: string; name: string }
 }
 
 interface SolveResultPayload {
@@ -263,8 +264,8 @@ function setupGameEventHandlers(sock: Socket) {
   // Accomplice sees murderer's card selection in real-time
   sock.on('murderer_selection_update', (data: MurdererSelectionUpdatePayload) => {
     gameStore.setMurdererSelection({
-      meansCardId: data.selectedMeansId,
-      clueCardId: data.selectedClueId,
+      meansCard: data.meansCard,
+      clueCard: data.clueCard,
     })
   })
 
@@ -302,8 +303,8 @@ function setupGameEventHandlers(sock: Socket) {
 
   sock.on('murderer_selected', (data: MurdererSelectedPayload) => {
     gameStore.setMurdererSelection({
-      meansCardId: data.meansCardId,
-      clueCardId: data.clueCardId,
+      meansCard: data.meansCard,
+      clueCard: data.clueCard,
     })
   })
 
@@ -344,11 +345,11 @@ function setupGameEventHandlers(sock: Socket) {
   })
 
   sock.on('clue_replaced', (data: ClueReplacedPayload) => {
-    const currentMeansId = gameStore.murdererSelection?.meansCardId
-    if (!currentMeansId) return // Cannot replace clue if no prior selection exists
+    const current = gameStore.murdererSelection
+    if (!current) return
     gameStore.setMurdererSelection({
-      meansCardId: currentMeansId,
-      clueCardId: data.newClueCardId,
+      meansCard: current.meansCard,
+      clueCard: data.newClueCard,
     })
   })
 

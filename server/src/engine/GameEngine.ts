@@ -13,6 +13,7 @@ import {
   type EffectCardRef,
   type SceneBoardState,
   type SolveAttempt,
+  type MurdererSelection,
   type GamePhase,
   type DiscussionPhase,
   type AdvancePhase,
@@ -207,19 +208,12 @@ export class GameEngine {
     }
   }
 
-  private startDisconnectTimer(userId: string, player: PlayerState): void {
+  private startDisconnectTimer(userId: string, _player: PlayerState): void {
+    // In a face-to-face scenario, players frequently lock their phones
+    // during discussion. Keep their status as 'disconnected' (not 'dead')
+    // so they can reconnect at any time. Never auto-end the game.
     const timer = setTimeout(() => {
       this.disconnectTimers.delete(userId);
-      player.status = 'dead';
-      player.hasSolveRight = false;
-
-      const activePlayers = this.state.players.filter(
-        p => p.status !== 'dead' && p.status !== 'disconnected'
-      );
-      if (activePlayers.length < MIN_PLAYERS) {
-        this.endGameEarly();
-      }
-
       this.broadcastRoomState();
     }, RECONNECT_TIMEOUT_MS);
 
@@ -354,15 +348,15 @@ export class GameEngine {
     const player = this.findPlayer(userId);
     if (!player || player.role !== 'murderer') return { ok: false, error: '只有凶手可以执行此操作' };
 
-    const hasMeans = player.meansCards.some(c => c.id === meansCardId);
-    const hasClue = player.clueCards.some(c => c.id === clueCardId);
-    if (!hasMeans || !hasClue) return { ok: false, error: '无效的卡牌选择' };
+    const meansCard = player.meansCards.find(c => c.id === meansCardId);
+    const clueCard = player.clueCards.find(c => c.id === clueCardId);
+    if (!meansCard || !clueCard) return { ok: false, error: '无效的卡牌选择' };
 
-    this.state.solution = { meansCardId, clueCardId };
+    this.state.solution = { meansCard, clueCard };
 
     this.emitToPlayer(this.getWitness(), 'murderer_selected', {
-      meansCardId,
-      clueCardId,
+      meansCard,
+      clueCard,
       murdererId: player.id,
     });
 
@@ -370,8 +364,8 @@ export class GameEngine {
     const accomplice = this.getAccomplice();
     if (accomplice) {
       this.emitToPlayer(accomplice, 'murderer_selection_update', {
-        selectedMeansId: meansCardId,
-        selectedClueId: clueCardId,
+        meansCard,
+        clueCard,
         confirmed: true,
       });
     }
@@ -523,10 +517,11 @@ export class GameEngine {
       const hasCard = murderer.clueCards.some(c => c.id === newClueCardId);
       if (!hasCard) return { ok: false, error: '无效的线索牌选择' };
 
-      const oldClueCardId = this.state.solution!.clueCardId;
-      this.state.solution!.clueCardId = newClueCardId;
+      const oldClueCardId = this.state.solution!.clueCard.id;
+      const newClueCard = murderer.clueCards.find(c => c.id === newClueCardId)!;
+      this.state.solution!.clueCard = newClueCard;
 
-      this.emitToPlayer(this.getWitness(), 'clue_replaced', { oldClueCardId, newClueCardId });
+      this.emitToPlayer(this.getWitness(), 'clue_replaced', { oldClueCardId, newClueCard });
 
       // Accomplice replaced: 1 effect + 2 boards
       this.executeAdvanceEffects(true);
@@ -646,8 +641,8 @@ export class GameEngine {
 
     const success =
       attempt.suspectId === murderer.id &&
-      attempt.meansCardId === solution.meansCardId &&
-      attempt.clueCardId === solution.clueCardId;
+      attempt.meansCardId === solution.meansCard.id &&
+      attempt.clueCardId === solution.clueCard.id;
 
     player.hasSolveRight = false;
 
@@ -1002,7 +997,7 @@ export class GameEngine {
   getActiveBoards(): readonly SceneBoardState[] { return this.state.activeBoards; }
 
   /** @internal - 获取凶手答案 */
-  getSolution(): Readonly<{ meansCardId: string; clueCardId: string }> | null { return this.state.solution; }
+  getSolution(): Readonly<MurdererSelection> | null { return this.state.solution; }
 
   /** @internal - 获取强制破案顺序 */
   getForceSolveOrder(): readonly string[] { return this.state.forceSolveOrder; }

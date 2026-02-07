@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { MurdererSelection, Player } from '../../types'
+import type { MurdererSelection } from '../../types'
 
 interface Props {
-  murdererPlayer?: Player
   selection?: MurdererSelection
 }
 
@@ -13,17 +12,11 @@ const emit = defineEmits<{
   'confirm-murder': []
 }>()
 
-const hasSelection = computed(() => !!props.selection?.meansCardId && !!props.selection?.clueCardId)
+const hasSelection = computed(() => !!props.selection?.meansCard && !!props.selection?.clueCard)
 
-const selectedMeans = computed(() => {
-  if (!props.selection || !props.murdererPlayer) return null
-  return props.murdererPlayer.meansCards.find(c => c.id === props.selection!.meansCardId)
-})
+const selectedMeansName = computed(() => props.selection?.meansCard.name ?? '未知')
 
-const selectedClue = computed(() => {
-  if (!props.selection || !props.murdererPlayer) return null
-  return props.murdererPlayer.clueCards.find(c => c.id === props.selection!.clueCardId)
-})
+const selectedClueName = computed(() => props.selection?.clueCard.name ?? '未知')
 </script>
 
 <template>
@@ -58,11 +51,11 @@ const selectedClue = computed(() => {
         <div class="witness-night__cards">
           <div class="witness-night__card witness-night__card--means">
             <span class="witness-night__card-label">手段</span>
-            <span class="witness-night__card-name">{{ selectedMeans?.name || '未知' }}</span>
+            <span class="witness-night__card-name">{{ selectedMeansName }}</span>
           </div>
           <div class="witness-night__card witness-night__card--clue">
             <span class="witness-night__card-label">线索</span>
-            <span class="witness-night__card-name">{{ selectedClue?.name || '未知' }}</span>
+            <span class="witness-night__card-name">{{ selectedClueName }}</span>
           </div>
         </div>
 

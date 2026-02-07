@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { SceneBoard, MurdererSelection, Player } from '../../types'
+import type { SceneBoard, MurdererSelection } from '../../types'
 import SceneBoardPanel from '../game/SceneBoardPanel.vue'
 
 interface Props {
   boards: SceneBoard[]
   murdererSelection?: MurdererSelection
-  murdererPlayer?: Player
 }
 
 const props = defineProps<Props>()
@@ -30,15 +29,9 @@ const displayBoards = computed(() =>
 const markedCount = computed(() => props.boards.filter(b => b.marker).length)
 const allMarkersPlaced = computed(() => markedCount.value === props.boards.length)
 
-const selectedMeansName = computed(() => {
-  if (!props.murdererSelection || !props.murdererPlayer) return null
-  return props.murdererPlayer.meansCards.find(c => c.id === props.murdererSelection!.meansCardId)?.name
-})
+const selectedMeansName = computed(() => props.murdererSelection?.meansCard.name ?? null)
 
-const selectedClueName = computed(() => {
-  if (!props.murdererSelection || !props.murdererPlayer) return null
-  return props.murdererPlayer.clueCards.find(c => c.id === props.murdererSelection!.clueCardId)?.name
-})
+const selectedClueName = computed(() => props.murdererSelection?.clueCard.name ?? null)
 
 function handleSelectOption(boardId: string, optionIndex: number) {
   const board = props.boards.find(b => b.id === boardId)

@@ -71,8 +71,8 @@ export interface PlayerState {
 }
 
 export interface MurdererSelection {
-  meansCardId: string;
-  clueCardId: string;
+  meansCard: CardRef;
+  clueCard: CardRef;
 }
 
 export interface SolveAttempt {

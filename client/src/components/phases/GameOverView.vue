@@ -35,13 +35,13 @@ const emit = defineEmits<{
         <div class="game-over__solution-card game-over__solution-card--means">
           <span class="game-over__card-label">手段</span>
           <span class="game-over__card-name">
-            {{ players.find(p => p.role === 'murderer')?.meansCards.find(c => c.id === solution?.meansCardId)?.name || '未知' }}
+            {{ solution?.meansCard.name || '未知' }}
           </span>
         </div>
         <div class="game-over__solution-card game-over__solution-card--clue">
           <span class="game-over__card-label">线索</span>
           <span class="game-over__card-name">
-            {{ players.find(p => p.role === 'murderer')?.clueCards.find(c => c.id === solution?.clueCardId)?.name || '未知' }}
+            {{ solution?.clueCard.name || '未知' }}
           </span>
         </div>
       </div>
