@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import type { Socket } from 'socket.io';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
-const GAME_PASSWORD = process.env.GAME_PASSWORD || 'crime123';
+const GAME_PASSWORD = process.env.GAME_PASSWORD || '123456';
 
 export function verifyPassword(password: string): { valid: boolean; token?: string } {
   if (password !== GAME_PASSWORD) {
