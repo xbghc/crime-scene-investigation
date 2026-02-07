@@ -9,6 +9,10 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const emit = defineEmits<{
+  'confirm-murder': []
+}>()
+
 const hasSelection = computed(() => !!props.selection?.meansCardId && !!props.selection?.clueCardId)
 
 const selectedMeans = computed(() => {
@@ -66,6 +70,11 @@ const selectedClue = computed(() => {
           <span class="material-symbols-outlined" style="font-size: 14px">lock</span>
           仅你可见
         </p>
+
+        <button class="witness-night__confirm-btn" @click="emit('confirm-murder')">
+          <span class="material-symbols-outlined" style="font-size: 18px">check</span>
+          我记住了，继续
+        </button>
       </template>
     </main>
 
@@ -206,6 +215,25 @@ const selectedClue = computed(() => {
   font-size: 0.7rem;
   color: var(--color-text-dim);
   margin: 0;
+}
+
+.witness-night__confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 20px;
+  padding: 10px 24px;
+  border-radius: 8px;
+  background: var(--color-amber);
+  color: var(--bg-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.witness-night__confirm-btn:hover {
+  opacity: 0.9;
 }
 
 .witness-night__footer {

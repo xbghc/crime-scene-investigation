@@ -9,6 +9,7 @@ import type {
   MurdererSelection,
   EffectCard,
   SolveResult,
+  RoomState,
 } from '../types'
 
 type SystemMessageType = 'info' | 'success' | 'error'
@@ -76,6 +77,12 @@ export const useGameStore = defineStore('game', () => {
   // Witness picks from these during advance phase
   const newBoards = ref<SceneBoard[]>([])
   const forceSolveTurnPlayerId = ref<string | undefined>()
+
+  // Room state (lobby)
+  const roomPlayers = ref<RoomState['players']>([])
+  const roomStatus = ref<RoomState['status']>('waiting')
+  const hostId = ref<string | null>(null)
+  const accomplicePrompted = ref(false)
 
   // === Computed ===
   const me = computed(() => players.value.find(p => p.id === myPlayerId.value))
@@ -213,6 +220,27 @@ export const useGameStore = defineStore('game', () => {
     blackout.value = val
   }
 
+  function setRoomState(state: RoomState) {
+    roomPlayers.value = state.players
+    roomStatus.value = state.status
+    hostId.value = state.hostId
+  }
+
+  function addRoomPlayer(player: RoomState['players'][number]) {
+    const exists = roomPlayers.value.some(p => p.id === player.id)
+    if (!exists) {
+      roomPlayers.value.push(player)
+    }
+  }
+
+  function removeRoomPlayer(playerId: string) {
+    roomPlayers.value = roomPlayers.value.filter(p => p.id !== playerId)
+  }
+
+  function setAccomplicePrompted(val: boolean) {
+    accomplicePrompted.value = val
+  }
+
   function reset() {
     phase.value = 'waiting'
     round.value = 1
@@ -230,6 +258,7 @@ export const useGameStore = defineStore('game', () => {
     lastSolveResult.value = null
     newBoards.value = []
     forceSolveTurnPlayerId.value = undefined
+    accomplicePrompted.value = false
   }
 
   return {
@@ -250,6 +279,10 @@ export const useGameStore = defineStore('game', () => {
     lastSolveResult,
     newBoards,
     forceSolveTurnPlayerId,
+    roomPlayers,
+    roomStatus,
+    hostId,
+    accomplicePrompted,
 
     // Computed
     me,
@@ -288,6 +321,10 @@ export const useGameStore = defineStore('game', () => {
     reorderBoards,
     replaceBoard,
     setBlackout,
+    setRoomState,
+    addRoomPlayer,
+    removeRoomPlayer,
+    setAccomplicePrompted,
     reset,
   }
 })

@@ -366,6 +366,16 @@ export class GameEngine {
       murdererId: player.id,
     });
 
+    // Notify accomplice of murderer's selection in real-time
+    const accomplice = this.getAccomplice();
+    if (accomplice) {
+      this.emitToPlayer(accomplice, 'murderer_selection_update', {
+        selectedMeansId: meansCardId,
+        selectedClueId: clueCardId,
+        confirmed: true,
+      });
+    }
+
     this.io.emit('system_message', { content: '凶手已完成选择，等待目击者确认...', type: 'info' });
 
     return { ok: true };
@@ -447,6 +457,7 @@ export class GameEngine {
     if (this.state.blackout && this.state.blackoutClearsAfterPhase === phase) {
       this.state.blackout = false;
       this.state.blackoutClearsAfterPhase = null;
+      this.io.emit('blackout_end', {});
       this.io.emit('system_message', { content: '电力恢复，场景板重新显示', type: 'info' });
     }
 
@@ -544,9 +555,8 @@ export class GameEngine {
     const witness = this.getWitness();
 
     if (newBoards.length > 0) {
-      this.emitToPlayer(witness, 'advance_boards', {
-        newBoards,
-        replaceCount: newBoards.length,
+      this.emitToPlayer(witness, 'new_boards', {
+        boards: newBoards.map(b => this.boardToPublic(b)),
       });
     } else {
       this.finishAdvancePhase();
@@ -598,7 +608,7 @@ export class GameEngine {
     if (poolIdx >= 0) {
       return this.state.sceneBoardPool.splice(poolIdx, 1)[0];
     }
-    // Fallback: board may have been sent via advance_boards and removed from pool
+    // Fallback: board may have been sent via new_boards and removed from pool
     const boardData = ALL_SCENE_BOARDS.find(b => b.id === newBoardId);
     return boardData ? this.toBoardState(boardData) : undefined;
   }
@@ -981,7 +991,7 @@ export class GameEngine {
     for (const player of this.state.players) {
       const socket = this.getSocket(player.socketId);
       if (socket) {
-        socket.emit('game_state_sync', this.getGameStateForPlayer(player.id));
+        socket.emit('full_state', this.getGameStateForPlayer(player.id));
       }
     }
   }

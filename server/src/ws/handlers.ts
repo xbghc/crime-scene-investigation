@@ -44,7 +44,7 @@ export function registerHandlers(io: Server, socket: Socket): void {
 
     // If reconnecting during a game, send full game state
     if (ge.isPlaying()) {
-      socket.emit('game_state_sync', ge.getGameStateForPlayer(userId));
+      socket.emit('full_state', ge.getGameStateForPlayer(userId));
       io.emit('system_message', {
         content: `${player.nickname} 已重新连接`,
         type: 'info',
@@ -180,6 +180,16 @@ export function registerHandlers(io: Server, socket: Socket): void {
     }
     ge.resetGame();
     io.emit('system_message', { content: '游戏已重置，等待房主开始新一局', type: 'info' });
+  });
+
+  // === Request State (reconnection) ===
+
+  socket.on('request_state', () => {
+    if (ge.isPlaying()) {
+      socket.emit('full_state', ge.getGameStateForPlayer(userId));
+    } else {
+      socket.emit('room_state', ge.getRoomState());
+    }
   });
 
   // === Disconnect ===

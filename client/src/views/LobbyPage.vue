@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useSocket } from '../composables/useSocket'
+import { useGameStore } from '../stores/game'
+import { useAuthStore } from '../stores/auth'
 import IconButton from '../components/ui/IconButton.vue'
 
-const { connected, connectionError, connect, disconnect, joinRoom } = useSocket()
+const router = useRouter()
+const game = useGameStore()
+const auth = useAuthStore()
+const { connected, connectionError, connect, disconnect, joinRoom, startGame } = useSocket()
 
 const nickname = ref('')
 const joined = ref(false)
@@ -11,45 +17,9 @@ const joined = ref(false)
 const minPlayers = 4
 const maxPlayers = 10
 
-type NetworkQuality = 'good' | 'fair' | 'poor'
-
-interface Player {
-  id: string
-  nickname: string
-  isHost: boolean
-  ready: boolean
-  network?: NetworkQuality
-  ping?: number
-}
-
-const networkIcon: Record<NetworkQuality, string> = {
-  good: 'signal_cellular_alt',
-  fair: 'signal_cellular_alt_2_bar',
-  poor: 'signal_cellular_alt_1_bar',
-}
-
-const networkColor: Record<NetworkQuality, string> = {
-  good: 'text-success',
-  fair: 'text-amber-accent',
-  poor: 'text-crimson-light',
-}
-
-const showPingId = ref<string | null>(null)
-
-function togglePing(playerId: string) {
-  showPingId.value = showPingId.value === playerId ? null : playerId
-}
-
-// For now, only the current player; Phase 3 will populate via socket
-const players = ref<Player[]>([])
-
-const canStart = computed(() => players.value.length >= minPlayers)
-
-const playerColors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16']
-
-function getPlayerColor(index: number) {
-  return playerColors[index % playerColors.length]
-}
+const players = computed(() => game.roomPlayers)
+const isHost = computed(() => game.hostId === auth.userId)
+const canStart = computed(() => players.value.length >= minPlayers && isHost.value)
 
 function getInitial(name: string) {
   return name.charAt(0).toUpperCase()
@@ -59,17 +29,21 @@ function handleJoin() {
   if (!nickname.value.trim()) return
   joinRoom(nickname.value.trim())
   joined.value = true
-  players.value = [
-    { id: 'self', nickname: nickname.value.trim(), isHost: true, ready: true, network: 'good', ping: 12 }
-  ]
 }
+
+function handleStartGame() {
+  startGame()
+}
+
+// Navigate to /game when game starts
+watch(() => game.phase, (phase) => {
+  if (phase === 'role-reveal') {
+    router.push('/game')
+  }
+})
 
 onMounted(() => {
   connect()
-})
-
-onUnmounted(() => {
-  disconnect()
 })
 </script>
 
@@ -123,7 +97,7 @@ onUnmounted(() => {
 
         <!-- Players -->
         <div
-          v-for="(player, index) in players"
+          v-for="player in players"
           :key="player.id"
           class="player-card"
           :class="{ 'player-card--host': player.isHost }"
@@ -131,7 +105,7 @@ onUnmounted(() => {
           <!-- Avatar -->
           <div
             class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-            :style="{ backgroundColor: getPlayerColor(index) + '20', color: getPlayerColor(index) }"
+            :style="{ backgroundColor: player.color + '20', color: player.color }"
           >
             <span v-if="player.isHost" class="material-symbols-outlined text-xl">local_police</span>
             <template v-else>{{ getInitial(player.nickname) }}</template>
@@ -143,26 +117,12 @@ onUnmounted(() => {
             <p v-if="player.isHost" class="text-amber-accent text-xs">Lead Investigator</p>
           </div>
 
-          <!-- Status badge + network quality -->
+          <!-- Status badge -->
           <div class="flex items-center gap-2 shrink-0">
             <span
-              class="text-xs px-2 py-0.5 rounded-full"
-              :class="player.ready
-                ? 'bg-success/15 text-success'
-                : 'bg-text-dim/15 text-text-muted'"
+              class="text-xs px-2 py-0.5 rounded-full bg-success/15 text-success"
             >
-              {{ player.ready ? 'Ready' : 'Pending' }}
-            </span>
-            <span
-              v-if="player.network"
-              class="network-indicator"
-              :class="networkColor[player.network]"
-              @click="togglePing(player.id)"
-            >
-              <span class="material-symbols-outlined text-base">{{ networkIcon[player.network] }}</span>
-              <Transition name="ping-fade">
-                <span v-if="showPingId === player.id && player.ping != null" class="ping-tooltip">{{ player.ping }}ms</span>
-              </Transition>
+              Ready
             </span>
           </div>
         </div>
@@ -177,9 +137,12 @@ onUnmounted(() => {
     <footer class="fixed bottom-0 left-0 right-0 z-20 px-4 pt-3 bg-bg-primary/95 backdrop-blur-sm border-t border-border"
             :style="{ paddingBottom: 'calc(16px + var(--safe-area-bottom))' }">
       <div class="max-w-md mx-auto">
-        <IconButton icon="play_arrow" :disabled="!canStart" block>
+        <IconButton v-if="isHost" icon="play_arrow" :disabled="!canStart" block @click="handleStartGame">
           {{ canStart ? '开始调查' : `开始调查（至少${minPlayers}人）` }}
         </IconButton>
+        <p v-else class="text-text-muted text-sm text-center py-3">
+          等待房主开始游戏…
+        </p>
       </div>
     </footer>
 
@@ -245,39 +208,6 @@ onUnmounted(() => {
 .player-card--host {
   border-left-color: var(--color-amber);
 }
-
-/* Network indicator */
-.network-indicator {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-.ping-tooltip {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.625rem;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  padding: 3px 6px;
-  border-radius: 4px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  pointer-events: none;
-}
-
-.ping-fade-enter-active { transition: opacity 0.15s, transform 0.15s; }
-.ping-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
-.ping-fade-enter-from,
-.ping-fade-leave-to { opacity: 0; transform: translateX(-50%) translateY(4px); }
-.ping-fade-enter-to,
-.ping-fade-leave-from { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 @keyframes slideIn {
   from {

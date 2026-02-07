@@ -17,6 +17,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'accomplice-choose': [payload: { replaceClue: boolean; newClueCardId?: string }]
   'witness-replace': [payload: { oldBoardId: string; newBoardId: string; optionIndex: number; markerNumber: number }]
+  'witness-finish-advance': []
 }>()
 
 // Accomplice state
@@ -111,6 +112,16 @@ function handleConfirmReplace() {
             确认更换
           </button>
         </template>
+      </div>
+    </template>
+
+    <!-- Witness: no new boards, finish advance -->
+    <template v-else-if="isWitness && newBoards.length === 0">
+      <div class="advance__waiting">
+        <p class="advance__waiting-text">推进阶段完成，没有新的场景板</p>
+        <button class="advance__btn advance__btn--primary" style="max-width: 200px" @click="emit('witness-finish-advance')">
+          继续
+        </button>
       </div>
     </template>
 

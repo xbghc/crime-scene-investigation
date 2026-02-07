@@ -2,13 +2,36 @@ import { ref } from 'vue'
 import { io, Socket } from 'socket.io-client'
 import { useAuthStore } from '../stores/auth'
 import { useGameStore } from '../stores/game'
-import type { GamePhase, GameState, Player, Role, SceneBoard, EffectCard, MurdererSelection } from '../types'
+import type { GamePhase, GameState, Player, Role, SceneBoard, EffectCard, MurdererSelection, RoomState, EffectActionData } from '../types'
+
+// === Room event payload types ===
+interface RoomStatePayload extends RoomState {}
+
+interface PlayerJoinedPayload {
+  player: RoomState['players'][number]
+}
+
+interface PlayerLeftPayload {
+  playerId: string
+}
+
+interface AccomplicePromptPayload {}
+
+interface MurdererSelectionUpdatePayload {
+  selectedMeansId: string
+  selectedClueId: string
+  confirmed: boolean
+}
 
 // === Socket event payload types ===
 interface GameStartedPayload {
-  playerId: string
   role: Role
-  allPlayerCards: Player[]
+  cards: { meansCards: { id: string; name: string }[]; clueCards: { id: string; name: string }[] } | null
+  allPlayerCards: Array<{
+    playerId: string
+    meansCards: { id: string; name: string }[]
+    clueCards: { id: string; name: string }[]
+  }>
 }
 
 interface NightPhasePayload {
@@ -100,6 +123,9 @@ export function useSocket() {
       reconnectionDelayMax: 5000,
     })
 
+    // Expose for E2E testing
+    ;(window as any).__socket = socket
+
     setupConnectionHandlers(socket)
     setupGameEventHandlers(socket)
   }
@@ -151,6 +177,22 @@ export function useSocket() {
     socket?.emit('attempt_solve', { suspectId, meansCardId, clueCardId })
   }
 
+  function witnessConfirmMurder() {
+    socket?.emit('witness_confirm_murder')
+  }
+
+  function effectAction(effectId: string, data: EffectActionData) {
+    socket?.emit('effect_action', { effectId, data })
+  }
+
+  function witnessFinishAdvance() {
+    socket?.emit('witness_finish_advance')
+  }
+
+  function resetGame() {
+    socket?.emit('reset_game')
+  }
+
   return {
     connected,
     connectionError,
@@ -166,6 +208,10 @@ export function useSocket() {
     endDiscussion,
     accompliceChoose,
     attemptSolve,
+    witnessConfirmMurder,
+    effectAction,
+    witnessFinishAdvance,
+    resetGame,
   }
 }
 
@@ -191,11 +237,61 @@ function setupConnectionHandlers(sock: Socket) {
 }
 
 function setupGameEventHandlers(sock: Socket) {
+  const authStore = useAuthStore()
   const gameStore = useGameStore()
 
+  // === Room management events ===
+
+  sock.on('room_state', (data: RoomStatePayload) => {
+    gameStore.setRoomState(data)
+  })
+
+  sock.on('player_joined', (data: PlayerJoinedPayload) => {
+    gameStore.addRoomPlayer(data.player)
+  })
+
+  sock.on('player_left', (data: PlayerLeftPayload) => {
+    gameStore.removeRoomPlayer(data.playerId)
+  })
+
+  // === Advance phase events ===
+
+  sock.on('accomplice_prompt', (_data: AccomplicePromptPayload) => {
+    gameStore.setAccomplicePrompted(true)
+  })
+
+  // Accomplice sees murderer's card selection in real-time
+  sock.on('murderer_selection_update', (data: MurdererSelectionUpdatePayload) => {
+    gameStore.setMurdererSelection({
+      meansCardId: data.selectedMeansId,
+      clueCardId: data.selectedClueId,
+    })
+  })
+
+  // === Game lifecycle events ===
+
   sock.on('game_started', (data: GameStartedPayload) => {
-    gameStore.setMyInfo(data.playerId, data.role)
-    gameStore.updatePlayers(data.allPlayerCards)
+    const myId = authStore.userId
+    if (myId) {
+      gameStore.setMyInfo(myId, data.role)
+    }
+
+    // Build player list from allPlayerCards merged with room players
+    const cardMap = new Map(data.allPlayerCards.map(p => [p.playerId, p]))
+    const players: Player[] = gameStore.roomPlayers.map(rp => {
+      const cards = cardMap.get(rp.id)
+      return {
+        id: rp.id,
+        nickname: rp.nickname,
+        color: rp.color,
+        isHost: rp.isHost,
+        status: 'alive' as const,
+        hasSolveRight: true,
+        meansCards: cards?.meansCards ?? [],
+        clueCards: cards?.clueCards ?? [],
+      }
+    })
+    gameStore.updatePlayers(players)
     gameStore.setPhase('role-reveal')
   })
 
@@ -295,7 +391,10 @@ function setupGameEventHandlers(sock: Socket) {
     gameStore.setBlackout(false)
   })
 
-  sock.on('full_state', (data: GameState) => {
-    gameStore.syncFullState(data)
+  sock.on('full_state', (data: Partial<GameState> & Pick<GameState, 'phase' | 'players' | 'boards'>) => {
+    gameStore.syncFullState({
+      ...data,
+      round: data.round ?? 1,
+    })
   })
 }

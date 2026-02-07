@@ -100,6 +100,14 @@ export interface GameState {
   blackout?: boolean // 停电效果
 }
 
+// === 效果牌操作 ===
+
+export interface EffectActionData {
+  targetId?: string
+  boardId?: string
+  cardId?: string
+}
+
 // === 房间 ===
 
 export type RoomStatus = 'waiting' | 'playing'

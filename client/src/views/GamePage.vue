@@ -29,24 +29,27 @@ const {
   murdererSelect,
   witnessSetMarker,
   witnessConfirm,
+  witnessConfirmMurder,
   witnessReplaceBoard,
+  witnessFinishAdvance,
   endDiscussion,
   accompliceChoose,
   attemptSolve,
+  effectAction,
   startGame,
+  resetGame,
 } = useSocket()
 
 // Local UI state
 const showSolveModal = ref(false)
 const roleRevealed = ref(false)
 const showEffectCard = ref(false)
+const showSolveResult = ref(false)
+const showPhaseChange = ref(false)
+const phaseChangeMessage = ref('')
 
 onMounted(() => {
   connect()
-})
-
-onUnmounted(() => {
-  disconnect()
 })
 
 // Watch for effect card events
@@ -54,10 +57,31 @@ watch(() => game.effectCard, (card) => {
   if (card) showEffectCard.value = true
 })
 
-// Navigate back to lobby if game resets
-watch(() => game.phase, (phase) => {
+// Watch for solve results — show modal for important announcements
+watch(() => game.lastSolveResult, (result) => {
+  if (result) showSolveResult.value = true
+})
+
+// Watch for phase changes — show brief announcement for key transitions
+watch(() => game.phase, (phase, oldPhase) => {
   if (phase === 'waiting') {
     router.replace('/lobby')
+    return
+  }
+
+  // Show modal announcement for key phase transitions
+  const announcements: Partial<Record<string, string>> = {
+    'witness-accuse': '天亮了！目击者正在布置线索…',
+    'discussion-1': '第一轮发言开始',
+    'discussion-2': '第二轮发言开始',
+    'discussion-3': '最后一轮发言',
+    'force-solve': '强制破案阶段',
+  }
+
+  const msg = announcements[phase]
+  if (msg && oldPhase !== 'waiting') {
+    phaseChangeMessage.value = msg
+    showPhaseChange.value = true
   }
 })
 
@@ -138,15 +162,40 @@ function handleWitnessReplace(payload: { oldBoardId: string; newBoardId: string;
   witnessReplaceBoard(payload.oldBoardId, payload.newBoardId, payload.optionIndex, payload.markerNumber)
 }
 
-// Play again
+// Play again (host resets, others wait)
 function handlePlayAgain() {
-  startGame()
+  resetGame()
+}
+
+// Witness confirms murder selection
+function handleWitnessConfirmMurder() {
+  witnessConfirmMurder()
+}
+
+// Witness finishes advance phase replacements
+function handleWitnessFinishAdvance() {
+  witnessFinishAdvance()
+}
+
+// Effect card witness action
+function handleEffectAction(payload: { effectId: string; data: import('../types').EffectActionData }) {
+  effectAction(payload.effectId, payload.data)
 }
 
 // Effect card dismiss
 function handleEffectDismiss() {
   showEffectCard.value = false
   game.setEffectCard(undefined)
+}
+
+// Solve result dismiss
+function handleSolveResultDismiss() {
+  showSolveResult.value = false
+}
+
+// Phase change dismiss
+function handlePhaseChangeDismiss() {
+  showPhaseChange.value = false
 }
 
 // Toast dismiss
@@ -183,6 +232,7 @@ function handleToastDismiss() {
         v-else-if="nightView === 'witness'"
         :murderer-player="murdererPlayer"
         :selection="game.murdererSelection"
+        @confirm-murder="handleWitnessConfirmMurder"
       />
       <NightDetectiveView v-else />
     </template>
@@ -261,6 +311,7 @@ function handleToastDismiss() {
               :murderer-player="murdererPlayer"
               @accomplice-choose="handleAccompliceChoose"
               @witness-replace="handleWitnessReplace"
+              @witness-finish-advance="handleWitnessFinishAdvance"
             />
           </template>
 
@@ -311,6 +362,38 @@ function handleToastDismiss() {
       </div>
       <template #footer>
         <button class="effect-card-display__btn" @click="handleEffectDismiss">知道了</button>
+      </template>
+    </BaseModal>
+
+    <!-- Solve result modal -->
+    <BaseModal v-model="showSolveResult" :title="game.lastSolveResult?.success ? '破案成功！' : '破案失败'">
+      <div v-if="game.lastSolveResult" class="solve-result-display">
+        <div class="solve-result-display__icon" :class="game.lastSolveResult.success ? 'solve-result-display__icon--success' : 'solve-result-display__icon--fail'">
+          <span class="material-symbols-outlined" style="font-size: 2.5rem">
+            {{ game.lastSolveResult.success ? 'check_circle' : 'cancel' }}
+          </span>
+        </div>
+        <p class="solve-result-display__text">
+          {{ game.lastSolveResult.success
+            ? '真相大白！侦探方成功破案'
+            : `${game.players.find(p => p.id === game.lastSolveResult?.playerId)?.nickname ?? '玩家'} 推理失败，失去破案权` }}
+        </p>
+      </div>
+      <template #footer>
+        <button class="effect-card-display__btn" @click="handleSolveResultDismiss">知道了</button>
+      </template>
+    </BaseModal>
+
+    <!-- Phase change announcement modal -->
+    <BaseModal v-model="showPhaseChange" title="阶段变更">
+      <div class="phase-change-display">
+        <div class="phase-change-display__icon">
+          <span class="material-symbols-outlined" style="font-size: 2.5rem; color: var(--color-amber)">{{ game.phaseIcon }}</span>
+        </div>
+        <p class="phase-change-display__text">{{ phaseChangeMessage }}</p>
+      </div>
+      <template #footer>
+        <button class="effect-card-display__btn" @click="handlePhaseChangeDismiss">继续</button>
       </template>
     </BaseModal>
 
@@ -461,6 +544,69 @@ function handleToastDismiss() {
   background: var(--color-purple);
   color: #fff;
   font-weight: 600;
+}
+
+/* Solve result display */
+.solve-result-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.solve-result-display__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.solve-result-display__icon--success {
+  background: rgba(46, 160, 67, 0.15);
+  color: var(--color-success, #2ea043);
+}
+
+.solve-result-display__icon--fail {
+  background: rgba(211, 47, 47, 0.15);
+  color: var(--color-crimson-light);
+}
+
+.solve-result-display__text {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Phase change display */
+.phase-change-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.phase-change-display__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(212, 168, 71, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phase-change-display__text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
 }
 
 /* Offline indicator */
