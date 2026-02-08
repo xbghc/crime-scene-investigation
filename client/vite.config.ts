@@ -34,11 +34,11 @@ export default defineConfig({
     port: 8030,
     proxy: {
       '/api': {
-        target: 'http://localhost:8041',
+        target: 'http://localhost:8040',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:8041',
+        target: 'http://localhost:8040',
         changeOrigin: true,
         ws: true,
       },

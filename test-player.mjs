@@ -13,7 +13,7 @@ import jwt from 'jsonwebtoken';
 const PLAYER_NUM = process.argv[2] || '1';
 const NICKNAME = `玩家${PLAYER_NUM}`;
 const PASSWORD = '123456';
-const SERVER_URL = 'http://localhost:8041';
+const SERVER_URL = 'http://localhost:8040';
 
 let socket = null;
 let myUserId = null;
