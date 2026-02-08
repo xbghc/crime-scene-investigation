@@ -9,6 +9,11 @@
     "story:dev": "pnpm --filter client story:dev"
   },
   "devDependencies": {
-    "playwright": "^1.58.2"
+    "jsonwebtoken": "^9.0.3",
+    "playwright": "^1.58.2",
+    "socket.io-client": "^4.8.3"
+  },
+  "dependencies": {
+    "axios": "^1.13.5"
   }
 }

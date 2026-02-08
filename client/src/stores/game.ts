@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useAuthStore } from './auth'
 import type {
   GameState,
   GamePhase,
@@ -130,7 +131,14 @@ export const useGameStore = defineStore('game', () => {
     round.value = state.round
     players.value = state.players
     boards.value = state.boards
-    if (state.myRole) myRole.value = state.myRole
+    if (state.myRole) {
+      myRole.value = state.myRole
+      // Restore myPlayerId from auth store on reconnect
+      if (!myPlayerId.value) {
+        const auth = useAuthStore()
+        if (auth.userId) myPlayerId.value = auth.userId
+      }
+    }
     if (state.murdererSelection) murdererSelection.value = state.murdererSelection
     if (state.currentSolverId) currentSolverId.value = state.currentSolverId
     if (state.effectCard) effectCard.value = state.effectCard

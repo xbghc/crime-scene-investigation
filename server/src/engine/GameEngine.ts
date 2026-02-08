@@ -6,6 +6,7 @@ import {
   ALL_SCENE_BOARDS,
 } from '../data/cards.js';
 import type { SceneBoardData } from '../data/cards.js';
+import { logger } from '../utils/logger.js';
 import {
   type GameInternalState,
   type PlayerState,
@@ -80,6 +81,12 @@ export class GameEngine {
       winner: null,
       scores: null,
     };
+  }
+
+  // Reset state completely (for server restart or initial setup)
+  resetToInitial(): void {
+    this.state = this.createInitialState();
+    this.disconnectTimers.clear();
   }
 
   // === Player Lookup Helpers ===
@@ -182,6 +189,16 @@ export class GameEngine {
     }
   }
 
+  updatePlayerNickname(userId: string, newNickname: string): OpResult {
+    const player = this.findPlayer(userId);
+    if (!player) {
+      return { ok: false, error: '玩家不存在' };
+    }
+    const oldNickname = player.nickname;
+    player.nickname = newNickname;
+    return { ok: true };
+  }
+
   private transferHostIfNeeded(departedId: string): void {
     if (this.state.hostId !== departedId) return;
 
@@ -212,12 +229,40 @@ export class GameEngine {
     // In a face-to-face scenario, players frequently lock their phones
     // during discussion. Keep their status as 'disconnected' (not 'dead')
     // so they can reconnect at any time. Never auto-end the game.
+
+    // Host transfers faster (5s) to prevent game lockup
+    const isHost = this.state.hostId === userId;
+    const timeout = isHost ? 5000 : RECONNECT_TIMEOUT_MS;
+
     const timer = setTimeout(() => {
       this.disconnectTimers.delete(userId);
+      // If disconnected player is the host, transfer host to next connected player
+      if (this.state.hostId === userId) {
+        this.transferHostToConnected();
+      }
       this.broadcastRoomState();
-    }, RECONNECT_TIMEOUT_MS);
+    }, timeout);
 
     this.disconnectTimers.set(userId, timer);
+  }
+
+  private transferHostToConnected(): void {
+    const connected = this.state.players.find(
+      p => p.socketId !== null && p.id !== this.state.hostId
+    );
+    if (!connected) return;
+
+    // Remove host flag from old host
+    const oldHost = this.findPlayer(this.state.hostId!);
+    if (oldHost) oldHost.isHost = false;
+
+    connected.isHost = true;
+    this.state.hostId = connected.id;
+
+    this.emitToPlayer(connected, 'system_message', {
+      content: '你已成为新房主',
+      type: 'info',
+    });
   }
 
   // === Game Initialization ===
@@ -232,11 +277,27 @@ export class GameEngine {
   }
 
   startGame(): void {
+    logger.game('GAME', `=== GAME STARTING ===`, { playerCount: this.state.players.length });
     this.state.roomStatus = 'playing';
     this.assignRoles();
+    logger.game('ROLES', `Roles assigned`, {
+      roles: this.state.players.map(p => ({ id: p.id, nickname: p.nickname, role: p.role }))
+    });
     this.initDecks();
     this.dealCards();
+    logger.game('CARDS', `Cards dealt to players`, {
+      playerCards: this.state.players.filter(p => p.role !== 'witness').map(p => ({
+        id: p.id,
+        nickname: p.nickname,
+        meansCount: p.meansCards.length,
+        clueCount: p.clueCards.length
+      }))
+    });
     this.setupBoards();
+    logger.game('BOARDS', `Scene boards setup`, {
+      activeBoardCount: this.state.activeBoards.length,
+      poolBoardCount: this.state.sceneBoardPool.length
+    });
     this.state.phase = 'role-reveal';
     this.emitGameStarted();
 
@@ -319,6 +380,10 @@ export class GameEngine {
   // === Night Murder Phase ===
 
   private transitionToNightMurder(): void {
+    logger.game('PHASE', `=== PHASE TRANSITION: night-murder ===`, {
+      from: this.state.phase,
+      to: 'night-murder'
+    });
     this.state.phase = 'night-murder';
 
     this.io.emit('phase_change', { phase: 'night-murder' });
@@ -388,6 +453,11 @@ export class GameEngine {
   // === Witness Accusation Phase ===
 
   private transitionToWitnessAccuse(): void {
+    logger.game('PHASE', `=== PHASE TRANSITION: witness-accuse ===`, {
+      from: this.state.phase,
+      to: 'witness-accuse',
+      solution: this.state.solution
+    });
     this.state.phase = 'witness-accuse';
     this.io.emit('phase_change', { phase: 'witness-accuse' });
     this.io.emit('boards_revealed', { boards: this.getPublicBoards() });
@@ -453,11 +523,17 @@ export class GameEngine {
       this.state.blackoutClearsAfterPhase = null;
       this.io.emit('blackout_end', {});
       this.io.emit('system_message', { content: '电力恢复，场景板重新显示', type: 'info' });
+      logger.game('EFFECT', `Blackout cleared`, { phase });
     }
 
+    const roundNum = phase === 'discussion-1' ? 1 : phase === 'discussion-2' ? 2 : 3;
+    logger.game('PHASE', `=== PHASE TRANSITION: ${phase} (Round ${roundNum}) ===`, {
+      from: this.state.phase,
+      to: phase,
+      blackout: this.state.blackout
+    });
     this.state.phase = phase;
 
-    const roundNum = phase === 'discussion-1' ? 1 : phase === 'discussion-2' ? 2 : 3;
     this.io.emit('phase_change', {
       phase,
       data: {
@@ -715,6 +791,11 @@ export class GameEngine {
   // === Game End ===
 
   private endGame(winner: 'detective' | 'murderer'): void {
+    logger.game('GAME', `=== GAME OVER ===`, {
+      winner,
+      solution: this.state.solution,
+      solveAttempts: this.state.solveResults.length
+    });
     this.state.phase = 'game-over';
     this.state.winner = winner;
 
@@ -731,6 +812,16 @@ export class GameEngine {
     for (const p of this.state.players) {
       if (p.role) roles[p.id] = p.role;
     }
+
+    logger.game('GAME', `Final scores`, {
+      winner,
+      scores: this.state.players.map(p => ({
+        id: p.id,
+        nickname: p.nickname,
+        role: p.role,
+        score: scores[p.id]
+      }))
+    });
 
     this.io.emit('game_over', {
       winner,

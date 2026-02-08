@@ -29,11 +29,17 @@ const accompliceDecided = ref(false)
 const selectedOldBoardId = ref<string | null>(null)
 const selectedNewBoardId = ref<string | null>(null)
 const selectedOptionIndex = ref<number | null>(null)
-const selectedMarkerNumber = ref<number | null>(null)
 
 const replaceableBoards = computed(() =>
   props.boards.filter(b => b.type !== 'cause')
 )
+
+// Get marker number from old board position
+const oldBoardMarkerNumber = computed(() => {
+  if (!selectedOldBoardId.value) return null
+  const index = props.boards.findIndex(b => b.id === selectedOldBoardId.value)
+  return index >= 0 ? index + 1 : null
+})
 
 function handleAccompliceKeep() {
   accompliceDecided.value = true
@@ -56,13 +62,17 @@ function handleNewBoardOption(boardId: string, optionIndex: number) {
 }
 
 function handleConfirmReplace() {
-  if (selectedOldBoardId.value && selectedNewBoardId.value && selectedOptionIndex.value !== null && selectedMarkerNumber.value !== null) {
+  if (selectedOldBoardId.value && selectedNewBoardId.value && selectedOptionIndex.value !== null && oldBoardMarkerNumber.value !== null) {
     emit('witness-replace', {
       oldBoardId: selectedOldBoardId.value,
       newBoardId: selectedNewBoardId.value,
       optionIndex: selectedOptionIndex.value,
-      markerNumber: selectedMarkerNumber.value,
+      markerNumber: oldBoardMarkerNumber.value,
     })
+    // Reset selection state for next replacement
+    selectedOldBoardId.value = null
+    selectedNewBoardId.value = null
+    selectedOptionIndex.value = null
   }
 }
 </script>
@@ -157,28 +167,12 @@ function handleConfirmReplace() {
           />
         </div>
 
-        <!-- Marker number selection -->
-        <div v-if="selectedOptionIndex !== null" class="advance__marker-pick">
-          <span class="advance__select-label">选择选项物编号：</span>
-          <div class="advance__marker-btns">
-            <button
-              v-for="n in 6"
-              :key="n"
-              class="advance__marker-btn"
-              :class="{ 'advance__marker-btn--selected': selectedMarkerNumber === n }"
-              @click="selectedMarkerNumber = n"
-            >
-              {{ n }}
-            </button>
-          </div>
-        </div>
-
         <button
           class="advance__btn advance__btn--primary"
-          :disabled="!selectedOldBoardId || !selectedNewBoardId || selectedOptionIndex === null || selectedMarkerNumber === null"
+          :disabled="!selectedOldBoardId || !selectedNewBoardId || selectedOptionIndex === null"
           @click="handleConfirmReplace"
         >
-          确认替换
+          确认替换（编号 {{ oldBoardMarkerNumber }}）
         </button>
       </div>
     </template>
@@ -311,38 +305,6 @@ function handleConfirmReplace() {
 
 .advance__board-wrap--selected {
   border-color: var(--color-crimson-light);
-}
-
-.advance__marker-pick {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.advance__marker-btns {
-  display: flex;
-  gap: 8px;
-}
-
-.advance__marker-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.85rem;
-  font-weight: 700;
-  background: var(--bg-card);
-  color: var(--color-text-muted);
-  border: 2px solid var(--border-color);
-  transition: all 0.15s;
-}
-
-.advance__marker-btn--selected {
-  background: var(--color-amber);
-  color: #fff;
-  border-color: var(--color-amber);
 }
 
 .advance__waiting {

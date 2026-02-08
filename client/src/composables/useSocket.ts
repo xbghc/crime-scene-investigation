@@ -141,6 +141,10 @@ export function useSocket() {
     socket?.emit('join_room', { nickname })
   }
 
+  function updateNickname(nickname: string) {
+    socket?.emit('update_nickname', { nickname })
+  }
+
   function getSocket(): Socket | null {
     return socket
   }
@@ -200,6 +204,7 @@ export function useSocket() {
     connect,
     disconnect,
     joinRoom,
+    updateNickname,
     getSocket,
     startGame,
     murdererSelect,
@@ -329,6 +334,8 @@ function setupGameEventHandlers(sock: Socket) {
         ? { optionIndex: data.optionIndex, markerNumber: data.markerNumber }
         : undefined,
     })
+    // Remove used board from newBoards
+    gameStore.setNewBoards(gameStore.newBoards.filter(b => b.id !== data.newBoard.id))
   })
 
   sock.on('effect_card', (data: EffectCardPayload) => {

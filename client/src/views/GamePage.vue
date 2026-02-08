@@ -47,6 +47,7 @@ const showEffectCard = ref(false)
 const showSolveResult = ref(false)
 const showPhaseChange = ref(false)
 const phaseChangeMessage = ref('')
+const showResetConfirm = ref(false)
 
 onMounted(() => {
   connect()
@@ -82,6 +83,7 @@ watch(() => game.phase, (phase, oldPhase) => {
   if (msg && oldPhase !== 'waiting') {
     phaseChangeMessage.value = msg
     showPhaseChange.value = true
+    setTimeout(() => { showPhaseChange.value = false }, 3000)
   }
 })
 
@@ -245,12 +247,22 @@ function handleToastDismiss() {
             <span class="material-symbols-outlined game-layout__phase-icon">{{ game.phaseIcon }}</span>
             <span>{{ game.phaseLabel }}</span>
           </div>
-          <div v-if="game.myRole" class="game-layout__role">
-            <RoleBadge :role="game.myRole" show-label />
-            <span v-if="game.isWitness" class="game-layout__mute-tag">
-              <span class="material-symbols-outlined" style="font-size: 14px">volume_off</span>
-              禁言
-            </span>
+          <div class="game-layout__header-right">
+            <div v-if="game.myRole" class="game-layout__role">
+              <RoleBadge :role="game.myRole" show-label />
+              <span v-if="game.isWitness" class="game-layout__mute-tag">
+                <span class="material-symbols-outlined" style="font-size: 14px">volume_off</span>
+                禁言
+              </span>
+            </div>
+            <button
+              v-if="isHost && game.phase !== 'game-over'"
+              class="game-layout__reset-btn"
+              title="重置游戏"
+              @click="showResetConfirm = true"
+            >
+              <span class="material-symbols-outlined" style="font-size: 18px">restart_alt</span>
+            </button>
           </div>
         </header>
 
@@ -395,6 +407,22 @@ function handleToastDismiss() {
       </template>
     </BaseModal>
 
+    <!-- Reset game confirm modal -->
+    <BaseModal v-model="showResetConfirm" title="重置游戏">
+      <div class="reset-confirm">
+        <div class="reset-confirm__icon">
+          <span class="material-symbols-outlined" style="font-size: 2.5rem; color: var(--color-crimson-light)">warning</span>
+        </div>
+        <p class="reset-confirm__text">确定要结束当前游戏并返回大厅吗？所有玩家的游戏进度将丢失。</p>
+      </div>
+      <template #footer>
+        <div class="reset-confirm__actions">
+          <button class="reset-confirm__cancel" @click="showResetConfirm = false">取消</button>
+          <button class="reset-confirm__confirm" @click="showResetConfirm = false; resetGame()">确定重置</button>
+        </div>
+      </template>
+    </BaseModal>
+
     <!-- System message toast -->
     <BaseToast
       v-if="game.systemMessage"
@@ -453,10 +481,32 @@ function handleToastDismiss() {
   color: var(--color-amber);
 }
 
+.game-layout__header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .game-layout__role {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.game-layout__reset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(211, 47, 47, 0.1);
+  color: var(--color-crimson-light);
+  transition: background 0.15s;
+}
+
+.game-layout__reset-btn:active {
+  background: rgba(211, 47, 47, 0.25);
 }
 
 .game-layout__mute-tag {
@@ -623,6 +673,58 @@ function handleToastDismiss() {
   border-radius: 999px;
   z-index: 100;
   backdrop-filter: blur(8px);
+}
+
+/* Reset confirm */
+.reset-confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.reset-confirm__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(211, 47, 47, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reset-confirm__text {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.reset-confirm__actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.reset-confirm__cancel {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.reset-confirm__confirm {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--color-crimson-light);
+  color: #fff;
+  font-weight: 600;
 }
 
 @keyframes spin {
