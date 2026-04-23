@@ -4,7 +4,7 @@ import NightDetectiveView from './NightDetectiveView.vue'
 
 <template>
   <Story title="侦探/夜晚 · 等待" group="phases" :layout="{ type: 'single', iframe: true }">
-    <Variant title="Default">
+    <Variant title="默认">
       <NightDetectiveView />
     </Variant>
   </Story>

@@ -5,7 +5,7 @@ import { mockBoards, mockPlayers } from '../../__mocks__/gameData'
 
 <template>
   <Story title="通用/发言" group="phases" :layout="{ type: 'single', iframe: true }">
-    <Variant title="With Solve Right">
+    <Variant title="持有破案权">
       <DiscussionView
         :boards="mockBoards"
         :players="mockPlayers"
@@ -17,7 +17,7 @@ import { mockBoards, mockPlayers } from '../../__mocks__/gameData'
         @end-discussion="() => console.log('end-discussion')"
       />
     </Variant>
-    <Variant title="Solve Right Used">
+    <Variant title="已用破案权">
       <DiscussionView
         :boards="mockBoards"
         :players="mockPlayers"
@@ -29,7 +29,7 @@ import { mockBoards, mockPlayers } from '../../__mocks__/gameData'
         @end-discussion="() => console.log('end-discussion')"
       />
     </Variant>
-    <Variant title="Witness">
+    <Variant title="目击者">
       <DiscussionView
         :boards="mockBoards"
         :players="mockPlayers"
@@ -41,7 +41,7 @@ import { mockBoards, mockPlayers } from '../../__mocks__/gameData'
         @end-discussion="() => console.log('end-discussion')"
       />
     </Variant>
-    <Variant title="Blackout Active">
+    <Variant title="停电中">
       <DiscussionView
         :boards="mockBoards"
         :players="mockPlayers"

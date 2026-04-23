@@ -7,10 +7,10 @@ const murderer = mockPlayers[1]!
 
 <template>
   <Story title="目击者/夜晚 · 视角" group="phases" :layout="{ type: 'single', iframe: true }">
-    <Variant title="Waiting for Murderer">
+    <Variant title="等待凶手">
       <NightWitnessView />
     </Variant>
-    <Variant title="Murderer Has Selected">
+    <Variant title="凶手已出牌">
       <NightWitnessView
         :murderer-player="murderer"
         :selection="{ meansCardId: 'M01', clueCardId: 'C01' }"

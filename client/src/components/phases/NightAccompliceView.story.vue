@@ -7,7 +7,7 @@ const accompliceCardIds = ['M03', 'C04']
 
 <template>
   <Story title="帮凶/夜晚 · 视角" group="phases" :layout="{ type: 'single', iframe: true }">
-    <Variant title="Waiting (No Selection)">
+    <Variant title="等待（未选择）">
       <NightAccompliceView
         murderer-nickname="探长老王"
         :means-cards="mockMeansCards"
@@ -16,7 +16,7 @@ const accompliceCardIds = ['M03', 'C04']
         :time-remaining="45"
       />
     </Variant>
-    <Variant title="Means Selected">
+    <Variant title="已选手段">
       <NightAccompliceView
         murderer-nickname="探长老王"
         :means-cards="mockMeansCards"
@@ -26,7 +26,7 @@ const accompliceCardIds = ['M03', 'C04']
         :time-remaining="30"
       />
     </Variant>
-    <Variant title="Both Selected (Not Confirmed)">
+    <Variant title="均已选择（未确认）">
       <NightAccompliceView
         murderer-nickname="探长老王"
         :means-cards="mockMeansCards"
@@ -37,7 +37,7 @@ const accompliceCardIds = ['M03', 'C04']
         :time-remaining="15"
       />
     </Variant>
-    <Variant title="Confirmed">
+    <Variant title="已确认">
       <NightAccompliceView
         murderer-nickname="探长老王"
         :means-cards="mockMeansCards"

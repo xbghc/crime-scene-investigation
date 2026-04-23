@@ -13,7 +13,7 @@ const solution = { meansCardId: 'M01', clueCardId: 'C01' }
 
 <template>
   <Story title="通用/游戏结算" group="phases" :layout="{ type: 'single', iframe: true }">
-    <Variant title="Detective Wins (Host)">
+    <Variant title="侦探阵营获胜（房主视角）">
       <GameOverView
         winner="detective"
         :players="mockPlayers"
@@ -23,7 +23,7 @@ const solution = { meansCardId: 'M01', clueCardId: 'C01' }
         @play-again="() => console.log('play-again')"
       />
     </Variant>
-    <Variant title="Murderer Wins (Not Host)">
+    <Variant title="凶手阵营获胜（非房主视角）">
       <GameOverView
         winner="murderer"
         :players="mockPlayers"

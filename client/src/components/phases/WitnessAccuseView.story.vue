@@ -73,7 +73,7 @@ const fullBoards: SceneBoard[] = baseBoards.map((b, i) => ({
 
 <template>
   <Story title="目击者/指证" group="phases" :layout="{ type: 'single', iframe: true }">
-    <Variant title="Interactive (Try It)">
+    <Variant title="可交互（试试看）">
       <WitnessAccuseView
         :boards="interactiveBoards"
         :murderer-selection="selection"
@@ -83,7 +83,7 @@ const fullBoards: SceneBoard[] = baseBoards.map((b, i) => ({
         @confirm="() => console.log('confirm — boards:', JSON.stringify(interactiveBoards))"
       />
     </Variant>
-    <Variant title="Empty (No Markers)">
+    <Variant title="未标记">
       <WitnessAccuseView
         :boards="baseBoards"
         :murderer-selection="selection"
@@ -93,7 +93,7 @@ const fullBoards: SceneBoard[] = baseBoards.map((b, i) => ({
         @confirm="() => console.log('confirm')"
       />
     </Variant>
-    <Variant title="Partial Markers (3/6)">
+    <Variant title="部分标记（3/6）">
       <WitnessAccuseView
         :boards="partialBoards"
         :murderer-selection="selection"
@@ -103,7 +103,7 @@ const fullBoards: SceneBoard[] = baseBoards.map((b, i) => ({
         @confirm="() => console.log('confirm')"
       />
     </Variant>
-    <Variant title="All Markers Placed">
+    <Variant title="全部标记完成">
       <WitnessAccuseView
         :boards="fullBoards"
         :murderer-selection="selection"

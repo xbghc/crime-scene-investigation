@@ -7,7 +7,7 @@ const solvePlayers = mockPlayers.filter(p => p.hasSolveRight)
 
 <template>
   <Story title="通用/强制破案" group="phases" :layout="{ type: 'single', iframe: true }">
-    <Variant title="Waiting for Others">
+    <Variant title="等待其他人">
       <ForceSolveView
         :players="solvePlayers"
         current-turn-player-id="p4"
@@ -15,7 +15,7 @@ const solvePlayers = mockPlayers.filter(p => p.hasSolveRight)
         @solve="() => console.log('solve')"
       />
     </Variant>
-    <Variant title="My Turn">
+    <Variant title="轮到我">
       <ForceSolveView
         :players="solvePlayers"
         current-turn-player-id="p5"

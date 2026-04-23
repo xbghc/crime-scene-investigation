@@ -19,7 +19,7 @@ const newBoards: SceneBoard[] = [
 
 <template>
   <Story title="通用/推进" group="phases" :layout="{ type: 'single', iframe: true }">
-    <Variant title="Accomplice Decision (Advance 1)">
+    <Variant title="帮凶抉择（推进 1）">
       <AdvancePhaseView
         :boards="mockBoards"
         :new-boards="newBoards"
@@ -31,7 +31,7 @@ const newBoards: SceneBoard[] = [
         @witness-replace="(p) => console.log('witness-replace:', p)"
       />
     </Variant>
-    <Variant title="Witness Board Replacement (Advance 2)">
+    <Variant title="目击者换板（推进 2）">
       <AdvancePhaseView
         :boards="mockBoards"
         :new-boards="newBoards"
@@ -42,7 +42,7 @@ const newBoards: SceneBoard[] = [
         @witness-replace="(p) => console.log('witness-replace:', p)"
       />
     </Variant>
-    <Variant title="Detective Waiting">
+    <Variant title="侦探等待">
       <AdvancePhaseView
         :boards="mockBoards"
         :new-boards="[]"
