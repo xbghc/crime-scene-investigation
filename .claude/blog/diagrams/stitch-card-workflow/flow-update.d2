@@ -1,0 +1,16 @@
+shape: sequence_diagram
+
+dev: 我
+design: cards-stitch.ts
+cli: pnpm card:*
+stitch: Stitch
+assets: public/assets/
+
+dev -> design: 改 M005.prompt (风格调整)
+dev -> cli: card:design M005 --regenerate
+cli -> stitch: edit_screens(existing screen)
+stitch -> cli: updated screen
+dev -> stitch: 审阅
+dev -> design: status=approved (或 draft 继续迭代)
+dev -> cli: card:fetch M005
+cli -> assets: 覆盖 means/M005.png

@@ -6,6 +6,8 @@ dist/
 .lostpixel/current/
 .lostpixel/difference/
 e2e/flags/
+.venv/
+.claude/settings.local.json
 
 # Playwright MCP 缓存（控制台日志等）
 .playwright-mcp/

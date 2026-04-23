@@ -1,0 +1,22 @@
+shape: sequence_diagram
+
+dev: 我
+server: server/cards.ts
+design: cards-stitch.ts
+cli: pnpm card:*
+stitch: Stitch
+assets: public/assets/
+
+dev -> server: 在 meansNames 末尾加 "榴莲"
+dev -> design: 给 M091 写 prompt + theme
+dev -> cli: card:design M091
+cli -> stitch: generate_screen_from_text(prompt)
+stitch -> cli: screen id
+cli -> dev: 预览 URL
+dev -> stitch: 在网站上选/微调变体
+dev -> design: 把选中的 screen id 写回 + status=approved
+dev -> cli: card:fetch M091
+cli -> stitch: get_screen(id)
+cli -> assets: 下载并写 means/M091.png
+dev -> cli: card:verify
+cli -> dev: ✅ 一致
