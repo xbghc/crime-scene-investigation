@@ -5,7 +5,7 @@ import { mockBoards, mockPlayers } from '../../__mocks__/gameData'
 
 <template>
   <Story title="通用/发言" group="phases" :layout="{ type: 'single', iframe: true }">
-    <Variant title="Round 1 - Detective (Can Solve)">
+    <Variant title="With Solve Right">
       <DiscussionView
         :boards="mockBoards"
         :players="mockPlayers"
@@ -17,7 +17,7 @@ import { mockBoards, mockPlayers } from '../../__mocks__/gameData'
         @end-discussion="() => console.log('end-discussion')"
       />
     </Variant>
-    <Variant title="Round 2 - Detective (No Solve Right)">
+    <Variant title="Solve Right Used">
       <DiscussionView
         :boards="mockBoards"
         :players="mockPlayers"
@@ -29,7 +29,7 @@ import { mockBoards, mockPlayers } from '../../__mocks__/gameData'
         @end-discussion="() => console.log('end-discussion')"
       />
     </Variant>
-    <Variant title="Round 3 - Witness (End Discussion Button)">
+    <Variant title="Witness">
       <DiscussionView
         :boards="mockBoards"
         :players="mockPlayers"
