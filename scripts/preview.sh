@@ -60,7 +60,7 @@ echo "---"
 # and print the token-appended version.
 cloudflared tunnel --url "http://localhost:${PORT}" 2>&1 | awk -v tok="$TOKEN" -v path="$SLUG_PATH" '
   {
-    print
+    print; fflush()
     if (match($0, /https:\/\/[a-z0-9-]+\.trycloudflare\.com/)) {
       url = substr($0, RSTART, RLENGTH)
       if (!printed) {
@@ -68,6 +68,7 @@ cloudflared tunnel --url "http://localhost:${PORT}" 2>&1 | awk -v tok="$TOKEN" -
         print "=== preview URL (with token) ==="
         print url "/" path "?t=" tok
         print "================================"
+        fflush()
         printed = 1
       }
     }

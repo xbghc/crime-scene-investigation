@@ -7,8 +7,7 @@ source: 权威清单 {
 
 tools: 工具 {
   cli: pnpm card:* 命令
-  stitch: Stitch (MCP + 网站)
-  exporter: Playwright 导出器
+  stitch: Stitch MCP
 }
 
 sink: 消费端 {
@@ -17,10 +16,10 @@ sink: 消费端 {
 }
 
 source.server_manifest -> tools.cli: 读 id/name
-source.design_manifest -> tools.cli: 读 prompt / screen id
-tools.cli -> tools.stitch: 生成或取 screen
-tools.cli -> tools.exporter: 触发 PNG 下载
-tools.exporter -> sink.assets: 写入 <ID>.png
-sink.assets -> sink.client: 按 BASE_URL 加载
+source.design_manifest -> tools.cli: 读 prompt / screen name
+tools.cli -> tools.stitch: generate_screen_from_text / get_screen
+tools.stitch -> tools.cli: screen name + screenshot.downloadUrl
+tools.cli -> sink.assets: curl 下载到 <ID>.png
 
 source.server_manifest -> sink.client: 定义 ID / 名字（构建时）
+sink.assets -> sink.client: 按 BASE_URL 加载
