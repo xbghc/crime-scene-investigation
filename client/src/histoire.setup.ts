@@ -6,10 +6,7 @@ import './assets/main.css'
 export const setupVue3 = defineSetupVue3(({ app }) => {
   app.use(createPinia())
 
-  // @histoire/plugin-vue 在挂载 story 前会预先注册一个 stub 的 RouterLink；
-  // 之后再 app.use(vue-router) 会因 app.component('RouterLink', ...) 重复注册
-  // 而触发 Vue 的 "has already been registered" 警告。先移除 stub 让真实组件
-  // 干净接管。
+  /* 先移除 @histoire/plugin-vue 预注册的 stub RouterLink，避免 app.use(router) 重复注册触发 Vue 警告。 */
   const components = (app as unknown as { _context: { components: Record<string, unknown> } })._context.components
   delete components.RouterLink
   delete components.RouterView
