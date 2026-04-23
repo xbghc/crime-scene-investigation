@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import {
+  getMeansCardImage,
+  getClueCardImage,
+  getEffectCardImage,
+  getBoardImageByFile,
+} from '../../types/stitch-cards'
+
 // 手段卡名称（取前 20 张展示）
 const meansCards = [
   { id: 'M001', name: '刀' }, { id: 'M002', name: '斧头' }, { id: 'M003', name: '锤子' },
@@ -75,7 +82,7 @@ const sceneBoards = [
         <div class="card-grid">
           <div v-for="card in meansCards" :key="card.id" class="card-item">
             <img
-              :src="`/assets/cards/means/${card.id}.png`"
+              :src="getMeansCardImage(card.id)"
               :alt="card.name"
               class="card-img"
               loading="lazy"
@@ -94,7 +101,7 @@ const sceneBoards = [
         <div class="card-grid">
           <div v-for="card in clueCards" :key="card.id" class="card-item">
             <img
-              :src="`/assets/cards/clues/${card.id}.png`"
+              :src="getClueCardImage(card.id)"
               :alt="card.name"
               class="card-img"
               loading="lazy"
@@ -113,7 +120,7 @@ const sceneBoards = [
         <div class="card-grid">
           <div v-for="card in effectCards" :key="card.id" class="card-item">
             <img
-              :src="`/assets/cards/effects/${card.id}.png`"
+              :src="getEffectCardImage(card.id)"
               :alt="card.name"
               class="card-img"
               loading="lazy"
@@ -132,7 +139,7 @@ const sceneBoards = [
         <div class="board-grid">
           <div v-for="board in sceneBoards" :key="board.file" class="board-item">
             <img
-              :src="`/assets/cards/boards/${board.file}`"
+              :src="getBoardImageByFile(board.file)"
               :alt="board.name"
               class="board-img"
               loading="lazy"
@@ -151,21 +158,21 @@ const sceneBoards = [
         <h3 class="section-title" style="color: #dc2626;">手段卡 (20/90)</h3>
         <div class="card-grid card-grid--small">
           <div v-for="card in meansCards" :key="card.id" class="card-item">
-            <img :src="`/assets/cards/means/${card.id}.png`" :alt="card.name" class="card-img" loading="lazy" />
+            <img :src="getMeansCardImage(card.id)" :alt="card.name" class="card-img" loading="lazy" />
           </div>
         </div>
 
         <h3 class="section-title" style="color: #3b82f6;">线索卡 (20/83)</h3>
         <div class="card-grid card-grid--small">
           <div v-for="card in clueCards" :key="card.id" class="card-item">
-            <img :src="`/assets/cards/clues/${card.id}.png`" :alt="card.name" class="card-img" loading="lazy" />
+            <img :src="getClueCardImage(card.id)" :alt="card.name" class="card-img" loading="lazy" />
           </div>
         </div>
 
         <h3 class="section-title" style="color: #8b5cf6;">效果卡 (10/10)</h3>
         <div class="card-grid card-grid--small">
           <div v-for="card in effectCards" :key="card.id" class="card-item">
-            <img :src="`/assets/cards/effects/${card.id}.png`" :alt="card.name" class="card-img" loading="lazy" />
+            <img :src="getEffectCardImage(card.id)" :alt="card.name" class="card-img" loading="lazy" />
           </div>
         </div>
       </div>

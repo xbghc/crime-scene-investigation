@@ -3,21 +3,26 @@
  * 基于实际生成的 PNG 文件命名
  */
 
+// Vite 在构建时会把 BASE_URL 替换成配置的 base（以 `/` 结尾）；
+// 这样 app 在根路径 `/` 运行、Histoire 在 `/crime-scene-investigation/` 子路径
+// 运行时，都能拿到正确的资源前缀。
+const BASE = import.meta.env.BASE_URL
+
 // === 卡片图片 URL 函数 ===
 
 /** 手段卡图片 (M001.png ~ M090.png) */
 export function getMeansCardImage(id: string): string {
-  return `/assets/cards/means/${id}.png`
+  return `${BASE}assets/cards/means/${id}.png`
 }
 
 /** 线索卡图片 (C001.png ~ C220.png) */
 export function getClueCardImage(id: string): string {
-  return `/assets/cards/clues/${id}.png`
+  return `${BASE}assets/cards/clues/${id}.png`
 }
 
 /** 效果卡图片 (E01.png ~ E10.png) */
 export function getEffectCardImage(id: string): string {
-  return `/assets/cards/effects/${id}.png`
+  return `${BASE}assets/cards/effects/${id}.png`
 }
 
 /** 通用：根据卡片类型和 ID 获取图片 */
@@ -28,9 +33,9 @@ export function getCardImage(type: 'means' | 'clue', id: string): string {
 // === 卡背图片 ===
 
 export const CARD_BACKS = {
-  means: '/assets/cards/means/means-card-back.png',
-  clue: '/assets/cards/clues/clue-card-back.png',
-  effect: '/assets/cards/effects/effect-card-back.png',
+  means: `${BASE}assets/cards/means/means-card-back.png`,
+  clue: `${BASE}assets/cards/clues/clue-card-back.png`,
+  effect: `${BASE}assets/cards/effects/effect-card-back.png`,
 } as const
 
 // === 场景板图片 ===
@@ -72,5 +77,10 @@ const BOARD_FILE_MAP: Record<string, string> = {
 /** 场景板图片 */
 export function getBoardImage(id: string): string | undefined {
   const file = BOARD_FILE_MAP[id]
-  return file ? `/assets/cards/boards/${file}` : undefined
+  return file ? `${BASE}assets/cards/boards/${file}` : undefined
+}
+
+/** 场景板图片（按文件名） */
+export function getBoardImageByFile(file: string): string {
+  return `${BASE}assets/cards/boards/${file}`
 }
