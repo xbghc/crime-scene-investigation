@@ -5,7 +5,7 @@ import NightMurdererView from './NightMurdererView.vue'
 <template>
   <Story title="凶手/夜晚 · 选牌" group="phases" :layout="{ type: 'single', iframe: true }">
     <Variant
-      title="Default"
+      title="默认"
       :init-state="() => ({
         meansCards: [
           { id: 'm1', name: 'Revolver' },
