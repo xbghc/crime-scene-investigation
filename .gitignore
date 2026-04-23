@@ -6,3 +6,51 @@ dist/
 .lostpixel/current/
 .lostpixel/difference/
 e2e/flags/
+
+# Playwright MCP 缓存（控制台日志等）
+.playwright-mcp/
+
+# 根目录的测试截图 / 调试截图
+/*.png
+
+# 根目录的一次性调试 / 测试脚本
+/player*.mjs
+/player*.js
+/test-*.js
+/test-*.mjs
+/test-player.mjs
+/agent-player-template.js
+
+# Stitch 导出相关的一次性工具和临时产物
+/check-stitch-progress.sh
+/download-stitch-designs.mjs
+/export-stitch-designs.mjs
+/generate-all-cards-types.mjs
+/generate-placeholder-pngs.mjs
+/monitor-export-progress.mjs
+/verify-all-exports.mjs
+/stitch-progress.json
+/stitch-export-config.json
+/stitch-export-config-full.json
+/export-verification-results.json
+
+# 根目录的临时截图目录
+/p2-screenshots/
+/player*-screenshots/
+/player*-screenshots-*/
+
+# 临时 / 过程性文档
+/AGENT_QUICKSTART.md
+/BULK-EXPORT-GUIDE.md
+/DOWNLOAD-STITCH-DESIGNS-MANUAL.md
+/STITCH-EXPORT-GUIDE.md
+/STITCH-EXPORT-INSTRUCTIONS.md
+/STITCH-EXPORT-STATUS.md
+
+# e2e 目录下的调试产物（保留 player.mjs / debug-single.mjs 这两个正式脚本）
+e2e/*.png
+e2e/player[0-9]*.mjs
+e2e/player[0-9]*-*.mjs
+e2e/player2-game/
+e2e/player[0-9]-screenshots/
+e2e/player[0-9]-game-screenshots/
