@@ -2,17 +2,17 @@ shape: sequence_diagram
 
 dev: 我
 design: cards-stitch.ts
-cli: pnpm card:*
+claude: Claude 会话
 stitch: Stitch MCP
 assets: public/assets/
 
 dev -> design: 改 M005.prompt (风格调整)
-dev -> cli: card:design M005 --regenerate
-cli -> stitch: edit_screens(existing screenName, prompt)
-stitch -> cli: 更新后的 screen
+dev -> claude: /card-design M005
+claude -> stitch: edit_screens(existing screenName, prompt)
+stitch -> claude: 更新后的 screen
 dev -> stitch: 审阅
-dev -> design: status=approved (或保留 draft 继续迭代)
-dev -> cli: card:fetch M005
-cli -> stitch: get_screen(screenName)
-stitch -> cli: 新的 screenshot.downloadUrl
-cli -> assets: 覆盖 means/M005.png
+dev -> design: status=approved
+dev -> claude: /card-fetch M005
+claude -> stitch: get_screen(screenName)
+stitch -> claude: 新的 screenshot.downloadUrl
+claude -> assets: 覆盖 means/M005.png

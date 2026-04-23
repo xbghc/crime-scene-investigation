@@ -3,21 +3,22 @@ shape: sequence_diagram
 dev: 我
 server: server/cards.ts
 design: cards-stitch.ts
-cli: pnpm card:*
+claude: Claude 会话
 stitch: Stitch MCP
 assets: public/assets/
+verify: pnpm card:verify
 
 dev -> server: 在 meansNames 末尾加 "榴莲"
 dev -> design: 给 M091 写 prompt + theme
-dev -> cli: card:design M091
-cli -> stitch: generate_screen_from_text(meansProjectId, prompt)
-stitch -> cli: screen name (projects/X/screens/Y)
-cli -> design: 写回 screenName，status=draft
-dev -> stitch: 在 Stitch 网站上审阅（按 screen link）
+dev -> claude: /card-design M091
+claude -> stitch: generate_screen_from_text(meansProjectId, prompt)
+stitch -> claude: screen name (projects/X/screens/Y)
+claude -> design: 写回 screenName，status=draft
+dev -> stitch: 在 Stitch 网站上审阅
 dev -> design: 手动改 status=approved
-dev -> cli: card:fetch M091
-cli -> stitch: get_screen(screenName)
-stitch -> cli: screenshot.downloadUrl (Google CDN)
-cli -> assets: curl 下载到 means/M091.png
-dev -> cli: card:verify
-cli -> dev: ✅ 一致
+dev -> claude: /card-fetch M091
+claude -> stitch: get_screen(screenName)
+stitch -> claude: screenshot.downloadUrl (Google CDN)
+claude -> assets: 下载到 means/M091.png
+dev -> verify: pnpm card:verify
+verify -> dev: ✅ 一致

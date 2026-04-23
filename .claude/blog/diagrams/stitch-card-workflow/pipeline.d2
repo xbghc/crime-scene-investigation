@@ -5,8 +5,12 @@ source: 权威清单 {
   design_manifest: design/cards-stitch.ts { shape: document }
 }
 
-tools: 工具 {
-  cli: pnpm card:* 命令
+runners: 执行者 {
+  claude: Claude 会话 (/card-design, /card-fetch)
+  verify: pnpm card:verify 脚本
+}
+
+external: 外部 {
   stitch: Stitch MCP
 }
 
@@ -15,11 +19,15 @@ sink: 消费端 {
   client: 客户端（app + Histoire）
 }
 
-source.server_manifest -> tools.cli: 读 id/name
-source.design_manifest -> tools.cli: 读 prompt / screen name
-tools.cli -> tools.stitch: generate_screen_from_text / get_screen
-tools.stitch -> tools.cli: screen name + screenshot.downloadUrl
-tools.cli -> sink.assets: curl 下载到 <ID>.png
+source.server_manifest -> runners.claude: 读 id/name
+source.design_manifest -> runners.claude: 读 prompt / screen name
+runners.claude -> external.stitch: generate / get_screen
+external.stitch -> runners.claude: screen name + downloadUrl
+runners.claude -> sink.assets: 写 <ID>.png
+runners.claude -> source.design_manifest: 写回 screen name
+
+source.server_manifest -> runners.verify: 读 id 列表
+sink.assets -> runners.verify: 扫 PNG 文件
 
 source.server_manifest -> sink.client: 定义 ID / 名字（构建时）
 sink.assets -> sink.client: 按 BASE_URL 加载
