@@ -53,43 +53,6 @@
 
 ![pipeline](./diagrams/stitch-card-workflow/pipeline.svg)
 
-```d2
-# diagrams/stitch-card-workflow/pipeline.d2
-vars: { d2-config: { layout-engine: elk } }
-
-source: 权威清单 {
-  server_manifest: server/src/data/cards.ts { shape: document }
-  design_manifest: design/cards-stitch.ts { shape: document }
-}
-
-runners: 执行者 {
-  claude: Claude 会话 (/card-design, /card-fetch)
-  verify: pnpm card:verify 脚本
-}
-
-external: 外部 {
-  stitch: Stitch MCP
-}
-
-sink: 消费端 {
-  assets: client/public/assets/cards/ { shape: cylinder }
-  client: 客户端（app + Histoire）
-}
-
-source.server_manifest -> runners.claude: 读 id/name
-source.design_manifest -> runners.claude: 读 prompt / screen name
-runners.claude -> external.stitch: generate / get_screen
-external.stitch -> runners.claude: screen name + downloadUrl
-runners.claude -> sink.assets: 写 <ID>.png
-runners.claude -> source.design_manifest: 写回 screen name
-
-source.server_manifest -> runners.verify: 读 id 列表
-sink.assets -> runners.verify: 扫 PNG 文件
-
-source.server_manifest -> sink.client: 定义 ID / 名字（构建时）
-sink.assets -> sink.client: 按 BASE_URL 加载
-```
-
 两个 manifest 的分工：
 
 - `server/src/data/cards.ts` 保留现状，**继续管 ID 和名字**。这是游戏逻辑需要的信息，客户端/测试/引擎都靠它。
@@ -120,59 +83,9 @@ Stitch 项目结构我想改成**一类一个 project**（`Means Cards` / `Clue 
 
 ![flow-add](./diagrams/stitch-card-workflow/flow-add.svg)
 
-```d2
-# diagrams/stitch-card-workflow/flow-add.d2
-shape: sequence_diagram
-
-dev: 我
-server: server/cards.ts
-design: cards-stitch.ts
-claude: Claude 会话
-stitch: Stitch MCP
-assets: public/assets/
-verify: pnpm card:verify
-
-dev -> server: 在 meansNames 末尾加 "榴莲"
-dev -> design: 给 M091 写 prompt + theme
-dev -> claude: /card-design M091
-claude -> stitch: generate_screen_from_text(meansProjectId, prompt)
-stitch -> claude: screen name (projects/X/screens/Y)
-claude -> design: 写回 screenName，status=draft
-dev -> stitch: 在 Stitch 网站上审阅
-dev -> design: 手动改 status=approved
-dev -> claude: /card-fetch M091
-claude -> stitch: get_screen(screenName)
-stitch -> claude: screenshot.downloadUrl (Google CDN)
-claude -> assets: 下载到 means/M091.png
-dev -> verify: pnpm card:verify
-verify -> dev: ✅ 一致
-```
-
 **更新一张卡的图案**（已经 approved 过，但我不满意）：
 
 ![flow-update](./diagrams/stitch-card-workflow/flow-update.svg)
-
-```d2
-# diagrams/stitch-card-workflow/flow-update.d2
-shape: sequence_diagram
-
-dev: 我
-design: cards-stitch.ts
-claude: Claude 会话
-stitch: Stitch MCP
-assets: public/assets/
-
-dev -> design: 改 M005.prompt (风格调整)
-dev -> claude: /card-design M005
-claude -> stitch: edit_screens(existing screenName, prompt)
-stitch -> claude: 更新后的 screen
-dev -> stitch: 审阅
-dev -> design: status=approved
-dev -> claude: /card-fetch M005
-claude -> stitch: get_screen(screenName)
-stitch -> claude: 新的 screenshot.downloadUrl
-claude -> assets: 覆盖 means/M005.png
-```
 
 更新和新增的区别只在第一步：新增是 `generate_screen_from_text` 开新 screen（存到对应类型的 project 下），更新是 `edit_screens` 复用老 screen——到底走哪条由 skill 读 manifest 里有没有 `stitchScreenName` 自动判断，不需要额外参数。
 
