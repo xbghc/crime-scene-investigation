@@ -3,11 +3,15 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Histoire 作为静态文档站部署，不需要 Service Worker；其打包出的 vendor
+// bundle 又超过了 workbox 的 2 MiB precache 上限，因此 histoire build 时跳过 PWA。
+const isHistoire = !!process.env.HISTOIRE
+
 export default defineConfig({
   plugins: [
     vue(),
     tailwindcss(),
-    VitePWA({
+    !isHistoire && VitePWA({
       registerType: 'autoUpdate',
       manifest: {
         name: '犯罪现场',
