@@ -2,7 +2,7 @@
 import NightAccompliceView from './NightAccompliceView.vue'
 import { mockMeansCards, mockClueCards } from '../../__mocks__/gameData'
 
-const accompliceCardIds = ['M03', 'C04']
+const accompliceCardIds = ['M003', 'C004']
 </script>
 
 <template>
@@ -22,7 +22,7 @@ const accompliceCardIds = ['M03', 'C04']
         :means-cards="mockMeansCards"
         :clue-cards="mockClueCards"
         :accomplice-card-ids="accompliceCardIds"
-        selected-means-id="M02"
+        selected-means-id="M002"
         :time-remaining="30"
       />
     </Variant>
@@ -32,8 +32,8 @@ const accompliceCardIds = ['M03', 'C04']
         :means-cards="mockMeansCards"
         :clue-cards="mockClueCards"
         :accomplice-card-ids="accompliceCardIds"
-        selected-means-id="M02"
-        selected-clue-id="C03"
+        selected-means-id="M002"
+        selected-clue-id="C003"
         :time-remaining="15"
       />
     </Variant>
@@ -43,8 +43,8 @@ const accompliceCardIds = ['M03', 'C04']
         :means-cards="mockMeansCards"
         :clue-cards="mockClueCards"
         :accomplice-card-ids="accompliceCardIds"
-        selected-means-id="M02"
-        selected-clue-id="C03"
+        selected-means-id="M002"
+        selected-clue-id="C003"
         :confirmed="true"
         :time-remaining="10"
       />

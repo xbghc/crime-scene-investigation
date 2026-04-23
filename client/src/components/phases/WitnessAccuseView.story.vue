@@ -5,7 +5,7 @@ import { mockPlayers } from '../../__mocks__/gameData'
 import type { SceneBoard } from '../../types'
 
 const murderer = mockPlayers[1]!
-const selection = { meansCardId: 'M01', clueCardId: 'C01' }
+const selection = { meansCardId: 'M001', clueCardId: 'C001' }
 
 const baseBoards: SceneBoard[] = [
   {

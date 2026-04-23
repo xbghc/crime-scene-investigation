@@ -8,7 +8,7 @@ const scores: Record<string, number> = {
 const murdererWinScores: Record<string, number> = {
   p1: 0, p2: 3, p3: 3, p4: 0, p5: 0, p6: 0, p7: 0,
 }
-const solution = { meansCardId: 'M01', clueCardId: 'C01' }
+const solution = { meansCardId: 'M001', clueCardId: 'C001' }
 </script>
 
 <template>
