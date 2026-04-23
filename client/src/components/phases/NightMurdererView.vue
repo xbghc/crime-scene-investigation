@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { MeansCard, ClueCard } from '../../types'
+import { getMeansCardImage, getClueCardImage } from '../../types/stitch-cards'
 
 interface Props {
   meansCards: MeansCard[]
@@ -109,7 +110,7 @@ function isAccomplice(id: string) {
           </div>
           <!-- Card body -->
           <div class="murder-card__body">
-            <span class="material-symbols-outlined murder-card__icon murder-card__icon--means">destruction</span>
+            <img :src="getMeansCardImage(card.id)" :alt="card.name" class="murder-card__card-img" loading="lazy" />
             <p class="murder-card__name">{{ card.name }}</p>
           </div>
           <!-- Selected tag -->
@@ -157,7 +158,7 @@ function isAccomplice(id: string) {
             <span>Accomplice</span>
           </div>
           <div class="murder-card__body">
-            <span class="material-symbols-outlined murder-card__icon murder-card__icon--clue">search</span>
+            <img :src="getClueCardImage(card.id)" :alt="card.name" class="murder-card__card-img" loading="lazy" />
             <p class="murder-card__name">{{ card.name }}</p>
           </div>
           <div v-if="selectedClueId === card.id" class="murder-card__tag murder-card__tag--clue">
@@ -440,26 +441,21 @@ function isAccomplice(id: string) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 28px 12px 20px;
-  gap: 10px;
+  padding: 8px 8px 12px;
+  gap: 6px;
 }
 
-.murder-card__icon {
-  font-size: 2rem;
-  opacity: 0.3;
+.murder-card__card-img {
+  width: 100%;
+  border-radius: 6px;
+  display: block;
+  opacity: 0.85;
+  transition: opacity 0.2s;
 }
 
-.murder-card__icon--means {
-  color: var(--color-crimson-light);
-}
-
-.murder-card__icon--clue {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.murder-card--selected-means .murder-card__icon--means,
-.murder-card--selected-clue .murder-card__icon--clue {
-  opacity: 0.6;
+.murder-card--selected-means .murder-card__card-img,
+.murder-card--selected-clue .murder-card__card-img {
+  opacity: 1;
 }
 
 .murder-card__name {

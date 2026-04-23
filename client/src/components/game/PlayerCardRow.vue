@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Player } from '../../types'
+import { getMeansCardImage, getClueCardImage } from '../../types/stitch-cards'
 
 defineProps<{
   player: Player
@@ -26,22 +27,34 @@ defineProps<{
 
     <div class="player-card-row__cards">
       <div class="player-card-row__row">
-        <span
+        <div
           v-for="card in player.meansCards"
           :key="card.id"
-          class="player-card-row__tag player-card-row__tag--means"
+          class="player-card-row__thumb player-card-row__thumb--means"
+          :title="card.name"
         >
-          {{ card.name }}
-        </span>
+          <img
+            :src="getMeansCardImage(card.id)"
+            :alt="card.name"
+            class="player-card-row__img"
+            loading="lazy"
+          />
+        </div>
       </div>
       <div class="player-card-row__row">
-        <span
+        <div
           v-for="card in player.clueCards"
           :key="card.id"
-          class="player-card-row__tag player-card-row__tag--clue"
+          class="player-card-row__thumb player-card-row__thumb--clue"
+          :title="card.name"
         >
-          {{ card.name }}
-        </span>
+          <img
+            :src="getClueCardImage(card.id)"
+            :alt="card.name"
+            class="player-card-row__img"
+            loading="lazy"
+          />
+        </div>
       </div>
     </div>
 
@@ -103,26 +116,31 @@ defineProps<{
   gap: 4px;
 }
 
-.player-card-row__tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 500;
-  white-space: nowrap;
+.player-card-row__thumb {
+  width: 36px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1.5px solid transparent;
+  transition: transform 0.15s ease;
 }
 
-.player-card-row__tag--means {
-  background: rgba(166, 28, 28, 0.15);
-  color: var(--color-crimson-light);
-  border: 1px solid rgba(166, 28, 28, 0.3);
+.player-card-row__thumb:hover {
+  transform: scale(1.15);
+  z-index: 5;
+  position: relative;
 }
 
-.player-card-row__tag--clue {
-  background: rgba(139, 148, 158, 0.1);
-  color: var(--color-text-muted);
-  border: 1px solid rgba(139, 148, 158, 0.2);
+.player-card-row__thumb--means {
+  border-color: rgba(166, 28, 28, 0.4);
+}
+
+.player-card-row__thumb--clue {
+  border-color: rgba(139, 148, 158, 0.3);
+}
+
+.player-card-row__img {
+  width: 100%;
+  display: block;
 }
 
 /* Dead overlay */

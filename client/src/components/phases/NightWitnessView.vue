@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { MurdererSelection } from '../../types'
+import { getMeansCardImage, getClueCardImage } from '../../types/stitch-cards'
 
 interface Props {
   selection?: MurdererSelection
@@ -17,6 +18,9 @@ const hasSelection = computed(() => !!props.selection?.meansCard && !!props.sele
 const selectedMeansName = computed(() => props.selection?.meansCard.name ?? '未知')
 
 const selectedClueName = computed(() => props.selection?.clueCard.name ?? '未知')
+
+const selectedMeansImage = computed(() => props.selection?.meansCard.id ? getMeansCardImage(props.selection.meansCard.id) : undefined)
+const selectedClueImage = computed(() => props.selection?.clueCard.id ? getClueCardImage(props.selection.clueCard.id) : undefined)
 </script>
 
 <template>
@@ -50,10 +54,12 @@ const selectedClueName = computed(() => props.selection?.clueCard.name ?? '未�
 
         <div class="witness-night__cards">
           <div class="witness-night__card witness-night__card--means">
+            <img v-if="selectedMeansImage" :src="selectedMeansImage" :alt="selectedMeansName" class="witness-night__card-img" />
             <span class="witness-night__card-label">手段</span>
             <span class="witness-night__card-name">{{ selectedMeansName }}</span>
           </div>
           <div class="witness-night__card witness-night__card--clue">
+            <img v-if="selectedClueImage" :src="selectedClueImage" :alt="selectedClueName" class="witness-night__card-img" />
             <span class="witness-night__card-label">线索</span>
             <span class="witness-night__card-name">{{ selectedClueName }}</span>
           </div>
@@ -186,6 +192,11 @@ const selectedClueName = computed(() => props.selection?.clueCard.name ?? '未�
 .witness-night__card--clue {
   background: rgba(139, 148, 158, 0.1);
   border: 1px solid rgba(139, 148, 158, 0.3);
+}
+
+.witness-night__card-img {
+  width: 80px;
+  border-radius: 6px;
 }
 
 .witness-night__card-label {

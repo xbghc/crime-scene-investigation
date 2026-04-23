@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SceneBoard } from '../../types'
 import { computed } from 'vue'
+import { getBoardImage } from '../../types/stitch-cards'
 
 const props = defineProps<{
   board: SceneBoard
@@ -25,6 +26,8 @@ const typeColor = computed(() => {
   }
 })
 
+const boardImageUrl = computed(() => getBoardImage(props.board.id))
+
 const typeLabel = computed(() => {
   switch (props.board.type) {
     case 'cause':
@@ -48,8 +51,16 @@ function handleSelect(optionIndex: number) {
 <template>
   <div class="scene-board" :class="{ 'scene-board--hidden': hidden }">
     <div class="scene-board__header">
-      <span class="scene-board__type" :style="{ color: typeColor }">{{ typeLabel }}</span>
-      <span class="scene-board__title">{{ board.title }}</span>
+      <img
+        v-if="boardImageUrl"
+        :src="boardImageUrl"
+        :alt="board.title"
+        class="scene-board__thumb"
+      />
+      <div class="scene-board__header-text">
+        <span class="scene-board__type" :style="{ color: typeColor }">{{ typeLabel }}</span>
+        <span class="scene-board__title">{{ board.title }}</span>
+      </div>
     </div>
 
     <div class="scene-board__grid">
@@ -93,8 +104,23 @@ function handleSelect(optionIndex: number) {
 .scene-board__header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 10px;
+}
+
+.scene-board__thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.scene-board__header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .scene-board__type {

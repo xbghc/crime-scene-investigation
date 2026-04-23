@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { MeansCard, ClueCard } from '../../types'
 import RoleBadge from '../game/RoleBadge.vue'
+import { getMeansCardImage, getClueCardImage } from '../../types/stitch-cards'
 
 interface Props {
   murdererNickname: string
@@ -94,7 +95,7 @@ function isAccomplice(id: string) {
           </div>
           <!-- Card body -->
           <div class="observe-card__body">
-            <span class="material-symbols-outlined observe-card__icon observe-card__icon--means">destruction</span>
+            <img :src="getMeansCardImage(card.id)" :alt="card.name" class="observe-card__card-img" loading="lazy" />
             <p class="observe-card__name">{{ card.name }}</p>
           </div>
           <!-- Selected tag -->
@@ -141,7 +142,7 @@ function isAccomplice(id: string) {
             <span>Mine</span>
           </div>
           <div class="observe-card__body">
-            <span class="material-symbols-outlined observe-card__icon observe-card__icon--clue">search</span>
+            <img :src="getClueCardImage(card.id)" :alt="card.name" class="observe-card__card-img" loading="lazy" />
             <p class="observe-card__name">{{ card.name }}</p>
           </div>
           <div v-if="selectedClueId === card.id" class="observe-card__tag observe-card__tag--clue">
@@ -417,26 +418,21 @@ function isAccomplice(id: string) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 28px 12px 20px;
-  gap: 10px;
+  padding: 8px 8px 12px;
+  gap: 6px;
 }
 
-.observe-card__icon {
-  font-size: 2rem;
-  opacity: 0.3;
+.observe-card__card-img {
+  width: 100%;
+  border-radius: 6px;
+  display: block;
+  opacity: 0.85;
+  transition: opacity 0.2s;
 }
 
-.observe-card__icon--means {
-  color: var(--color-role-accomplice);
-}
-
-.observe-card__icon--clue {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.observe-card--selected-means .observe-card__icon--means,
-.observe-card--selected-clue .observe-card__icon--clue {
-  opacity: 0.6;
+.observe-card--selected-means .observe-card__card-img,
+.observe-card--selected-clue .observe-card__card-img {
+  opacity: 1;
 }
 
 .observe-card__name {
