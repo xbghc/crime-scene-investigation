@@ -3,7 +3,7 @@ import RoleRevealView from './RoleRevealView.vue'
 </script>
 
 <template>
-  <Story title="身份揭示" group="phases" :layout="{ type: 'single', iframe: true }">
+  <Story title="通用/身份揭示" group="phases" :layout="{ type: 'single', iframe: true }">
     <Variant title="Detective">
       <RoleRevealView role="detective" @confirm="() => console.log('confirm')" />
     </Variant>

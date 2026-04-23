@@ -4,7 +4,7 @@ import { mockBoards, mockPlayers } from '../../__mocks__/gameData'
 </script>
 
 <template>
-  <Story title="发言阶段" group="phases" :layout="{ type: 'single', iframe: true }">
+  <Story title="通用/发言" group="phases" :layout="{ type: 'single', iframe: true }">
     <Variant title="Round 1 - Detective (Can Solve)">
       <DiscussionView
         :boards="mockBoards"

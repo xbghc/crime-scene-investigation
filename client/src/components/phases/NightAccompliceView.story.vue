@@ -6,7 +6,7 @@ const accompliceCardIds = ['M03', 'C04']
 </script>
 
 <template>
-  <Story title="夜晚 · 帮凶视角" group="phases" :layout="{ type: 'single', iframe: true }">
+  <Story title="帮凶/夜晚 · 视角" group="phases" :layout="{ type: 'single', iframe: true }">
     <Variant title="Waiting (No Selection)">
       <NightAccompliceView
         murderer-nickname="探长老王"

@@ -72,7 +72,7 @@ const fullBoards: SceneBoard[] = baseBoards.map((b, i) => ({
 </script>
 
 <template>
-  <Story title="指证阶段" group="phases" :layout="{ type: 'single', iframe: true }">
+  <Story title="目击者/指证" group="phases" :layout="{ type: 'single', iframe: true }">
     <Variant title="Interactive (Try It)">
       <WitnessAccuseView
         :boards="interactiveBoards"

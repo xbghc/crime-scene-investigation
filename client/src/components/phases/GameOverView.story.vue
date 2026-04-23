@@ -12,7 +12,7 @@ const solution = { meansCardId: 'M01', clueCardId: 'C01' }
 </script>
 
 <template>
-  <Story title="游戏结算" group="phases" :layout="{ type: 'single', iframe: true }">
+  <Story title="通用/游戏结算" group="phases" :layout="{ type: 'single', iframe: true }">
     <Variant title="Detective Wins (Host)">
       <GameOverView
         winner="detective"

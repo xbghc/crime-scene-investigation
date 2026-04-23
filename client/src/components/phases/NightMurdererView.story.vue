@@ -3,7 +3,7 @@ import NightMurdererView from './NightMurdererView.vue'
 </script>
 
 <template>
-  <Story title="夜晚 · 凶手选牌" group="phases" :layout="{ type: 'single', iframe: true }">
+  <Story title="凶手/夜晚 · 选牌" group="phases" :layout="{ type: 'single', iframe: true }">
     <Variant
       title="Default"
       :init-state="() => ({

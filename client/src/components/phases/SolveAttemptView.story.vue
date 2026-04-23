@@ -4,7 +4,7 @@ import { mockPlayers } from '../../__mocks__/gameData'
 </script>
 
 <template>
-  <Story title="破案界面" group="phases" :layout="{ type: 'single', iframe: true }">
+  <Story title="侦探/破案" group="phases" :layout="{ type: 'single', iframe: true }">
     <Variant title="Normal Solve">
       <SolveAttemptView
         :players="mockPlayers"

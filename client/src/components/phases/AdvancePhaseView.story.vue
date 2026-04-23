@@ -18,7 +18,7 @@ const newBoards: SceneBoard[] = [
 </script>
 
 <template>
-  <Story title="推进阶段" group="phases" :layout="{ type: 'single', iframe: true }">
+  <Story title="通用/推进" group="phases" :layout="{ type: 'single', iframe: true }">
     <Variant title="Accomplice Decision (Advance 1)">
       <AdvancePhaseView
         :boards="mockBoards"
