@@ -1,11 +1,16 @@
 import { defineConfig } from 'histoire'
 import { HstVue } from '@histoire/plugin-vue'
 
+// 构建部署到 https://xbghc.github.io/crime-scene-investigation/ 时需要子路径前缀；
+// histoire dev 时保持根路径。
+const isBuild = process.argv.includes('build')
+
 export default defineConfig({
   plugins: [HstVue()],
   setupFile: 'src/histoire.setup.ts',
   storyMatch: ['src/**/*.story.vue'],
   vite: {
+    base: isBuild ? '/crime-scene-investigation/' : '/',
     server: {
       port: 8031,
     },
