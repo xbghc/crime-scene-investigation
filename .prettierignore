@@ -1,0 +1,12 @@
+# Prettier 默认已遵循 .gitignore（调试脚本等无需在此重复）
+# 以下为额外不参与格式化的内容
+**/dist
+**/.histoire
+**/.lostpixel
+pnpm-lock.yaml
+assets
+client/public
+e2e
+
+# 大块手写文档不做格式化，避免无谓 churn（需要时可移除本行）
+*.md

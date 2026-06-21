@@ -6,11 +6,21 @@
     "dev": "pnpm --parallel -r run dev",
     "dev:server": "pnpm --filter server dev",
     "dev:client": "pnpm --filter client dev",
-    "story:dev": "pnpm --filter client story:dev"
+    "story:dev": "pnpm --filter client story:dev",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@eslint/compat": "^2.1.0",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.8.0",
+    "eslint": "^10.5.0",
+    "eslint-plugin-vue": "^10.9.2",
     "jsonwebtoken": "^9.0.3",
     "playwright": "^1.58.2",
+    "prettier": "^3.8.4",
     "socket.io-client": "^4.8.3"
   },
   "dependencies": {
