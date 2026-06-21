@@ -39,7 +39,9 @@ function fireEvent(eventName: string, ...args: unknown[]): void {
   const handler = getHandler(eventName)
   if (!handler) {
     const registeredEvents = mockSocket.on.mock.calls.map((c: unknown[]) => c[0])
-    throw new Error(`No handler registered for event: ${eventName}. Registered: ${registeredEvents.join(', ')}`)
+    throw new Error(
+      `No handler registered for event: ${eventName}. Registered: ${registeredEvents.join(', ')}`,
+    )
   }
   handler(...args)
 }

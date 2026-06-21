@@ -14,10 +14,12 @@ const error = ref('')
 const loading = ref(false)
 const hintHover = ref(false)
 
-function reload() { window.location.reload() }
+function reload() {
+  window.location.reload()
+}
 
 const password = computed(() => digits.value.join(''))
-const isFilled = computed(() => digits.value.every(d => d !== ''))
+const isFilled = computed(() => digits.value.every((d) => d !== ''))
 
 function focusInput(index: number) {
   nextTick(() => inputRefs.value[index]?.focus())
@@ -58,7 +60,9 @@ function handlePaste(event: ClipboardEvent) {
   event.preventDefault()
   const text = event.clipboardData?.getData('text') ?? ''
   const chars = text.replace(/\s/g, '').slice(0, digitCount).split('')
-  chars.forEach((ch, i) => { digits.value[i] = ch })
+  chars.forEach((ch, i) => {
+    digits.value[i] = ch
+  })
   // Focus the next empty or last
   const nextIndex = Math.min(chars.length, digitCount - 1)
   focusInput(nextIndex)
@@ -92,11 +96,12 @@ async function handleSubmit() {
 <template>
   <div class="vignette min-h-dvh flex flex-col items-center justify-center px-6 bg-bg-primary">
     <div class="relative z-10 w-full max-w-xs flex flex-col items-center">
-
       <!-- Top badge -->
       <div class="flex items-center gap-2 mb-8">
         <span class="material-symbols-outlined text-crimson-light text-2xl">lock</span>
-        <span class="text-crimson-light text-xs font-semibold tracking-[0.2em] uppercase">Restricted</span>
+        <span class="text-crimson-light text-xs font-semibold tracking-[0.2em] uppercase"
+          >Restricted</span
+        >
       </div>
 
       <!-- PIN Input Group: 3 + spacer + 3 -->
@@ -106,7 +111,11 @@ async function handleSubmit() {
             <!-- Spacer between group of 3 -->
             <div v-if="i === 3" class="w-2" />
             <input
-              :ref="(el) => { if (el) inputRefs[i] = el as HTMLInputElement }"
+              :ref="
+                (el) => {
+                  if (el) inputRefs[i] = el as HTMLInputElement
+                }
+              "
               :value="digits[i]"
               type="text"
               inputmode="numeric"
@@ -156,7 +165,9 @@ async function handleSubmit() {
   font-family: inherit;
   text-align: center;
   outline: none;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
   -webkit-user-select: text;
   user-select: text;
 }

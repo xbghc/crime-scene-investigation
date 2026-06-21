@@ -19,15 +19,21 @@ const selectedMeansName = computed(() => props.selection?.meansCard.name ?? '未
 
 const selectedClueName = computed(() => props.selection?.clueCard.name ?? '未知')
 
-const selectedMeansImage = computed(() => props.selection?.meansCard.id ? getMeansCardImage(props.selection.meansCard.id) : undefined)
-const selectedClueImage = computed(() => props.selection?.clueCard.id ? getClueCardImage(props.selection.clueCard.id) : undefined)
+const selectedMeansImage = computed(() =>
+  props.selection?.meansCard.id ? getMeansCardImage(props.selection.meansCard.id) : undefined,
+)
+const selectedClueImage = computed(() =>
+  props.selection?.clueCard.id ? getClueCardImage(props.selection.clueCard.id) : undefined,
+)
 </script>
 
 <template>
   <div class="vignette witness-night">
     <header class="witness-night__header">
       <div class="witness-night__phase">
-        <span class="material-symbols-outlined text-amber-accent witness-night__pulse">dark_mode</span>
+        <span class="material-symbols-outlined text-amber-accent witness-night__pulse"
+          >dark_mode</span
+        >
         <span>Night Phase</span>
       </div>
     </header>
@@ -46,7 +52,9 @@ const selectedClueImage = computed(() => props.selection?.clueCard.id ? getClueC
       <!-- Selection revealed -->
       <template v-else>
         <div class="witness-night__icon-wrap">
-          <span class="material-symbols-outlined witness-night__eye witness-night__eye--alert">emergency</span>
+          <span class="material-symbols-outlined witness-night__eye witness-night__eye--alert"
+            >emergency</span
+          >
           <div class="witness-night__glow witness-night__glow--alert" />
         </div>
         <h1 class="witness-night__title">凶手已做出选择</h1>
@@ -54,12 +62,22 @@ const selectedClueImage = computed(() => props.selection?.clueCard.id ? getClueC
 
         <div class="witness-night__cards">
           <div class="witness-night__card witness-night__card--means">
-            <img v-if="selectedMeansImage" :src="selectedMeansImage" :alt="selectedMeansName" class="witness-night__card-img" />
+            <img
+              v-if="selectedMeansImage"
+              :src="selectedMeansImage"
+              :alt="selectedMeansName"
+              class="witness-night__card-img"
+            />
             <span class="witness-night__card-label">手段</span>
             <span class="witness-night__card-name">{{ selectedMeansName }}</span>
           </div>
           <div class="witness-night__card witness-night__card--clue">
-            <img v-if="selectedClueImage" :src="selectedClueImage" :alt="selectedClueName" class="witness-night__card-img" />
+            <img
+              v-if="selectedClueImage"
+              :src="selectedClueImage"
+              :alt="selectedClueName"
+              class="witness-night__card-img"
+            />
             <span class="witness-night__card-label">线索</span>
             <span class="witness-night__card-name">{{ selectedClueName }}</span>
           </div>
@@ -262,23 +280,44 @@ const selectedClueImage = computed(() => props.selection?.clueCard.id ? getClueC
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 @keyframes glow-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 @keyframes loading {
-  0% { transform: translateX(-100%); }
-  50% { transform: translateX(200%); }
-  100% { transform: translateX(-100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(200%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
 }
 </style>

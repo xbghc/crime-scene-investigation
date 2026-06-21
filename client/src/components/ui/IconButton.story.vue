@@ -23,7 +23,7 @@ import IconButton from './IconButton.vue'
       <IconButton icon="play_arrow" :disabled="true">开始调查（至少4人）</IconButton>
     </Variant>
     <Variant title="Block">
-      <div style="max-width: 320px;">
+      <div style="max-width: 320px">
         <IconButton icon="key" block>进入档案</IconButton>
       </div>
     </Variant>

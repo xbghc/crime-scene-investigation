@@ -12,7 +12,7 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'select-option': [payload: { boardId: string; optionIndex: number }]
-  'reorder': [boardIds: string[]]
+  reorder: [boardIds: string[]]
   confirm: []
 }>()
 
@@ -20,13 +20,11 @@ const emit = defineEmits<{
 const displayBoards = computed(() =>
   props.boards.map((board, index) => ({
     ...board,
-    marker: board.marker
-      ? { ...board.marker, markerNumber: index + 1 }
-      : undefined,
-  }))
+    marker: board.marker ? { ...board.marker, markerNumber: index + 1 } : undefined,
+  })),
 )
 
-const markedCount = computed(() => props.boards.filter(b => b.marker).length)
+const markedCount = computed(() => props.boards.filter((b) => b.marker).length)
 const allMarkersPlaced = computed(() => markedCount.value === props.boards.length)
 
 const selectedMeansName = computed(() => props.murdererSelection?.meansCard.name ?? null)
@@ -34,7 +32,7 @@ const selectedMeansName = computed(() => props.murdererSelection?.meansCard.name
 const selectedClueName = computed(() => props.murdererSelection?.clueCard.name ?? null)
 
 function handleSelectOption(boardId: string, optionIndex: number) {
-  const board = props.boards.find(b => b.id === boardId)
+  const board = props.boards.find((b) => b.id === boardId)
   if (!board) return
 
   // Clicking the already-marked option: deselect it
@@ -51,7 +49,7 @@ function moveBoard(index: number, direction: 'up' | 'down') {
   const targetIndex = direction === 'up' ? index - 1 : index + 1
   if (targetIndex < 0 || targetIndex >= props.boards.length) return
 
-  const ids = props.boards.map(b => b.id)
+  const ids = props.boards.map((b) => b.id)
   const temp = ids[index]!
   ids[index] = ids[targetIndex]!
   ids[targetIndex] = temp
@@ -100,7 +98,9 @@ function moveBoard(index: number, direction: 'up' | 'down') {
             :disabled="index === displayBoards.length - 1"
             @click="moveBoard(index, 'down')"
           >
-            <span class="material-symbols-outlined" style="font-size: 18px">keyboard_arrow_down</span>
+            <span class="material-symbols-outlined" style="font-size: 18px"
+              >keyboard_arrow_down</span
+            >
           </button>
         </div>
 

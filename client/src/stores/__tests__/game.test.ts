@@ -194,7 +194,7 @@ describe('GameStore', () => {
       store.setSolveResult({ playerId: 'p1', success: false })
 
       expect(store.lastSolveResult).toEqual({ playerId: 'p1', success: false })
-      const p = store.players.find(pl => pl.id === 'p1')
+      const p = store.players.find((pl) => pl.id === 'p1')
       expect(p!.hasSolveRight).toBe(false)
     })
 
@@ -204,7 +204,7 @@ describe('GameStore', () => {
 
       store.setSolveResult({ playerId: 'p1', success: true })
 
-      const p = store.players.find(pl => pl.id === 'p1')
+      const p = store.players.find((pl) => pl.id === 'p1')
       expect(p!.hasSolveRight).toBe(true)
     })
   })
@@ -262,7 +262,7 @@ describe('GameStore', () => {
 
       store.updateMarker('b1', 2, 3)
 
-      const board = store.boards.find(b => b.id === 'b1')
+      const board = store.boards.find((b) => b.id === 'b1')
       expect(board!.marker).toEqual({ optionIndex: 2, markerNumber: 3 })
     })
 
@@ -309,18 +309,15 @@ describe('GameStore', () => {
 
       store.reorderBoards(['b3', 'b1', 'b2'])
 
-      expect(store.boards.map(b => b.id)).toEqual(['b3', 'b1', 'b2'])
+      expect(store.boards.map((b) => b.id)).toEqual(['b3', 'b1', 'b2'])
     })
 
     it('应忽略不存在的 ID', () => {
-      store.updateBoards([
-        makeBoard({ id: 'b1' }),
-        makeBoard({ id: 'b2' }),
-      ])
+      store.updateBoards([makeBoard({ id: 'b1' }), makeBoard({ id: 'b2' })])
 
       store.reorderBoards(['b2', 'nonexistent', 'b1'])
 
-      expect(store.boards.map(b => b.id)).toEqual(['b2', 'b1'])
+      expect(store.boards.map((b) => b.id)).toEqual(['b2', 'b1'])
     })
   })
 
@@ -437,7 +434,7 @@ describe('GameStore', () => {
       ])
 
       expect(store.nonWitnessPlayers).toHaveLength(2)
-      expect(store.nonWitnessPlayers.every(p => p.role !== 'witness')).toBe(true)
+      expect(store.nonWitnessPlayers.every((p) => p.role !== 'witness')).toBe(true)
     })
   })
 

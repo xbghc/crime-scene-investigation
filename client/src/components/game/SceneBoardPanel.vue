@@ -76,10 +76,7 @@ function handleSelect(optionIndex: number) {
         @click="handleSelect(index)"
       >
         <span class="scene-board__option-text">{{ option }}</span>
-        <span
-          v-if="board.marker && board.marker.optionIndex === index"
-          class="scene-board__marker"
-        >
+        <span v-if="board.marker && board.marker.optionIndex === index" class="scene-board__marker">
           {{ board.marker.markerNumber }}
         </span>
       </button>

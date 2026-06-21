@@ -10,7 +10,7 @@ const props = defineProps<{
   disabled?: boolean
 }>()
 
-const imageUrl = computed(() => props.id ? getCardImage(props.type, props.id) : undefined)
+const imageUrl = computed(() => (props.id ? getCardImage(props.type, props.id) : undefined))
 </script>
 
 <template>
@@ -21,13 +21,7 @@ const imageUrl = computed(() => props.id ? getCardImage(props.type, props.id) : 
       { 'game-card--selected': selected, 'game-card--disabled': disabled },
     ]"
   >
-    <img
-      v-if="imageUrl"
-      :src="imageUrl"
-      :alt="name"
-      class="game-card__img"
-      loading="lazy"
-    />
+    <img v-if="imageUrl" :src="imageUrl" :alt="name" class="game-card__img" loading="lazy" />
     <span class="game-card__name">{{ name }}</span>
   </div>
 </template>
@@ -80,7 +74,9 @@ const imageUrl = computed(() => props.id ? getCardImage(props.type, props.id) : 
 
 .game-card--selected {
   border-color: var(--color-amber);
-  box-shadow: 0 0 8px rgba(212, 168, 71, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 0 8px rgba(212, 168, 71, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.3);
   transform: translateY(-2px);
 }
 

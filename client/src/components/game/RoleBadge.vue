@@ -28,11 +28,7 @@ const config = computed(() => roleConfig[props.role])
   >
     {{ config.label }}
   </span>
-  <span
-    v-else
-    class="role-dot"
-    :style="{ backgroundColor: config.cssVar }"
-  />
+  <span v-else class="role-dot" :style="{ backgroundColor: config.cssVar }" />
 </template>
 
 <style scoped>

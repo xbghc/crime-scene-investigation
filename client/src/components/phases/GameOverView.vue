@@ -52,11 +52,7 @@ const emit = defineEmits<{
       <h3 class="game-over__section-title">身份揭示</h3>
       <div class="game-over__player-list">
         <div v-for="player in players" :key="player.id" class="game-over__player">
-          <PlayerAvatar
-            :nickname="player.nickname"
-            :color="player.color"
-            :status="player.status"
-          />
+          <PlayerAvatar :nickname="player.nickname" :color="player.color" :status="player.status" />
           <div class="game-over__player-info">
             <span class="game-over__player-name">{{ player.nickname }}</span>
             <RoleBadge v-if="player.role" :role="player.role" show-label />
@@ -70,11 +66,7 @@ const emit = defineEmits<{
 
     <!-- Play again -->
     <div class="game-over__footer">
-      <button
-        v-if="isHost"
-        class="game-over__btn"
-        @click="emit('play-again')"
-      >
+      <button v-if="isHost" class="game-over__btn" @click="emit('play-again')">
         <span class="material-symbols-outlined" style="font-size: 20px">replay</span>
         再来一局
       </button>
@@ -249,7 +241,12 @@ const emit = defineEmits<{
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
 }
 </style>

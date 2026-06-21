@@ -10,12 +10,7 @@ defineProps<{
 
 <template>
   <div class="scene-boards-overview">
-    <SceneBoardPanel
-      v-for="board in boards"
-      :key="board.id"
-      :board="board"
-      :hidden="blackout"
-    />
+    <SceneBoardPanel v-for="board in boards" :key="board.id" :board="board" :hidden="blackout" />
   </div>
 </template>
 

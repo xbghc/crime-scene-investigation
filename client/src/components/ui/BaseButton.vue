@@ -51,7 +51,9 @@ function handleClick(e: MouseEvent) {
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s ease, background-color 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    background-color 0.2s ease;
   position: relative;
   white-space: nowrap;
 }

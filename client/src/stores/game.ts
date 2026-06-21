@@ -21,12 +21,16 @@ interface SystemMessage {
   type: SystemMessageType
 }
 
-const DISCUSSION_PHASES: ReadonlySet<GamePhase> = new Set(['discussion-1', 'discussion-2', 'discussion-3'])
+const DISCUSSION_PHASES: ReadonlySet<GamePhase> = new Set([
+  'discussion-1',
+  'discussion-2',
+  'discussion-3',
+])
 const ADVANCE_PHASES: ReadonlySet<GamePhase> = new Set(['advance-1', 'advance-2'])
 const SOLVABLE_PHASES: ReadonlySet<GamePhase> = new Set([...DISCUSSION_PHASES, 'force-solve'])
 
 const PHASE_LABELS: Record<GamePhase, string> = {
-  'waiting': '等待中',
+  waiting: '等待中',
   'role-reveal': '身份揭示',
   'night-murder': '夜晚',
   'witness-accuse': '指证阶段',
@@ -40,7 +44,7 @@ const PHASE_LABELS: Record<GamePhase, string> = {
 }
 
 const PHASE_ICONS: Record<GamePhase, string> = {
-  'waiting': 'info',
+  waiting: 'info',
   'role-reveal': 'badge',
   'night-murder': 'dark_mode',
   'witness-accuse': 'search',
@@ -86,7 +90,7 @@ export const useGameStore = defineStore('game', () => {
   const accomplicePrompted = ref(false)
 
   // === Computed ===
-  const me = computed(() => players.value.find(p => p.id === myPlayerId.value))
+  const me = computed(() => players.value.find((p) => p.id === myPlayerId.value))
 
   const isWitness = computed(() => myRole.value === 'witness')
   const isMurderer = computed(() => myRole.value === 'murderer')
@@ -111,12 +115,12 @@ export const useGameStore = defineStore('game', () => {
   const isDiscussionPhase = computed(() => DISCUSSION_PHASES.has(phase.value))
   const isAdvancePhase = computed(() => ADVANCE_PHASES.has(phase.value))
 
-  const murderer = computed(() => players.value.find(p => p.role === 'murderer'))
+  const murderer = computed(() => players.value.find((p) => p.role === 'murderer'))
 
-  const nonWitnessPlayers = computed(() => players.value.filter(p => p.role !== 'witness'))
+  const nonWitnessPlayers = computed(() => players.value.filter((p) => p.role !== 'witness'))
 
-  const isMyForceSolveTurn = computed(() =>
-    phase.value === 'force-solve' && forceSolveTurnPlayerId.value === myPlayerId.value
+  const isMyForceSolveTurn = computed(
+    () => phase.value === 'force-solve' && forceSolveTurnPlayerId.value === myPlayerId.value,
   )
 
   const discussionRound = computed(() => DISCUSSION_ROUND_MAP[phase.value] ?? 0)
@@ -176,7 +180,7 @@ export const useGameStore = defineStore('game', () => {
     lastSolveResult.value = result
     // Update player solve right
     if (!result.success) {
-      const p = players.value.find(pl => pl.id === result.playerId)
+      const p = players.value.find((pl) => pl.id === result.playerId)
       if (p) p.hasSolveRight = false
     }
   }
@@ -204,21 +208,19 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function updateMarker(boardId: string, optionIndex: number, markerNumber: number) {
-    const board = boards.value.find(b => b.id === boardId)
+    const board = boards.value.find((b) => b.id === boardId)
     if (board) {
       board.marker = { optionIndex, markerNumber }
     }
   }
 
   function reorderBoards(boardIds: string[]) {
-    const boardMap = new Map(boards.value.map(b => [b.id, b]))
-    boards.value = boardIds
-      .map(id => boardMap.get(id))
-      .filter((b): b is SceneBoard => !!b)
+    const boardMap = new Map(boards.value.map((b) => [b.id, b]))
+    boards.value = boardIds.map((id) => boardMap.get(id)).filter((b): b is SceneBoard => !!b)
   }
 
   function replaceBoard(oldBoardId: string, newBoard: SceneBoard) {
-    const idx = boards.value.findIndex(b => b.id === oldBoardId)
+    const idx = boards.value.findIndex((b) => b.id === oldBoardId)
     if (idx !== -1) {
       boards.value[idx] = newBoard
     }
@@ -235,14 +237,14 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function addRoomPlayer(player: RoomState['players'][number]) {
-    const exists = roomPlayers.value.some(p => p.id === player.id)
+    const exists = roomPlayers.value.some((p) => p.id === player.id)
     if (!exists) {
       roomPlayers.value.push(player)
     }
   }
 
   function removeRoomPlayer(playerId: string) {
-    roomPlayers.value = roomPlayers.value.filter(p => p.id !== playerId)
+    roomPlayers.value = roomPlayers.value.filter((p) => p.id !== playerId)
   }
 
   function setAccomplicePrompted(val: boolean) {

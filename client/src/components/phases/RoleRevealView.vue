@@ -40,7 +40,10 @@ const roleInfo: Record<Role, { title: string; description: string; icon: string 
   <div class="vignette role-reveal">
     <main class="role-reveal__body">
       <div class="role-reveal__icon-wrap">
-        <span class="material-symbols-outlined role-reveal__icon" :class="`role-reveal__icon--${role}`">
+        <span
+          class="material-symbols-outlined role-reveal__icon"
+          :class="`role-reveal__icon--${role}`"
+        >
           {{ roleInfo[role].icon }}
         </span>
         <div class="role-reveal__glow" :class="`role-reveal__glow--${role}`" />
@@ -90,10 +93,18 @@ const roleInfo: Record<Role, { title: string; description: string; icon: string 
   animation: float 3s ease-in-out infinite;
 }
 
-.role-reveal__icon--witness { color: var(--color-witness); }
-.role-reveal__icon--murderer { color: var(--color-murderer); }
-.role-reveal__icon--accomplice { color: var(--color-accomplice); }
-.role-reveal__icon--detective { color: var(--color-detective); }
+.role-reveal__icon--witness {
+  color: var(--color-witness);
+}
+.role-reveal__icon--murderer {
+  color: var(--color-murderer);
+}
+.role-reveal__icon--accomplice {
+  color: var(--color-accomplice);
+}
+.role-reveal__icon--detective {
+  color: var(--color-detective);
+}
 
 .role-reveal__glow {
   position: absolute;
@@ -103,10 +114,18 @@ const roleInfo: Record<Role, { title: string; description: string; icon: string 
   animation: glow-pulse 3s ease-in-out infinite;
 }
 
-.role-reveal__glow--witness { background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%); }
-.role-reveal__glow--murderer { background: radial-gradient(circle, rgba(239, 68, 68, 0.15) 0%, transparent 70%); }
-.role-reveal__glow--accomplice { background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 70%); }
-.role-reveal__glow--detective { background: radial-gradient(circle, rgba(34, 197, 94, 0.15) 0%, transparent 70%); }
+.role-reveal__glow--witness {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+}
+.role-reveal__glow--murderer {
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.15) 0%, transparent 70%);
+}
+.role-reveal__glow--accomplice {
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 70%);
+}
+.role-reveal__glow--detective {
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.15) 0%, transparent 70%);
+}
 
 .role-reveal__label {
   font-size: 0.75rem;
@@ -157,12 +176,22 @@ const roleInfo: Record<Role, { title: string; description: string; icon: string 
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 @keyframes glow-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 </style>

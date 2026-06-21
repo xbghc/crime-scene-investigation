@@ -21,7 +21,7 @@ const suspectId = ref<string | null>(null)
 const meansCardId = ref<string | null>(null)
 const clueCardId = ref<string | null>(null)
 
-const suspect = computed(() => props.players.find(p => p.id === suspectId.value))
+const suspect = computed(() => props.players.find((p) => p.id === suspectId.value))
 
 function selectSuspect(id: string) {
   suspectId.value = id
@@ -39,10 +39,18 @@ function selectClue(id: string) {
 }
 
 function goBack() {
-  if (step.value === 4) { clueCardId.value = null; step.value = 3 }
-  else if (step.value === 3) { meansCardId.value = null; step.value = 2 }
-  else if (step.value === 2) { suspectId.value = null; step.value = 1 }
-  else { emit('cancel') }
+  if (step.value === 4) {
+    clueCardId.value = null
+    step.value = 3
+  } else if (step.value === 3) {
+    meansCardId.value = null
+    step.value = 2
+  } else if (step.value === 2) {
+    suspectId.value = null
+    step.value = 1
+  } else {
+    emit('cancel')
+  }
 }
 
 function handleConfirm() {
@@ -65,7 +73,12 @@ function handleConfirm() {
       </button>
       <h2 class="solve__title">{{ forced ? '强制破案' : '破案' }}</h2>
       <div class="solve__steps">
-        <span v-for="s in 4" :key="s" class="solve__step-dot" :class="{ 'solve__step-dot--active': step >= s }" />
+        <span
+          v-for="s in 4"
+          :key="s"
+          class="solve__step-dot"
+          :class="{ 'solve__step-dot--active': step >= s }"
+        />
       </div>
     </header>
 
@@ -80,11 +93,7 @@ function handleConfirm() {
           :class="{ 'solve__suspect--selected': suspectId === player.id }"
           @click="selectSuspect(player.id)"
         >
-          <PlayerAvatar
-            :nickname="player.nickname"
-            :color="player.color"
-            :status="player.status"
-          />
+          <PlayerAvatar :nickname="player.nickname" :color="player.color" :status="player.status" />
         </button>
       </div>
     </div>
@@ -137,13 +146,13 @@ function handleConfirm() {
         <div class="solve__summary-row">
           <span class="solve__summary-label">手段</span>
           <span class="solve__summary-value solve__summary-value--means">
-            {{ suspect.meansCards.find(c => c.id === meansCardId)?.name }}
+            {{ suspect.meansCards.find((c) => c.id === meansCardId)?.name }}
           </span>
         </div>
         <div class="solve__summary-row">
           <span class="solve__summary-label">线索</span>
           <span class="solve__summary-value">
-            {{ suspect.clueCards.find(c => c.id === clueCardId)?.name }}
+            {{ suspect.clueCards.find((c) => c.id === clueCardId)?.name }}
           </span>
         </div>
       </div>
@@ -153,9 +162,7 @@ function handleConfirm() {
           <span class="material-symbols-outlined" style="font-size: 20px">gavel</span>
           确认破案
         </button>
-        <button class="solve__cancel-btn" @click="goBack">
-          返回修改
-        </button>
+        <button class="solve__cancel-btn" @click="goBack">返回修改</button>
       </div>
     </div>
   </div>

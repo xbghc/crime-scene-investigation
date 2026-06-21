@@ -7,11 +7,15 @@ const murderer = mockPlayers[1]!
 
 const newBoards: SceneBoard[] = [
   {
-    id: 'B07', type: 'scene', title: '天气状况',
+    id: 'B07',
+    type: 'scene',
+    title: '天气状况',
     options: ['晴天', '阴天', '小雨', '暴雨', '大雾', '下雪'],
   },
   {
-    id: 'B08', type: 'scene', title: '现场光线',
+    id: 'B08',
+    type: 'scene',
+    title: '现场光线',
     options: ['明亮', '昏暗', '黑暗', '闪烁', '自然光', '人造光'],
   },
 ]

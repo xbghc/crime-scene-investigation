@@ -7,14 +7,17 @@ const revealed = ref(false)
 
 <template>
   <div class="vignette night-view">
-
     <!-- Status bar -->
     <header class="night-view__header">
       <div class="night-view__phase">
         <span class="material-symbols-outlined text-amber-accent">bedtime</span>
         <span>Night Phase</span>
       </div>
-      <div class="role-flip" :class="{ 'role-flip--revealed': revealed }" @click="revealed = !revealed">
+      <div
+        class="role-flip"
+        :class="{ 'role-flip--revealed': revealed }"
+        @click="revealed = !revealed"
+      >
         <div class="role-flip__inner">
           <div class="role-flip__front">
             <span class="material-symbols-outlined text-base text-text-dim">visibility_off</span>
@@ -137,7 +140,11 @@ const revealed = ref(false)
 .night-view__moon {
   font-size: 5rem;
   color: var(--color-amber);
-  font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 48;
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 300,
+    'GRAD' 0,
+    'opsz' 48;
   animation: float 4s ease-in-out infinite;
 }
 
@@ -190,18 +197,34 @@ const revealed = ref(false)
 
 /* Animations */
 @keyframes loading {
-  0% { transform: translateX(-100%); }
-  50% { transform: translateX(200%); }
-  100% { transform: translateX(-100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(200%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 @keyframes glow-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 </style>

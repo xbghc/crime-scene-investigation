@@ -29,8 +29,8 @@ const timerDisplay = computed(() => {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 })
 
-const meansStatus = computed(() => props.selectedMeansId ? '1/1' : '0/1')
-const clueStatus = computed(() => props.selectedClueId ? '1/1' : '0/1')
+const meansStatus = computed(() => (props.selectedMeansId ? '1/1' : '0/1'))
+const clueStatus = computed(() => (props.selectedClueId ? '1/1' : '0/1'))
 
 function isAccomplice(id: string) {
   return props.accompliceCardIds.includes(id)
@@ -42,7 +42,9 @@ function isAccomplice(id: string) {
     <!-- Header -->
     <header class="accomplice-view__header">
       <div class="accomplice-view__phase">
-        <span class="material-symbols-outlined text-amber-accent accomplice-view__pulse">dark_mode</span>
+        <span class="material-symbols-outlined text-amber-accent accomplice-view__pulse"
+          >dark_mode</span
+        >
         <span>Night Phase</span>
       </div>
       <div class="accomplice-view__timer">
@@ -71,7 +73,9 @@ function isAccomplice(id: string) {
           <h3 class="accomplice-view__section-title">Means</h3>
           <p class="accomplice-view__section-sub">Weapon of choice</p>
         </div>
-        <span class="accomplice-view__counter accomplice-view__counter--means">{{ meansStatus }}</span>
+        <span class="accomplice-view__counter accomplice-view__counter--means">{{
+          meansStatus
+        }}</span>
       </div>
 
       <div class="accomplice-view__grid">
@@ -85,7 +89,10 @@ function isAccomplice(id: string) {
           }"
         >
           <!-- Selected badge -->
-          <div v-if="selectedMeansId === card.id" class="observe-card__check observe-card__check--means">
+          <div
+            v-if="selectedMeansId === card.id"
+            class="observe-card__check observe-card__check--means"
+          >
             <span class="material-symbols-outlined" style="font-size: 16px">check</span>
           </div>
           <!-- Accomplice badge -->
@@ -95,11 +102,19 @@ function isAccomplice(id: string) {
           </div>
           <!-- Card body -->
           <div class="observe-card__body">
-            <img :src="getMeansCardImage(card.id)" :alt="card.name" class="observe-card__card-img" loading="lazy" />
+            <img
+              :src="getMeansCardImage(card.id)"
+              :alt="card.name"
+              class="observe-card__card-img"
+              loading="lazy"
+            />
             <p class="observe-card__name">{{ card.name }}</p>
           </div>
           <!-- Selected tag -->
-          <div v-if="selectedMeansId === card.id" class="observe-card__tag observe-card__tag--means">
+          <div
+            v-if="selectedMeansId === card.id"
+            class="observe-card__tag observe-card__tag--means"
+          >
             Murderer's Choice
           </div>
         </div>
@@ -121,7 +136,9 @@ function isAccomplice(id: string) {
           <h3 class="accomplice-view__section-title">Clue</h3>
           <p class="accomplice-view__section-sub">Evidence left behind</p>
         </div>
-        <span class="accomplice-view__counter accomplice-view__counter--clue">{{ clueStatus }}</span>
+        <span class="accomplice-view__counter accomplice-view__counter--clue">{{
+          clueStatus
+        }}</span>
       </div>
 
       <div class="accomplice-view__grid">
@@ -134,7 +151,10 @@ function isAccomplice(id: string) {
             'observe-card--mine': isAccomplice(card.id),
           }"
         >
-          <div v-if="selectedClueId === card.id" class="observe-card__check observe-card__check--clue">
+          <div
+            v-if="selectedClueId === card.id"
+            class="observe-card__check observe-card__check--clue"
+          >
             <span class="material-symbols-outlined" style="font-size: 16px">check</span>
           </div>
           <div v-if="isAccomplice(card.id)" class="observe-card__mine-badge">
@@ -142,7 +162,12 @@ function isAccomplice(id: string) {
             <span>Mine</span>
           </div>
           <div class="observe-card__body">
-            <img :src="getClueCardImage(card.id)" :alt="card.name" class="observe-card__card-img" loading="lazy" />
+            <img
+              :src="getClueCardImage(card.id)"
+              :alt="card.name"
+              class="observe-card__card-img"
+              loading="lazy"
+            />
             <p class="observe-card__name">{{ card.name }}</p>
           </div>
           <div v-if="selectedClueId === card.id" class="observe-card__tag observe-card__tag--clue">
@@ -155,7 +180,11 @@ function isAccomplice(id: string) {
     <!-- Bottom waiting indicator -->
     <div class="accomplice-view__waiting">
       <template v-if="confirmed">
-        <span class="material-symbols-outlined" style="font-size: 20px; color: var(--color-role-accomplice)">check_circle</span>
+        <span
+          class="material-symbols-outlined"
+          style="font-size: 20px; color: var(--color-role-accomplice)"
+          >check_circle</span
+        >
         <span>Murderer has made their choice</span>
       </template>
       <template v-else>
@@ -519,19 +548,36 @@ function isAccomplice(id: string) {
 
 /* Animations */
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 @keyframes loading {
-  0% { transform: translateX(-100%); }
-  50% { transform: translateX(200%); }
-  100% { transform: translateX(-100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(200%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
 }
 
 @keyframes pop-in {
-  0% { transform: scale(0); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 </style>

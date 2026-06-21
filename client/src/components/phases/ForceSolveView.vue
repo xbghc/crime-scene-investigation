@@ -35,11 +35,7 @@ const emit = defineEmits<{
           'force-solve__player--done': !player.hasSolveRight,
         }"
       >
-        <PlayerAvatar
-          :nickname="player.nickname"
-          :color="player.color"
-          :status="player.status"
-        />
+        <PlayerAvatar :nickname="player.nickname" :color="player.color" :status="player.status" />
         <span v-if="player.id === currentTurnPlayerId" class="force-solve__current-tag">当前</span>
         <span v-else-if="!player.hasSolveRight" class="force-solve__done-tag">已破案</span>
       </div>
@@ -61,7 +57,7 @@ const emit = defineEmits<{
       <div class="force-solve__waiting">
         <div class="force-solve__spinner" />
         <p class="force-solve__wait-text">
-          等待 {{ players.find(p => p.id === currentTurnPlayerId)?.nickname || '' }} 破案中…
+          等待 {{ players.find((p) => p.id === currentTurnPlayerId)?.nickname || '' }} 破案中…
         </p>
       </div>
     </template>
@@ -197,11 +193,18 @@ const emit = defineEmits<{
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

@@ -2,7 +2,7 @@
 import ForceSolveView from './ForceSolveView.vue'
 import { mockPlayers } from '../../__mocks__/gameData'
 
-const solvePlayers = mockPlayers.filter(p => p.hasSolveRight)
+const solvePlayers = mockPlayers.filter((p) => p.hasSolveRight)
 </script>
 
 <template>

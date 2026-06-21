@@ -30,8 +30,8 @@ const timerDisplay = computed(() => {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 })
 
-const meansCount = computed(() => selectedMeansId.value ? '1/1' : '0/1')
-const clueCount = computed(() => selectedClueId.value ? '1/1' : '0/1')
+const meansCount = computed(() => (selectedMeansId.value ? '1/1' : '0/1'))
+const clueCount = computed(() => (selectedClueId.value ? '1/1' : '0/1'))
 
 function toggleMeans(id: string) {
   selectedMeansId.value = selectedMeansId.value === id ? null : id
@@ -60,11 +60,15 @@ function isAccomplice(id: string) {
     <!-- Header -->
     <header class="murder-view__header">
       <div class="murder-view__phase">
-        <span class="material-symbols-outlined text-crimson-light murder-view__pulse">dark_mode</span>
+        <span class="material-symbols-outlined text-crimson-light murder-view__pulse"
+          >dark_mode</span
+        >
         <span>Night Phase</span>
       </div>
       <div class="murder-view__timer">
-        <span class="material-symbols-outlined text-crimson-light" style="font-size: 16px">timer</span>
+        <span class="material-symbols-outlined text-crimson-light" style="font-size: 16px"
+          >timer</span
+        >
         <span>{{ timerDisplay }}</span>
       </div>
     </header>
@@ -100,7 +104,10 @@ function isAccomplice(id: string) {
           @click="toggleMeans(card.id)"
         >
           <!-- Check badge -->
-          <div v-if="selectedMeansId === card.id" class="murder-card__check murder-card__check--means">
+          <div
+            v-if="selectedMeansId === card.id"
+            class="murder-card__check murder-card__check--means"
+          >
             <span class="material-symbols-outlined" style="font-size: 16px">check</span>
           </div>
           <!-- Accomplice badge -->
@@ -110,7 +117,12 @@ function isAccomplice(id: string) {
           </div>
           <!-- Card body -->
           <div class="murder-card__body">
-            <img :src="getMeansCardImage(card.id)" :alt="card.name" class="murder-card__card-img" loading="lazy" />
+            <img
+              :src="getMeansCardImage(card.id)"
+              :alt="card.name"
+              class="murder-card__card-img"
+              loading="lazy"
+            />
             <p class="murder-card__name">{{ card.name }}</p>
           </div>
           <!-- Selected tag -->
@@ -150,7 +162,10 @@ function isAccomplice(id: string) {
           }"
           @click="toggleClue(card.id)"
         >
-          <div v-if="selectedClueId === card.id" class="murder-card__check murder-card__check--clue">
+          <div
+            v-if="selectedClueId === card.id"
+            class="murder-card__check murder-card__check--clue"
+          >
             <span class="material-symbols-outlined" style="font-size: 16px">check</span>
           </div>
           <div v-if="isAccomplice(card.id)" class="murder-card__accomplice-badge">
@@ -158,7 +173,12 @@ function isAccomplice(id: string) {
             <span>Accomplice</span>
           </div>
           <div class="murder-card__body">
-            <img :src="getClueCardImage(card.id)" :alt="card.name" class="murder-card__card-img" loading="lazy" />
+            <img
+              :src="getClueCardImage(card.id)"
+              :alt="card.name"
+              class="murder-card__card-img"
+              loading="lazy"
+            />
             <p class="murder-card__name">{{ card.name }}</p>
           </div>
           <div v-if="selectedClueId === card.id" class="murder-card__tag murder-card__tag--clue">
@@ -552,7 +572,12 @@ function isAccomplice(id: string) {
 
 /* Animations */
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 </style>

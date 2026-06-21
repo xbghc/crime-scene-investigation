@@ -22,9 +22,13 @@ withDefaults(defineProps<Props>(), {
 <template>
   <BaseButton :variant="variant" :disabled="disabled" :loading="loading" :block="block">
     <span class="icon-button__inner">
-      <span v-if="iconPosition === 'left'" class="material-symbols-outlined icon-button__icon">{{ icon }}</span>
+      <span v-if="iconPosition === 'left'" class="material-symbols-outlined icon-button__icon">{{
+        icon
+      }}</span>
       <span class="icon-button__label"><slot /></span>
-      <span v-if="iconPosition === 'right'" class="material-symbols-outlined icon-button__icon">{{ icon }}</span>
+      <span v-if="iconPosition === 'right'" class="material-symbols-outlined icon-button__icon">{{
+        icon
+      }}</span>
     </span>
   </BaseButton>
 </template>

@@ -16,7 +16,9 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'accomplice-choose': [payload: { replaceClue: boolean; newClueCardId?: string }]
-  'witness-replace': [payload: { oldBoardId: string; newBoardId: string; optionIndex: number; markerNumber: number }]
+  'witness-replace': [
+    payload: { oldBoardId: string; newBoardId: string; optionIndex: number; markerNumber: number },
+  ]
   'witness-finish-advance': []
 }>()
 
@@ -30,14 +32,12 @@ const selectedOldBoardId = ref<string | null>(null)
 const selectedNewBoardId = ref<string | null>(null)
 const selectedOptionIndex = ref<number | null>(null)
 
-const replaceableBoards = computed(() =>
-  props.boards.filter(b => b.type !== 'cause')
-)
+const replaceableBoards = computed(() => props.boards.filter((b) => b.type !== 'cause'))
 
 // Get marker number from old board position
 const oldBoardMarkerNumber = computed(() => {
   if (!selectedOldBoardId.value) return null
-  const index = props.boards.findIndex(b => b.id === selectedOldBoardId.value)
+  const index = props.boards.findIndex((b) => b.id === selectedOldBoardId.value)
   return index >= 0 ? index + 1 : null
 })
 
@@ -62,7 +62,12 @@ function handleNewBoardOption(boardId: string, optionIndex: number) {
 }
 
 function handleConfirmReplace() {
-  if (selectedOldBoardId.value && selectedNewBoardId.value && selectedOptionIndex.value !== null && oldBoardMarkerNumber.value !== null) {
+  if (
+    selectedOldBoardId.value &&
+    selectedNewBoardId.value &&
+    selectedOptionIndex.value !== null &&
+    oldBoardMarkerNumber.value !== null
+  ) {
     emit('witness-replace', {
       oldBoardId: selectedOldBoardId.value,
       newBoardId: selectedNewBoardId.value,
@@ -105,7 +110,7 @@ function handleConfirmReplace() {
           <p class="advance__select-label">选择新的线索牌</p>
           <div class="advance__clue-grid">
             <button
-              v-for="card in (murdererPlayer?.clueCards || [])"
+              v-for="card in murdererPlayer?.clueCards || []"
               :key="card.id"
               class="advance__clue-card"
               :class="{ 'advance__clue-card--selected': selectedClueId === card.id }"
@@ -129,7 +134,11 @@ function handleConfirmReplace() {
     <template v-else-if="isWitness && newBoards.length === 0">
       <div class="advance__waiting">
         <p class="advance__waiting-text">推进阶段完成，没有新的场景板</p>
-        <button class="advance__btn advance__btn--primary" style="max-width: 200px" @click="emit('witness-finish-advance')">
+        <button
+          class="advance__btn advance__btn--primary"
+          style="max-width: 200px"
+          @click="emit('witness-finish-advance')"
+        >
           继续
         </button>
       </div>
@@ -332,6 +341,8 @@ function handleConfirmReplace() {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

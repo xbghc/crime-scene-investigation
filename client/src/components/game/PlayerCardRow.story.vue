@@ -15,25 +15,34 @@ const noSolvePlayer = mockPlayers[6]!
 <template>
   <Story title="玩家卡牌行" group="game">
     <Variant title="Normal Player">
-      <div style="padding: 20px; background: var(--bg-primary); max-width: 360px;">
+      <div style="padding: 20px; background: var(--bg-primary); max-width: 360px">
         <PlayerCardRow :player="normalPlayer" />
       </div>
     </Variant>
 
     <Variant title="Dead Player">
-      <div style="padding: 20px; background: var(--bg-primary); max-width: 360px;">
+      <div style="padding: 20px; background: var(--bg-primary); max-width: 360px">
         <PlayerCardRow :player="deadPlayer" />
       </div>
     </Variant>
 
     <Variant title="Lost Solve Right">
-      <div style="padding: 20px; background: var(--bg-primary); max-width: 360px;">
+      <div style="padding: 20px; background: var(--bg-primary); max-width: 360px">
         <PlayerCardRow :player="noSolvePlayer" />
       </div>
     </Variant>
 
     <Variant title="Multiple Players">
-      <div style="padding: 20px; background: var(--bg-primary); max-width: 360px; display: flex; flex-direction: column; gap: 12px;">
+      <div
+        style="
+          padding: 20px;
+          background: var(--bg-primary);
+          max-width: 360px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        "
+      >
         <PlayerCardRow :player="normalPlayer" />
         <PlayerCardRow :player="deadPlayer" />
         <PlayerCardRow :player="noSolvePlayer" />

@@ -28,7 +28,18 @@ export default defineConfig({
     darkClass: 'dark',
     defaultColorScheme: 'dark',
     colors: {
-      primary: { 50: '#fef2f2', 100: '#fee2e2', 200: '#fecaca', 300: '#fca5a5', 400: '#f87171', 500: '#a61c1c', 600: '#991b1b', 700: '#7f1d1d', 800: '#6b1616', 900: '#4c0f0f' },
+      primary: {
+        50: '#fef2f2',
+        100: '#fee2e2',
+        200: '#fecaca',
+        300: '#fca5a5',
+        400: '#f87171',
+        500: '#a61c1c',
+        600: '#991b1b',
+        700: '#7f1d1d',
+        800: '#6b1616',
+        900: '#4c0f0f',
+      },
     },
   },
   responsivePresets: [

@@ -44,7 +44,18 @@ function togglePing(playerId: string) {
   showPingId.value = showPingId.value === playerId ? null : playerId
 }
 
-const playerColors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16']
+const playerColors = [
+  '#ef4444',
+  '#3b82f6',
+  '#22c55e',
+  '#f59e0b',
+  '#8b5cf6',
+  '#ec4899',
+  '#14b8a6',
+  '#f97316',
+  '#6366f1',
+  '#84cc16',
+]
 
 function getPlayerColor(index: number) {
   return playerColors[index % playerColors.length]
@@ -57,7 +68,18 @@ function getInitial(name: string) {
 const minPlayers = 4
 const maxPlayers = 10
 
-const presetNames = ['探长老王', '神探小李', 'Sherlock', '华生', 'Poirot', '柯南', 'Lupin', '包青天', 'Holmes', '狄仁杰']
+const presetNames = [
+  '探长老王',
+  '神探小李',
+  'Sherlock',
+  '华生',
+  'Poirot',
+  '柯南',
+  'Lupin',
+  '包青天',
+  'Holmes',
+  '狄仁杰',
+]
 
 let nextId = 4
 
@@ -83,7 +105,6 @@ function removeLastPlayer(state: { players: Player[] }) {
 
 <template>
   <Story title="游戏大厅页" group="pages" :layout="{ type: 'single', iframe: true }">
-
     <!-- Variant 1: Not joined -->
     <Variant title="未加入 — 昵称输入">
       <LobbyPage />
@@ -92,23 +113,49 @@ function removeLastPlayer(state: { players: Player[] }) {
     <!-- Variant 2: Joined — lobby with state controls -->
     <Variant
       title="已加入 — 大厅"
-      :init-state="() => ({
-        players: [
-          { id: '1', nickname: '探长老王', isHost: true, ready: true, network: 'good' as NetworkQuality, ping: 12 },
-          { id: '2', nickname: '神探小李', isHost: false, ready: true, network: 'fair' as NetworkQuality, ping: 87 },
-          { id: '3', nickname: 'Sherlock', isHost: false, ready: false, network: 'poor' as NetworkQuality, ping: 342 },
-        ] as Player[],
-        connectionError: '',
-      })"
+      :init-state="
+        () => ({
+          players: [
+            {
+              id: '1',
+              nickname: '探长老王',
+              isHost: true,
+              ready: true,
+              network: 'good' as NetworkQuality,
+              ping: 12,
+            },
+            {
+              id: '2',
+              nickname: '神探小李',
+              isHost: false,
+              ready: true,
+              network: 'fair' as NetworkQuality,
+              ping: 87,
+            },
+            {
+              id: '3',
+              nickname: 'Sherlock',
+              isHost: false,
+              ready: false,
+              network: 'poor' as NetworkQuality,
+              ping: 342,
+            },
+          ] as Player[],
+          connectionError: '',
+        })
+      "
     >
       <template #default="{ state }">
         <div class="min-h-dvh flex flex-col bg-bg-primary">
-
           <!-- Sticky header -->
-          <header class="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-bg-secondary/90 backdrop-blur-sm border-b border-border">
+          <header
+            class="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-bg-secondary/90 backdrop-blur-sm border-b border-border"
+          >
             <div class="flex items-center gap-2">
               <span class="pulse-dot" />
-              <span class="text-text-primary text-sm font-semibold tracking-wide">Lobby Active</span>
+              <span class="text-text-primary text-sm font-semibold tracking-wide"
+                >Lobby Active</span
+              >
             </div>
             <div class="flex items-center gap-1.5 text-text-muted text-sm">
               <span class="material-symbols-outlined text-lg">groups</span>
@@ -119,7 +166,6 @@ function removeLastPlayer(state: { players: Player[] }) {
           <!-- Scrollable player list -->
           <main class="flex-1 overflow-y-auto px-4 py-4 pb-36">
             <div class="max-w-md mx-auto flex flex-col gap-3">
-
               <div
                 v-for="(player, index) in state.players"
                 :key="player.id"
@@ -128,23 +174,30 @@ function removeLastPlayer(state: { players: Player[] }) {
               >
                 <div
                   class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                  :style="{ backgroundColor: getPlayerColor(index) + '20', color: getPlayerColor(index) }"
+                  :style="{
+                    backgroundColor: getPlayerColor(index) + '20',
+                    color: getPlayerColor(index),
+                  }"
                 >
-                  <span v-if="player.isHost" class="material-symbols-outlined text-xl">local_police</span>
+                  <span v-if="player.isHost" class="material-symbols-outlined text-xl"
+                    >local_police</span
+                  >
                   <template v-else>{{ getInitial(player.nickname) }}</template>
                 </div>
 
                 <div class="flex-1 min-w-0">
-                  <p class="text-text-primary text-sm font-semibold truncate">{{ player.nickname }}</p>
+                  <p class="text-text-primary text-sm font-semibold truncate">
+                    {{ player.nickname }}
+                  </p>
                   <p v-if="player.isHost" class="text-amber-accent text-xs">Lead Investigator</p>
                 </div>
 
                 <div class="flex items-center gap-2 shrink-0">
                   <span
                     class="text-xs px-2 py-0.5 rounded-full"
-                    :class="player.ready
-                      ? 'bg-success/15 text-success'
-                      : 'bg-text-dim/15 text-text-muted'"
+                    :class="
+                      player.ready ? 'bg-success/15 text-success' : 'bg-text-dim/15 text-text-muted'
+                    "
                   >
                     {{ player.ready ? 'Ready' : 'Pending' }}
                   </span>
@@ -153,25 +206,33 @@ function removeLastPlayer(state: { players: Player[] }) {
                     :class="networkColor[player.network as NetworkQuality]"
                     @click="togglePing(player.id)"
                   >
-                    <span class="material-symbols-outlined text-base">{{ networkIcon[player.network as NetworkQuality] }}</span>
+                    <span class="material-symbols-outlined text-base">{{
+                      networkIcon[player.network as NetworkQuality]
+                    }}</span>
                     <Transition name="ping-fade">
-                      <span v-if="showPingId === player.id" class="ping-tooltip">{{ player.ping }}ms</span>
+                      <span v-if="showPingId === player.id" class="ping-tooltip"
+                        >{{ player.ping }}ms</span
+                      >
                     </Transition>
                   </span>
                 </div>
               </div>
 
-              <IconButton icon="share" variant="ghost" block>
-                邀请
-              </IconButton>
+              <IconButton icon="share" variant="ghost" block> 邀请 </IconButton>
             </div>
           </main>
 
           <!-- Fixed footer -->
-          <footer class="fixed bottom-0 left-0 right-0 z-20 px-4 pt-3 pb-4 bg-bg-primary/95 backdrop-blur-sm border-t border-border">
+          <footer
+            class="fixed bottom-0 left-0 right-0 z-20 px-4 pt-3 pb-4 bg-bg-primary/95 backdrop-blur-sm border-t border-border"
+          >
             <div class="max-w-md mx-auto">
               <IconButton icon="play_arrow" :disabled="state.players.length < minPlayers" block>
-                {{ state.players.length >= minPlayers ? '开始调查' : `开始调查（至少${minPlayers}人）` }}
+                {{
+                  state.players.length >= minPlayers
+                    ? '开始调查'
+                    : `开始调查（至少${minPlayers}人）`
+                }}
               </IconButton>
             </div>
           </footer>
@@ -189,16 +250,34 @@ function removeLastPlayer(state: { players: Player[] }) {
       <template #controls="{ state }">
         <HstText v-model="state.connectionError" title="Connection Error" />
 
-        <div style="padding: 8px 12px; display: flex; gap: 8px;">
+        <div style="padding: 8px 12px; display: flex; gap: 8px">
           <button
-            style="flex: 1; padding: 4px 8px; font-size: 12px; background: #22c55e20; color: #22c55e; border: 1px solid #22c55e40; border-radius: 4px; cursor: pointer;"
+            style="
+              flex: 1;
+              padding: 4px 8px;
+              font-size: 12px;
+              background: #22c55e20;
+              color: #22c55e;
+              border: 1px solid #22c55e40;
+              border-radius: 4px;
+              cursor: pointer;
+            "
             :disabled="state.players.length >= maxPlayers"
             @click="addPlayer(state)"
           >
             + 添加玩家
           </button>
           <button
-            style="flex: 1; padding: 4px 8px; font-size: 12px; background: #ef444420; color: #ef4444; border: 1px solid #ef444440; border-radius: 4px; cursor: pointer;"
+            style="
+              flex: 1;
+              padding: 4px 8px;
+              font-size: 12px;
+              background: #ef444420;
+              color: #ef4444;
+              border: 1px solid #ef444440;
+              border-radius: 4px;
+              cursor: pointer;
+            "
             :disabled="state.players.length <= 1"
             @click="removeLastPlayer(state)"
           >
@@ -227,8 +306,13 @@ function removeLastPlayer(state: { players: Player[] }) {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .player-card {
@@ -270,11 +354,24 @@ function removeLastPlayer(state: { players: Player[] }) {
   pointer-events: none;
 }
 
-.ping-fade-enter-active { transition: opacity 0.15s, transform 0.15s; }
-.ping-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
+.ping-fade-enter-active {
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+.ping-fade-leave-active {
+  transition:
+    opacity 0.3s,
+    transform 0.3s;
+}
 .ping-fade-enter-from,
-.ping-fade-leave-to { opacity: 0; transform: translateX(-50%) translateY(4px); }
+.ping-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(4px);
+}
 .ping-fade-enter-to,
-.ping-fade-leave-from { opacity: 1; transform: translateX(-50%) translateY(0); }
-
+.ping-fade-leave-from {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 </style>

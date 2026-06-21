@@ -54,38 +54,49 @@ onMounted(() => {
 })
 
 // Watch for effect card events
-watch(() => game.effectCard, (card) => {
-  if (card) showEffectCard.value = true
-})
+watch(
+  () => game.effectCard,
+  (card) => {
+    if (card) showEffectCard.value = true
+  },
+)
 
 // Watch for solve results — show modal for important announcements
-watch(() => game.lastSolveResult, (result) => {
-  if (result) showSolveResult.value = true
-})
+watch(
+  () => game.lastSolveResult,
+  (result) => {
+    if (result) showSolveResult.value = true
+  },
+)
 
 // Watch for phase changes — show brief announcement for key transitions
-watch(() => game.phase, (phase, oldPhase) => {
-  if (phase === 'waiting') {
-    router.replace('/lobby')
-    return
-  }
+watch(
+  () => game.phase,
+  (phase, oldPhase) => {
+    if (phase === 'waiting') {
+      router.replace('/lobby')
+      return
+    }
 
-  // Show modal announcement for key phase transitions
-  const announcements: Partial<Record<string, string>> = {
-    'witness-accuse': '天亮了！目击者正在布置线索…',
-    'discussion-1': '第一轮发言开始',
-    'discussion-2': '第二轮发言开始',
-    'discussion-3': '最后一轮发言',
-    'force-solve': '强制破案阶段',
-  }
+    // Show modal announcement for key phase transitions
+    const announcements: Partial<Record<string, string>> = {
+      'witness-accuse': '天亮了！目击者正在布置线索…',
+      'discussion-1': '第一轮发言开始',
+      'discussion-2': '第二轮发言开始',
+      'discussion-3': '最后一轮发言',
+      'force-solve': '强制破案阶段',
+    }
 
-  const msg = announcements[phase]
-  if (msg && oldPhase !== 'waiting') {
-    phaseChangeMessage.value = msg
-    showPhaseChange.value = true
-    setTimeout(() => { showPhaseChange.value = false }, 3000)
-  }
-})
+    const msg = announcements[phase]
+    if (msg && oldPhase !== 'waiting') {
+      phaseChangeMessage.value = msg
+      showPhaseChange.value = true
+      setTimeout(() => {
+        showPhaseChange.value = false
+      }, 3000)
+    }
+  },
+)
 
 const isHost = computed(() => {
   const me = game.me
@@ -117,7 +128,7 @@ function handleMurdererConfirm(payload: { meansCardId: string; clueCardId: strin
 
 // Witness accuse actions
 function handleSelectOption(payload: { boardId: string; optionIndex: number }) {
-  const boardIndex = game.boards.findIndex(b => b.id === payload.boardId)
+  const boardIndex = game.boards.findIndex((b) => b.id === payload.boardId)
   if (boardIndex < 0) return
   const markerNumber = boardIndex + 1
   if (payload.optionIndex < 0) {
@@ -146,7 +157,11 @@ function handleEndDiscussion() {
 }
 
 // Solve actions
-function handleSolveConfirm(payload: { suspectId: string; meansCardId: string; clueCardId: string }) {
+function handleSolveConfirm(payload: {
+  suspectId: string
+  meansCardId: string
+  clueCardId: string
+}) {
   attemptSolve(payload.suspectId, payload.meansCardId, payload.clueCardId)
   showSolveModal.value = false
 }
@@ -160,8 +175,18 @@ function handleAccompliceChoose(payload: { replaceClue: boolean; newClueCardId?:
   accompliceChoose(payload.replaceClue, payload.newClueCardId)
 }
 
-function handleWitnessReplace(payload: { oldBoardId: string; newBoardId: string; optionIndex: number; markerNumber: number }) {
-  witnessReplaceBoard(payload.oldBoardId, payload.newBoardId, payload.optionIndex, payload.markerNumber)
+function handleWitnessReplace(payload: {
+  oldBoardId: string
+  newBoardId: string
+  optionIndex: number
+  markerNumber: number
+}) {
+  witnessReplaceBoard(
+    payload.oldBoardId,
+    payload.newBoardId,
+    payload.optionIndex,
+    payload.markerNumber,
+  )
 }
 
 // Play again (host resets, others wait)
@@ -180,7 +205,10 @@ function handleWitnessFinishAdvance() {
 }
 
 // Effect card witness action
-function handleEffectAction(payload: { effectId: string; data: import('../types').EffectActionData }) {
+function handleEffectAction(payload: {
+  effectId: string
+  data: import('../types').EffectActionData
+}) {
   effectAction(payload.effectId, payload.data)
 }
 
@@ -208,14 +236,9 @@ function handleToastDismiss() {
 
 <template>
   <div class="game-page">
-
     <!-- Role Reveal (full screen overlay, before game starts) -->
     <template v-if="game.phase === 'role-reveal' && !roleRevealed">
-      <RoleRevealView
-        v-if="game.myRole"
-        :role="game.myRole"
-        @confirm="handleRoleConfirm"
-      />
+      <RoleRevealView v-if="game.myRole" :role="game.myRole" @confirm="handleRoleConfirm" />
     </template>
 
     <!-- Night Murder Phase (full screen for each role) -->
@@ -244,7 +267,9 @@ function handleToastDismiss() {
         <!-- Status bar -->
         <header class="game-layout__header">
           <div class="game-layout__phase">
-            <span class="material-symbols-outlined game-layout__phase-icon">{{ game.phaseIcon }}</span>
+            <span class="material-symbols-outlined game-layout__phase-icon">{{
+              game.phaseIcon
+            }}</span>
             <span>{{ game.phaseLabel }}</span>
           </div>
           <div class="game-layout__header-right">
@@ -268,7 +293,6 @@ function handleToastDismiss() {
 
         <!-- Main content area (scrollable) -->
         <main class="game-layout__body">
-
           <!-- Waiting / post-reveal -->
           <template v-if="game.phase === 'role-reveal' && roleRevealed">
             <div class="game-layout__center">
@@ -346,7 +370,6 @@ function handleToastDismiss() {
               @play-again="handlePlayAgain"
             />
           </template>
-
         </main>
       </div>
     </template>
@@ -365,7 +388,11 @@ function handleToastDismiss() {
     <BaseModal v-model="showEffectCard" title="效果牌">
       <div v-if="game.effectCard" class="effect-card-display">
         <div class="effect-card-display__icon">
-          <span class="material-symbols-outlined" style="font-size: 2.5rem; color: var(--color-purple)">auto_awesome</span>
+          <span
+            class="material-symbols-outlined"
+            style="font-size: 2.5rem; color: var(--color-purple)"
+            >auto_awesome</span
+          >
         </div>
         <h3 class="effect-card-display__name">{{ game.effectCard.name }}</h3>
         <p class="effect-card-display__effect">{{ game.effectCard.effect }}</p>
@@ -376,17 +403,29 @@ function handleToastDismiss() {
     </BaseModal>
 
     <!-- Solve result modal -->
-    <BaseModal v-model="showSolveResult" :title="game.lastSolveResult?.success ? '破案成功！' : '破案失败'">
+    <BaseModal
+      v-model="showSolveResult"
+      :title="game.lastSolveResult?.success ? '破案成功！' : '破案失败'"
+    >
       <div v-if="game.lastSolveResult" class="solve-result-display">
-        <div class="solve-result-display__icon" :class="game.lastSolveResult.success ? 'solve-result-display__icon--success' : 'solve-result-display__icon--fail'">
+        <div
+          class="solve-result-display__icon"
+          :class="
+            game.lastSolveResult.success
+              ? 'solve-result-display__icon--success'
+              : 'solve-result-display__icon--fail'
+          "
+        >
           <span class="material-symbols-outlined" style="font-size: 2.5rem">
             {{ game.lastSolveResult.success ? 'check_circle' : 'cancel' }}
           </span>
         </div>
         <p class="solve-result-display__text">
-          {{ game.lastSolveResult.success
-            ? '真相大白！侦探方成功破案'
-            : `${game.players.find(p => p.id === game.lastSolveResult?.playerId)?.nickname ?? '玩家'} 推理失败，失去破案权` }}
+          {{
+            game.lastSolveResult.success
+              ? '真相大白！侦探方成功破案'
+              : `${game.players.find((p) => p.id === game.lastSolveResult?.playerId)?.nickname ?? '玩家'} 推理失败，失去破案权`
+          }}
         </p>
       </div>
       <template #footer>
@@ -398,7 +437,11 @@ function handleToastDismiss() {
     <BaseModal v-model="showPhaseChange" title="阶段变更">
       <div class="phase-change-display">
         <div class="phase-change-display__icon">
-          <span class="material-symbols-outlined" style="font-size: 2.5rem; color: var(--color-amber)">{{ game.phaseIcon }}</span>
+          <span
+            class="material-symbols-outlined"
+            style="font-size: 2.5rem; color: var(--color-amber)"
+            >{{ game.phaseIcon }}</span
+          >
         </div>
         <p class="phase-change-display__text">{{ phaseChangeMessage }}</p>
       </div>
@@ -411,14 +454,28 @@ function handleToastDismiss() {
     <BaseModal v-model="showResetConfirm" title="重置游戏">
       <div class="reset-confirm">
         <div class="reset-confirm__icon">
-          <span class="material-symbols-outlined" style="font-size: 2.5rem; color: var(--color-crimson-light)">warning</span>
+          <span
+            class="material-symbols-outlined"
+            style="font-size: 2.5rem; color: var(--color-crimson-light)"
+            >warning</span
+          >
         </div>
-        <p class="reset-confirm__text">确定要结束当前游戏并返回大厅吗？所有玩家的游戏进度将丢失。</p>
+        <p class="reset-confirm__text">
+          确定要结束当前游戏并返回大厅吗？所有玩家的游戏进度将丢失。
+        </p>
       </div>
       <template #footer>
         <div class="reset-confirm__actions">
           <button class="reset-confirm__cancel" @click="showResetConfirm = false">取消</button>
-          <button class="reset-confirm__confirm" @click="showResetConfirm = false; resetGame()">确定重置</button>
+          <button
+            class="reset-confirm__confirm"
+            @click="
+              showResetConfirm = false
+              resetGame()
+            "
+          >
+            确定重置
+          </button>
         </div>
       </template>
     </BaseModal>
@@ -728,6 +785,8 @@ function handleToastDismiss() {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

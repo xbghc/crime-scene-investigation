@@ -36,9 +36,7 @@ function onBackdropClick() {
         >
           <header v-if="title || !fullscreen" class="modal-header">
             <h2 v-if="title" class="modal-title">{{ title }}</h2>
-            <button class="modal-close" aria-label="Close" @click="close">
-              &times;
-            </button>
+            <button class="modal-close" aria-label="Close" @click="close">&times;</button>
           </header>
 
           <div class="modal-body">
@@ -144,7 +142,9 @@ function onBackdropClick() {
 
 .modal-enter-active .modal-card,
 .modal-leave-active .modal-card {
-  transition: transform 0.25s ease, opacity 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    opacity 0.25s ease;
 }
 
 .modal-enter-from,

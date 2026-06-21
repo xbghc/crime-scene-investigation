@@ -8,31 +8,63 @@ import {
 
 // 手段卡名称（取前 20 张展示）
 const meansCards = [
-  { id: 'M001', name: '刀' }, { id: 'M002', name: '斧头' }, { id: 'M003', name: '锤子' },
-  { id: 'M004', name: '绳索' }, { id: 'M005', name: '枕头' }, { id: 'M006', name: '毒药' },
-  { id: 'M007', name: '针筒' }, { id: 'M008', name: '手枪' }, { id: 'M009', name: '步枪' },
-  { id: 'M010', name: '电击器' }, { id: 'M011', name: '剪刀' }, { id: 'M012', name: '砖块' },
-  { id: 'M013', name: '铁管' }, { id: 'M014', name: '棒球棍' }, { id: 'M015', name: '石头' },
-  { id: 'M016', name: '玻璃碎片' }, { id: 'M017', name: '螺丝刀' }, { id: 'M018', name: '扳手' },
-  { id: 'M019', name: '钢琴线' }, { id: 'M020', name: '弓箭' },
+  { id: 'M001', name: '刀' },
+  { id: 'M002', name: '斧头' },
+  { id: 'M003', name: '锤子' },
+  { id: 'M004', name: '绳索' },
+  { id: 'M005', name: '枕头' },
+  { id: 'M006', name: '毒药' },
+  { id: 'M007', name: '针筒' },
+  { id: 'M008', name: '手枪' },
+  { id: 'M009', name: '步枪' },
+  { id: 'M010', name: '电击器' },
+  { id: 'M011', name: '剪刀' },
+  { id: 'M012', name: '砖块' },
+  { id: 'M013', name: '铁管' },
+  { id: 'M014', name: '棒球棍' },
+  { id: 'M015', name: '石头' },
+  { id: 'M016', name: '玻璃碎片' },
+  { id: 'M017', name: '螺丝刀' },
+  { id: 'M018', name: '扳手' },
+  { id: 'M019', name: '钢琴线' },
+  { id: 'M020', name: '弓箭' },
 ]
 
 // 线索卡名称（取前 20 张展示）
 const clueCards = [
-  { id: 'C001', name: '头发' }, { id: 'C002', name: '指纹' }, { id: 'C003', name: '脚印' },
-  { id: 'C004', name: '血迹' }, { id: 'C005', name: '纽扣' }, { id: 'C006', name: '布料碎片' },
-  { id: 'C007', name: '烟蒂' }, { id: 'C008', name: '口红印' }, { id: 'C009', name: '手套' },
-  { id: 'C010', name: '帽子' }, { id: 'C011', name: '眼镜' }, { id: 'C012', name: '耳环' },
-  { id: 'C013', name: '戒指' }, { id: 'C014', name: '项链' }, { id: 'C015', name: '手表' },
-  { id: 'C016', name: '钥匙' }, { id: 'C017', name: '钱包' }, { id: 'C018', name: '手机' },
-  { id: 'C019', name: '照片' }, { id: 'C020', name: '信件' },
+  { id: 'C001', name: '头发' },
+  { id: 'C002', name: '指纹' },
+  { id: 'C003', name: '脚印' },
+  { id: 'C004', name: '血迹' },
+  { id: 'C005', name: '纽扣' },
+  { id: 'C006', name: '布料碎片' },
+  { id: 'C007', name: '烟蒂' },
+  { id: 'C008', name: '口红印' },
+  { id: 'C009', name: '手套' },
+  { id: 'C010', name: '帽子' },
+  { id: 'C011', name: '眼镜' },
+  { id: 'C012', name: '耳环' },
+  { id: 'C013', name: '戒指' },
+  { id: 'C014', name: '项链' },
+  { id: 'C015', name: '手表' },
+  { id: 'C016', name: '钥匙' },
+  { id: 'C017', name: '钱包' },
+  { id: 'C018', name: '手机' },
+  { id: 'C019', name: '照片' },
+  { id: 'C020', name: '信件' },
 ]
 
 // 效果卡
 const effectCards = [
-  { id: 'E01', name: '暗杀' }, { id: 'E02', name: '意外死亡' }, { id: 'E03', name: '排除嫌疑' },
-  { id: 'E04', name: '关键线索' }, { id: 'E05', name: '证据遗失' }, { id: 'E06', name: '目击者笔录' },
-  { id: 'E07', name: '停电' }, { id: 'E08', name: '信息泄露' }, { id: 'E09', name: '混乱现场' },
+  { id: 'E01', name: '暗杀' },
+  { id: 'E02', name: '意外死亡' },
+  { id: 'E03', name: '排除嫌疑' },
+  { id: 'E04', name: '关键线索' },
+  { id: 'E05', name: '证据遗失' },
+  { id: 'E06', name: '目击者笔录' },
+  { id: 'E07', name: '停电' },
+  { id: 'E08', name: '信息泄露' },
+  { id: 'E09', name: '混乱现场' },
   { id: 'E10', name: '案中案' },
 ]
 
@@ -77,7 +109,7 @@ const sceneBoards = [
     <!-- 手段卡 -->
     <Variant title="手段卡 (红色主题)">
       <div class="gallery-container">
-        <h2 class="gallery-title" style="color: #dc2626;">手段卡 Means Cards</h2>
+        <h2 class="gallery-title" style="color: #dc2626">手段卡 Means Cards</h2>
         <p class="gallery-subtitle">共 90 张 · 展示前 20 张</p>
         <div class="card-grid">
           <div v-for="card in meansCards" :key="card.id" class="card-item">
@@ -96,7 +128,7 @@ const sceneBoards = [
     <!-- 线索卡 -->
     <Variant title="线索卡 (蓝色主题)">
       <div class="gallery-container">
-        <h2 class="gallery-title" style="color: #3b82f6;">线索卡 Clue Cards</h2>
+        <h2 class="gallery-title" style="color: #3b82f6">线索卡 Clue Cards</h2>
         <p class="gallery-subtitle">已生成 83/220 张 · 展示前 20 张</p>
         <div class="card-grid">
           <div v-for="card in clueCards" :key="card.id" class="card-item">
@@ -115,7 +147,7 @@ const sceneBoards = [
     <!-- 效果卡 -->
     <Variant title="效果卡 (紫色主题)">
       <div class="gallery-container">
-        <h2 class="gallery-title" style="color: #8b5cf6;">效果卡 Effect Cards</h2>
+        <h2 class="gallery-title" style="color: #8b5cf6">效果卡 Effect Cards</h2>
         <p class="gallery-subtitle">共 10 张 · 全部展示</p>
         <div class="card-grid">
           <div v-for="card in effectCards" :key="card.id" class="card-item">
@@ -134,7 +166,7 @@ const sceneBoards = [
     <!-- 场景板 -->
     <Variant title="场景板 (多色主题)">
       <div class="gallery-container">
-        <h2 class="gallery-title" style="color: #d4a847;">场景板 Scene Boards</h2>
+        <h2 class="gallery-title" style="color: #d4a847">场景板 Scene Boards</h2>
         <p class="gallery-subtitle">共 31 张 · 全部展示</p>
         <div class="board-grid">
           <div v-for="board in sceneBoards" :key="board.file" class="board-item">
@@ -153,26 +185,41 @@ const sceneBoards = [
     <!-- 全部卡片一览 -->
     <Variant title="全部卡片一览">
       <div class="gallery-container">
-        <h2 class="gallery-title" style="color: var(--color-text);">全部卡片设计总览</h2>
+        <h2 class="gallery-title" style="color: var(--color-text)">全部卡片设计总览</h2>
 
-        <h3 class="section-title" style="color: #dc2626;">手段卡 (20/90)</h3>
+        <h3 class="section-title" style="color: #dc2626">手段卡 (20/90)</h3>
         <div class="card-grid card-grid--small">
           <div v-for="card in meansCards" :key="card.id" class="card-item">
-            <img :src="getMeansCardImage(card.id)" :alt="card.name" class="card-img" loading="lazy" />
+            <img
+              :src="getMeansCardImage(card.id)"
+              :alt="card.name"
+              class="card-img"
+              loading="lazy"
+            />
           </div>
         </div>
 
-        <h3 class="section-title" style="color: #3b82f6;">线索卡 (20/83)</h3>
+        <h3 class="section-title" style="color: #3b82f6">线索卡 (20/83)</h3>
         <div class="card-grid card-grid--small">
           <div v-for="card in clueCards" :key="card.id" class="card-item">
-            <img :src="getClueCardImage(card.id)" :alt="card.name" class="card-img" loading="lazy" />
+            <img
+              :src="getClueCardImage(card.id)"
+              :alt="card.name"
+              class="card-img"
+              loading="lazy"
+            />
           </div>
         </div>
 
-        <h3 class="section-title" style="color: #8b5cf6;">效果卡 (10/10)</h3>
+        <h3 class="section-title" style="color: #8b5cf6">效果卡 (10/10)</h3>
         <div class="card-grid card-grid--small">
           <div v-for="card in effectCards" :key="card.id" class="card-item">
-            <img :src="getEffectCardImage(card.id)" :alt="card.name" class="card-img" loading="lazy" />
+            <img
+              :src="getEffectCardImage(card.id)"
+              :alt="card.name"
+              class="card-img"
+              loading="lazy"
+            />
           </div>
         </div>
       </div>
@@ -235,7 +282,9 @@ const sceneBoards = [
   width: 100%;
   border-radius: 8px;
   border: 1px solid #30363d;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   background: #161b22;
 }
 
@@ -250,7 +299,9 @@ const sceneBoards = [
   width: 100%;
   border-radius: 8px;
   border: 1px solid #30363d;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   background: #161b22;
 }
 

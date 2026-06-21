@@ -9,11 +9,7 @@ defineProps<{
 
 <template>
   <div class="all-players-cards">
-    <PlayerCardRow
-      v-for="player in players"
-      :key="player.id"
-      :player="player"
-    />
+    <PlayerCardRow v-for="player in players" :key="player.id" :player="player" />
   </div>
 </template>
 

@@ -65,11 +65,7 @@ const activeTab = ref<'boards' | 'cards'>('boards')
 
       <!-- Cards tab -->
       <div v-if="activeTab === 'cards'" class="discussion__cards">
-        <PlayerCardRow
-          v-for="player in players"
-          :key="player.id"
-          :player="player"
-        />
+        <PlayerCardRow v-for="player in players" :key="player.id" :player="player" />
       </div>
     </div>
 

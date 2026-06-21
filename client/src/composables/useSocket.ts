@@ -2,7 +2,17 @@ import { ref } from 'vue'
 import { io, Socket } from 'socket.io-client'
 import { useAuthStore } from '../stores/auth'
 import { useGameStore } from '../stores/game'
-import type { GamePhase, GameState, Player, Role, SceneBoard, EffectCard, MurdererSelection, RoomState, EffectActionData } from '../types'
+import type {
+  GamePhase,
+  GameState,
+  Player,
+  Role,
+  SceneBoard,
+  EffectCard,
+  MurdererSelection,
+  RoomState,
+  EffectActionData,
+} from '../types'
 
 // === Room event payload types ===
 interface RoomStatePayload extends RoomState {}
@@ -26,7 +36,10 @@ interface MurdererSelectionUpdatePayload {
 // === Socket event payload types ===
 interface GameStartedPayload {
   role: Role
-  cards: { meansCards: { id: string; name: string }[]; clueCards: { id: string; name: string }[] } | null
+  cards: {
+    meansCards: { id: string; name: string }[]
+    clueCards: { id: string; name: string }[]
+  } | null
   allPlayerCards: Array<{
     playerId: string
     meansCards: { id: string; name: string }[]
@@ -166,7 +179,12 @@ export function useSocket() {
     socket?.emit('witness_confirm')
   }
 
-  function witnessReplaceBoard(oldBoardId: string, newBoardId: string, optionIndex: number, markerNumber: number) {
+  function witnessReplaceBoard(
+    oldBoardId: string,
+    newBoardId: string,
+    optionIndex: number,
+    markerNumber: number,
+  ) {
     socket?.emit('witness_replace_board', { oldBoardId, newBoardId, optionIndex, markerNumber })
   }
 
@@ -283,8 +301,8 @@ function setupGameEventHandlers(sock: Socket) {
     }
 
     // Build player list from allPlayerCards merged with room players
-    const cardMap = new Map(data.allPlayerCards.map(p => [p.playerId, p]))
-    const players: Player[] = gameStore.roomPlayers.map(rp => {
+    const cardMap = new Map(data.allPlayerCards.map((p) => [p.playerId, p]))
+    const players: Player[] = gameStore.roomPlayers.map((rp) => {
       const cards = cardMap.get(rp.id)
       return {
         id: rp.id,
@@ -330,12 +348,13 @@ function setupGameEventHandlers(sock: Socket) {
   sock.on('board_replaced', (data: BoardReplacedPayload) => {
     gameStore.replaceBoard(data.oldBoardId, {
       ...data.newBoard,
-      marker: data.optionIndex != null && data.markerNumber != null
-        ? { optionIndex: data.optionIndex, markerNumber: data.markerNumber }
-        : undefined,
+      marker:
+        data.optionIndex != null && data.markerNumber != null
+          ? { optionIndex: data.optionIndex, markerNumber: data.markerNumber }
+          : undefined,
     })
     // Remove used board from newBoards
-    gameStore.setNewBoards(gameStore.newBoards.filter(b => b.id !== data.newBoard.id))
+    gameStore.setNewBoards(gameStore.newBoards.filter((b) => b.id !== data.newBoard.id))
   })
 
   sock.on('effect_card', (data: EffectCardPayload) => {
@@ -365,7 +384,7 @@ function setupGameEventHandlers(sock: Socket) {
     if (data.success) {
       gameStore.setSystemMessage('破案成功！', 'success')
     } else {
-      const player = gameStore.players.find(p => p.id === data.playerId)
+      const player = gameStore.players.find((p) => p.id === data.playerId)
       const name = player?.nickname || '未知'
       gameStore.setSystemMessage(`${name} 破案失败，失去破案权`, 'error')
     }
@@ -399,10 +418,13 @@ function setupGameEventHandlers(sock: Socket) {
     gameStore.setBlackout(false)
   })
 
-  sock.on('full_state', (data: Partial<GameState> & Pick<GameState, 'phase' | 'players' | 'boards'>) => {
-    gameStore.syncFullState({
-      ...data,
-      round: data.round ?? 1,
-    })
-  })
+  sock.on(
+    'full_state',
+    (data: Partial<GameState> & Pick<GameState, 'phase' | 'players' | 'boards'>) => {
+      gameStore.syncFullState({
+        ...data,
+        round: data.round ?? 1,
+      })
+    },
+  )
 }

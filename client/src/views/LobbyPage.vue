@@ -9,7 +9,8 @@ import IconButton from '../components/ui/IconButton.vue'
 const router = useRouter()
 const game = useGameStore()
 const auth = useAuthStore()
-const { connected, connectionError, connect, disconnect, joinRoom, updateNickname, startGame } = useSocket()
+const { connected, connectionError, connect, disconnect, joinRoom, updateNickname, startGame } =
+  useSocket()
 
 const NICKNAME_KEY = 'csi_nickname'
 const PWA_DISMISS_KEY = 'csi_pwa_dismissed'
@@ -19,14 +20,15 @@ const editingNickname = ref(false)
 const newNickname = ref('')
 
 // === PWA install prompt ===
-const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-  || (navigator as any).standalone === true
+const isStandalone =
+  window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true
 const deferredPrompt = ref<any>(null)
 const showPwaPrompt = ref(false)
 
 // Detect iOS Safari (no beforeinstallprompt support)
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-const isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|Chrome/.test(navigator.userAgent)
+const isSafari =
+  /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|Chrome/.test(navigator.userAgent)
 const isIOSSafari = isIOS && isSafari
 
 function onBeforeInstallPrompt(e: Event) {
@@ -101,35 +103,53 @@ function confirmEditNickname() {
 
 // Navigate to /game when game is active (start or reconnect)
 const GAME_ACTIVE_PHASES = new Set([
-  'role-reveal', 'night-murder', 'witness-accuse',
-  'discussion-1', 'advance-1', 'discussion-2', 'advance-2',
-  'discussion-3', 'force-solve', 'game-over',
+  'role-reveal',
+  'night-murder',
+  'witness-accuse',
+  'discussion-1',
+  'advance-1',
+  'discussion-2',
+  'advance-2',
+  'discussion-3',
+  'force-solve',
+  'game-over',
 ])
-watch(() => game.phase, (p) => {
-  if (GAME_ACTIVE_PHASES.has(p)) {
-    router.push('/game')
-  }
-})
+watch(
+  () => game.phase,
+  (p) => {
+    if (GAME_ACTIVE_PHASES.has(p)) {
+      router.push('/game')
+    }
+  },
+)
 
 // Also redirect if room status is 'playing' (handles reconnection case)
-watch(() => game.roomStatus, (status) => {
-  if (status === 'playing') {
-    router.push('/game')
-  }
-}, { immediate: true })
+watch(
+  () => game.roomStatus,
+  (status) => {
+    if (status === 'playing') {
+      router.push('/game')
+    }
+  },
+  { immediate: true },
+)
 
 onMounted(() => {
   connect()
   // Auto-join if nickname was saved
   const saved = nickname.value
   if (saved) {
-    const stop = watch(connected, (isConnected) => {
-      if (isConnected) {
-        joinRoom(saved)
-        joined.value = true
-        stop()
-      }
-    }, { immediate: true })
+    const stop = watch(
+      connected,
+      (isConnected) => {
+        if (isConnected) {
+          joinRoom(saved)
+          joined.value = true
+          stop()
+        }
+      },
+      { immediate: true },
+    )
   }
 
   // PWA install prompt — show for all non-standalone mobile browsers
@@ -146,9 +166,11 @@ onUnmounted(() => {
 
 <template>
   <!-- State 1: Not joined — nickname input -->
-  <div v-if="!joined" class="vignette min-h-dvh flex flex-col items-center justify-center px-6 bg-bg-primary">
+  <div
+    v-if="!joined"
+    class="vignette min-h-dvh flex flex-col items-center justify-center px-6 bg-bg-primary"
+  >
     <div class="relative z-10 w-full max-w-xs flex flex-col items-center">
-
       <!-- Icon + Title -->
       <span class="material-symbols-outlined text-amber-accent text-4xl mb-4">shield</span>
       <h1 class="text-xl font-bold tracking-[0.08em] text-text-primary mb-1">Join Investigation</h1>
@@ -164,20 +186,26 @@ onUnmounted(() => {
           maxlength="10"
           autocomplete="off"
         />
-        <IconButton type="submit" icon="arrow_forward" icon-position="right" :disabled="!nickname.trim() || !connected" block>
+        <IconButton
+          type="submit"
+          icon="arrow_forward"
+          icon-position="right"
+          :disabled="!nickname.trim() || !connected"
+          block
+        >
           加入调查
         </IconButton>
       </form>
-
     </div>
   </div>
 
   <!-- State 2: Joined — lobby -->
   <div v-else class="min-h-dvh flex flex-col bg-bg-primary">
-
     <!-- Sticky header -->
-    <header class="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-bg-secondary/90 backdrop-blur-sm border-b border-border"
-            :style="{ paddingTop: 'calc(12px + var(--safe-area-top))' }">
+    <header
+      class="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-bg-secondary/90 backdrop-blur-sm border-b border-border"
+      :style="{ paddingTop: 'calc(12px + var(--safe-area-top))' }"
+    >
       <div class="flex items-center gap-2">
         <span class="pulse-dot" />
         <span class="text-text-primary text-sm font-semibold tracking-wide">Lobby Active</span>
@@ -191,7 +219,6 @@ onUnmounted(() => {
     <!-- Scrollable player list -->
     <main class="flex-1 overflow-y-auto px-4 py-4 pb-36">
       <div class="max-w-md mx-auto flex flex-col gap-3">
-
         <!-- Players -->
         <div
           v-for="player in players"
@@ -226,30 +253,30 @@ onUnmounted(() => {
 
           <!-- Status badge -->
           <div class="flex items-center gap-2 shrink-0">
-            <span
-              class="text-xs px-2 py-0.5 rounded-full bg-success/15 text-success"
-            >
-              Ready
-            </span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-success/15 text-success"> Ready </span>
           </div>
         </div>
 
-        <IconButton icon="share" variant="ghost" block>
-          邀请
-        </IconButton>
+        <IconButton icon="share" variant="ghost" block> 邀请 </IconButton>
       </div>
     </main>
 
     <!-- Fixed footer -->
-    <footer class="fixed bottom-0 left-0 right-0 z-20 px-4 pt-3 bg-bg-primary/95 backdrop-blur-sm border-t border-border"
-            :style="{ paddingBottom: 'calc(16px + var(--safe-area-bottom))' }">
+    <footer
+      class="fixed bottom-0 left-0 right-0 z-20 px-4 pt-3 bg-bg-primary/95 backdrop-blur-sm border-t border-border"
+      :style="{ paddingBottom: 'calc(16px + var(--safe-area-bottom))' }"
+    >
       <div class="max-w-md mx-auto">
-        <IconButton v-if="isHost" icon="play_arrow" :disabled="!canStart" block @click="handleStartGame">
+        <IconButton
+          v-if="isHost"
+          icon="play_arrow"
+          :disabled="!canStart"
+          block
+          @click="handleStartGame"
+        >
           {{ canStart ? '开始调查' : `开始调查（至少${minPlayers}人）` }}
         </IconButton>
-        <p v-else class="text-text-muted text-sm text-center py-3">
-          等待房主开始游戏…
-        </p>
+        <p v-else class="text-text-muted text-sm text-center py-3">等待房主开始游戏…</p>
       </div>
     </footer>
 
@@ -285,10 +312,12 @@ onUnmounted(() => {
           />
 
           <div class="flex gap-2 w-full mt-2">
-            <button class="pwa-dialog__dismiss flex-1" @click="cancelEditNickname">
-              取消
-            </button>
-            <button class="pwa-dialog__install flex-1" @click="confirmEditNickname" :disabled="!newNickname.trim()">
+            <button class="pwa-dialog__dismiss flex-1" @click="cancelEditNickname">取消</button>
+            <button
+              class="pwa-dialog__install flex-1"
+              @click="confirmEditNickname"
+              :disabled="!newNickname.trim()"
+            >
               确认
             </button>
           </div>
@@ -307,7 +336,7 @@ onUnmounted(() => {
           </div>
           <h2 class="pwa-dialog__title">添加到主屏幕</h2>
           <p class="pwa-dialog__desc">
-            安装「犯罪现场」到主屏幕，获得更好的全屏体验。<br/>
+            安装「犯罪现场」到主屏幕，获得更好的全屏体验。<br />
             <span class="pwa-dialog__hint">几乎不占存储空间</span>
           </p>
 
@@ -322,7 +351,11 @@ onUnmounted(() => {
             <template v-if="isIOSSafari">
               <div class="pwa-dialog__step">
                 <span class="pwa-dialog__step-num">1</span>
-                <span>点击底部 <span class="material-symbols-outlined pwa-dialog__inline-icon">ios_share</span> 分享按钮</span>
+                <span
+                  >点击底部
+                  <span class="material-symbols-outlined pwa-dialog__inline-icon">ios_share</span>
+                  分享按钮</span
+                >
               </div>
               <div class="pwa-dialog__step">
                 <span class="pwa-dialog__step-num">2</span>
@@ -332,7 +365,11 @@ onUnmounted(() => {
             <template v-else>
               <div class="pwa-dialog__step">
                 <span class="pwa-dialog__step-num">1</span>
-                <span>点击浏览器右上角 <span class="material-symbols-outlined pwa-dialog__inline-icon">more_vert</span> 菜单</span>
+                <span
+                  >点击浏览器右上角
+                  <span class="material-symbols-outlined pwa-dialog__inline-icon">more_vert</span>
+                  菜单</span
+                >
               </div>
               <div class="pwa-dialog__step">
                 <span class="pwa-dialog__step-num">2</span>
@@ -341,9 +378,7 @@ onUnmounted(() => {
             </template>
           </div>
 
-          <button class="pwa-dialog__dismiss" @click="dismissPwaPrompt">
-            以后再说
-          </button>
+          <button class="pwa-dialog__dismiss" @click="dismissPwaPrompt">以后再说</button>
         </div>
       </div>
     </Transition>
@@ -361,7 +396,9 @@ onUnmounted(() => {
   font-size: 1rem;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .lobby-input:focus {
@@ -383,8 +420,13 @@ onUnmounted(() => {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 /* Player card */
@@ -415,7 +457,9 @@ onUnmounted(() => {
   border: none;
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .edit-nickname-btn:hover {
@@ -438,7 +482,9 @@ onUnmounted(() => {
   font-size: 0.95rem;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .nickname-edit-input:focus {

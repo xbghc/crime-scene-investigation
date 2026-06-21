@@ -3,10 +3,22 @@ import GameOverView from './GameOverView.vue'
 import { mockPlayers } from '../../__mocks__/gameData'
 
 const scores: Record<string, number> = {
-  p1: 3, p2: 0, p3: 0, p4: 2, p5: 2, p6: 2, p7: 2,
+  p1: 3,
+  p2: 0,
+  p3: 0,
+  p4: 2,
+  p5: 2,
+  p6: 2,
+  p7: 2,
 }
 const murdererWinScores: Record<string, number> = {
-  p1: 0, p2: 3, p3: 3, p4: 0, p5: 0, p6: 0, p7: 0,
+  p1: 0,
+  p2: 3,
+  p3: 3,
+  p4: 0,
+  p5: 0,
+  p6: 0,
+  p7: 0,
 }
 const solution = { meansCardId: 'M001', clueCardId: 'C001' }
 </script>
