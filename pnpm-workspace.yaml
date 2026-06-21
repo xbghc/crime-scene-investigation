@@ -6,14 +6,4 @@ ignoredBuiltDependencies:
   - esbuild
 
 onlyBuiltDependencies:
-  - '"'
-  - '['
-  - ']'
-  - b
-  - d
-  - e
-  - i
-  - l
   - odiff-bin
-  - s
-  - u
