@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 
 interface Props {
   message: string
@@ -16,6 +16,7 @@ const emit = defineEmits<{
   dismiss: []
 }>()
 
+const visible = ref(false)
 let timer: ReturnType<typeof setTimeout> | null = null
 
 function dismiss() {
@@ -23,6 +24,7 @@ function dismiss() {
 }
 
 onMounted(() => {
+  visible.value = true
   if (props.duration > 0) {
     timer = setTimeout(dismiss, props.duration)
   }
@@ -39,7 +41,12 @@ onUnmounted(() => {
 <template>
   <Teleport to="body">
     <Transition name="toast">
-      <div :class="['base-toast', `base-toast--${type}`]" role="alert" @click="dismiss">
+      <div
+        v-show="visible"
+        :class="['base-toast', `base-toast--${type}`]"
+        role="alert"
+        @click="dismiss"
+      >
         <span class="base-toast__message">{{ message }}</span>
       </div>
     </Transition>

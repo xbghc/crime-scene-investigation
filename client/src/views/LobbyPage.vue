@@ -9,8 +9,7 @@ import IconButton from '../components/ui/IconButton.vue'
 const router = useRouter()
 const game = useGameStore()
 const auth = useAuthStore()
-const { connected, connectionError, connect, disconnect, joinRoom, updateNickname, startGame } =
-  useSocket()
+const { connected, connectionError, connect, joinRoom, updateNickname, startGame } = useSocket()
 
 const NICKNAME_KEY = 'csi_nickname'
 const PWA_DISMISS_KEY = 'csi_pwa_dismissed'
@@ -20,9 +19,14 @@ const editingNickname = ref(false)
 const newNickname = ref('')
 
 // === PWA install prompt ===
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
 const isStandalone =
-  window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true
-const deferredPrompt = ref<any>(null)
+  window.matchMedia('(display-mode: standalone)').matches ||
+  (navigator as Navigator & { standalone?: boolean }).standalone === true
+const deferredPrompt = ref<BeforeInstallPromptEvent | null>(null)
 const showPwaPrompt = ref(false)
 
 // Detect iOS Safari (no beforeinstallprompt support)
@@ -33,7 +37,7 @@ const isIOSSafari = isIOS && isSafari
 
 function onBeforeInstallPrompt(e: Event) {
   e.preventDefault()
-  deferredPrompt.value = e
+  deferredPrompt.value = e as BeforeInstallPromptEvent
   if (!localStorage.getItem(PWA_DISMISS_KEY)) {
     showPwaPrompt.value = true
   }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../stores/game'
 import { useSocket } from '../composables/useSocket'
@@ -25,7 +25,6 @@ const game = useGameStore()
 const {
   connected,
   connect,
-  disconnect,
   murdererSelect,
   witnessSetMarker,
   witnessConfirm,
@@ -36,7 +35,6 @@ const {
   accompliceChoose,
   attemptSolve,
   effectAction,
-  startGame,
   resetGame,
 } = useSocket()
 
@@ -205,6 +203,8 @@ function handleWitnessFinishAdvance() {
 }
 
 // Effect card witness action
+// TODO: 效果牌目击者交互尚未接入 UI（效果牌弹窗目前仅展示），保留此 handler 待接线
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function handleEffectAction(payload: {
   effectId: string
   data: import('../types').EffectActionData

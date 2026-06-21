@@ -15,7 +15,7 @@ import type {
 } from '../types'
 
 // === Room event payload types ===
-interface RoomStatePayload extends RoomState {}
+type RoomStatePayload = RoomState
 
 interface PlayerJoinedPayload {
   player: RoomState['players'][number]
@@ -25,7 +25,7 @@ interface PlayerLeftPayload {
   playerId: string
 }
 
-interface AccomplicePromptPayload {}
+type AccomplicePromptPayload = Record<string, never>
 
 interface MurdererSelectionUpdatePayload {
   meansCard: { id: string; name: string }
@@ -138,7 +138,7 @@ export function useSocket() {
     })
 
     // Expose for E2E testing
-    ;(window as any).__socket = socket
+    ;(window as Window & { __socket?: Socket }).__socket = socket
 
     setupConnectionHandlers(socket)
     setupGameEventHandlers(socket)
