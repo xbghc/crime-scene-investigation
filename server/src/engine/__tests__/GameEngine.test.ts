@@ -126,7 +126,7 @@ function advanceToForceSolve(engine: GameEngine, io: MockIO, players: PlayerInfo
 /** Get the solution known to the witness (for correct solve attempts) */
 function getSolution(
   engine: GameEngine,
-  players: PlayerInfo[],
+  _players: PlayerInfo[],
 ): { meansCardId: string; clueCardId: string } {
   const solution = engine.getSolution()
   expect(solution).not.toBeNull()
@@ -298,7 +298,7 @@ describe('GameEngine', () => {
     })
 
     it('should setup 6 active boards (1 cause + 1 location + 4 scene)', () => {
-      const players = addPlayers(engine, io, 7)
+      addPlayers(engine, io, 7)
       advanceToNightMurder(engine)
 
       const boards = engine.getActiveBoards()
@@ -1203,7 +1203,7 @@ describe('GameEngine', () => {
   // ===== 断线重连 =====
   describe('断线重连', () => {
     it('should allow a disconnected player to reconnect with a new socket', () => {
-      const players = addPlayers(engine, io, 4)
+      addPlayers(engine, io, 4)
       engine.startGame()
 
       engine.handleDisconnect('user-0')

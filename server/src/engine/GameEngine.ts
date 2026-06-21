@@ -194,7 +194,6 @@ export class GameEngine {
     if (!player) {
       return { ok: false, error: '玩家不存在' }
     }
-    const oldNickname = player.nickname
     player.nickname = newNickname
     return { ok: true }
   }
