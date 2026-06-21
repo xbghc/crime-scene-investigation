@@ -29,4 +29,22 @@ export default defineConfigWithVueTs(
   pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,
   skipFormatting,
+  {
+    /* 尊重 `_` 前缀约定：以下划线开头的未使用参数/变量是有意保留的（保持签名等），不报错。 */
+    name: 'app/unused-vars',
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+    },
+  },
+  {
+    /* 测试文件大量使用 mock 对象与类型断言，no-explicit-any 在此收益低噪音大，遵循 typescript-eslint 官方建议予以豁免。 */
+    name: 'app/test-overrides',
+    files: ['**/__tests__/**', '**/*.{test,spec}.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 )
