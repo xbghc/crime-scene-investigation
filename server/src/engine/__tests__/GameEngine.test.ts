@@ -130,7 +130,7 @@ function getSolution(
 ): { meansCardId: string; clueCardId: string } {
   const solution = engine.getSolution()
   expect(solution).not.toBeNull()
-  return solution!
+  return { meansCardId: solution!.meansCard.id, clueCardId: solution!.clueCard.id }
 }
 
 // =========================================================================
@@ -396,8 +396,8 @@ describe('GameEngine', () => {
       )
       const solution = engine.getSolution()
       expect(solution).not.toBeNull()
-      expect(solution!.meansCardId).toBe(murderer!.meansCards[0].id)
-      expect(solution!.clueCardId).toBe(murderer!.clueCards[0].id)
+      expect(solution!.meansCard.id).toBe(murderer!.meansCards[0].id)
+      expect(solution!.clueCard.id).toBe(murderer!.clueCards[0].id)
     })
 
     it('should notify witness of the murder selection', () => {
