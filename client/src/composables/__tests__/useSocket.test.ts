@@ -333,7 +333,7 @@ describe('useSocket', () => {
       fireEvent('room_state', roomData)
 
       expect(gameStore.roomPlayers).toHaveLength(1)
-      expect(gameStore.roomPlayers[0].nickname).toBe('Alice')
+      expect(gameStore.roomPlayers[0]!.nickname).toBe('Alice')
       expect(gameStore.hostId).toBe('p1')
     })
 
@@ -345,7 +345,7 @@ describe('useSocket', () => {
       })
 
       expect(gameStore.roomPlayers).toHaveLength(1)
-      expect(gameStore.roomPlayers[0].id).toBe('p1')
+      expect(gameStore.roomPlayers[0]!.id).toBe('p1')
     })
 
     it('player_left 事件应从房间列表移除玩家', () => {
@@ -447,9 +447,9 @@ describe('useSocket', () => {
       expect(gameStore.phase).toBe('role-reveal')
       expect(gameStore.myRole).toBe('detective')
       expect(gameStore.players).toHaveLength(2)
-      expect(gameStore.players[0].meansCards).toHaveLength(1)
-      expect(gameStore.players[0].status).toBe('alive')
-      expect(gameStore.players[0].hasSolveRight).toBe(true)
+      expect(gameStore.players[0]!.meansCards).toHaveLength(1)
+      expect(gameStore.players[0]!.status).toBe('alive')
+      expect(gameStore.players[0]!.hasSolveRight).toBe(true)
     })
 
     it('night_phase 事件应将 phase 设为 night-murder', () => {
@@ -494,7 +494,7 @@ describe('useSocket', () => {
 
       expect(gameStore.phase).toBe('discussion-1')
       expect(gameStore.players).toHaveLength(1)
-      expect(gameStore.players[0].id).toBe('existing')
+      expect(gameStore.players[0]!.id).toBe('existing')
     })
   })
 
@@ -515,7 +515,7 @@ describe('useSocket', () => {
 
       fireEvent('marker_placed', { boardId: 'b1', optionIndex: 1, markerNumber: 3 })
 
-      expect(gameStore.boards[0].marker).toEqual({ optionIndex: 1, markerNumber: 3 })
+      expect(gameStore.boards[0]!.marker).toEqual({ optionIndex: 1, markerNumber: 3 })
     })
 
     it('board_replaced 事件应替换旧场景板（含 marker）', () => {
@@ -530,8 +530,8 @@ describe('useSocket', () => {
         markerNumber: 2,
       })
 
-      expect(gameStore.boards[0].id).toBe('b2')
-      expect(gameStore.boards[0].marker).toEqual({ optionIndex: 0, markerNumber: 2 })
+      expect(gameStore.boards[0]!.id).toBe('b2')
+      expect(gameStore.boards[0]!.marker).toEqual({ optionIndex: 0, markerNumber: 2 })
     })
 
     it('board_replaced 事件不含 marker 参数时不应设置 marker', () => {
@@ -541,8 +541,8 @@ describe('useSocket', () => {
       const newBoard = makeBoard({ id: 'b2' })
       fireEvent('board_replaced', { oldBoardId: 'b1', newBoard })
 
-      expect(gameStore.boards[0].id).toBe('b2')
-      expect(gameStore.boards[0].marker).toBeUndefined()
+      expect(gameStore.boards[0]!.id).toBe('b2')
+      expect(gameStore.boards[0]!.marker).toBeUndefined()
     })
 
     it('new_boards 事件应设置新场景板列表', () => {
@@ -552,7 +552,7 @@ describe('useSocket', () => {
       fireEvent('new_boards', { boards })
 
       expect(gameStore.newBoards).toHaveLength(1)
-      expect(gameStore.newBoards[0].id).toBe('nb1')
+      expect(gameStore.newBoards[0]!.id).toBe('nb1')
     })
   })
 
@@ -587,7 +587,7 @@ describe('useSocket', () => {
         result: { players: updatedPlayers },
       })
 
-      expect(gameStore.players[0].status).toBe('dead')
+      expect(gameStore.players[0]!.status).toBe('dead')
     })
 
     it('effect_card 事件含 result.blackout 时应设置停电状态', () => {
@@ -660,7 +660,7 @@ describe('useSocket', () => {
       fireEvent('solve_result', { playerId: 'p1', success: false })
 
       expect(gameStore.lastSolveResult).toEqual({ playerId: 'p1', success: false })
-      expect(gameStore.players[0].hasSolveRight).toBe(false)
+      expect(gameStore.players[0]!.hasSolveRight).toBe(false)
       expect(gameStore.systemMessage!.content).toContain('Alice')
       expect(gameStore.systemMessage!.content).toContain('破案失败')
       expect(gameStore.systemMessage!.type).toBe('error')
@@ -695,8 +695,8 @@ describe('useSocket', () => {
       expect(gameStore.phase).toBe('game-over')
       expect(gameStore.scores).toEqual({ p1: 3, p2: 0 })
       expect(gameStore.murdererSelection).toEqual({ meansCardId: 'M001', clueCardId: 'C001' })
-      expect(gameStore.players[0].role).toBe('detective')
-      expect(gameStore.players[1].role).toBe('murderer')
+      expect(gameStore.players[0]!.role).toBe('detective')
+      expect(gameStore.players[1]!.role).toBe('murderer')
     })
   })
 

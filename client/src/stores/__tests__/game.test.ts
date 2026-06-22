@@ -218,7 +218,10 @@ describe('GameStore', () => {
         players: [makePlayer({ id: 'p1' })],
         boards: [makeBoard({ id: 'b1' })],
         myRole: 'detective',
-        murdererSelection: { meansCardId: 'M001', clueCardId: 'C001' },
+        murdererSelection: {
+          meansCard: { id: 'M001', name: '手枪' },
+          clueCard: { id: 'C001', name: '血迹' },
+        },
         currentSolverId: 'p2',
         effectCard: { id: 'E01', name: '暗杀', effect: '暗杀一名玩家' },
         winner: 'detective',
@@ -233,7 +236,10 @@ describe('GameStore', () => {
       expect(store.players).toHaveLength(1)
       expect(store.boards).toHaveLength(1)
       expect(store.myRole).toBe('detective')
-      expect(store.murdererSelection).toEqual({ meansCardId: 'M001', clueCardId: 'C001' })
+      expect(store.murdererSelection).toEqual({
+        meansCard: { id: 'M001', name: '手枪' },
+        clueCard: { id: 'C001', name: '血迹' },
+      })
       expect(store.currentSolverId).toBe('p2')
       expect(store.effectCard).toEqual({ id: 'E01', name: '暗杀', effect: '暗杀一名玩家' })
       expect(store.winner).toBe('detective')
@@ -271,7 +277,7 @@ describe('GameStore', () => {
 
       store.updateMarker('nonexistent', 0, 1)
 
-      expect(store.boards[0].marker).toBeUndefined()
+      expect(store.boards[0]!.marker).toBeUndefined()
     })
   })
 
@@ -283,9 +289,9 @@ describe('GameStore', () => {
       const newBoard = makeBoard({ id: 'b3', title: '新场景板' })
       store.replaceBoard('b1', newBoard)
 
-      expect(store.boards[0].id).toBe('b3')
-      expect(store.boards[0].title).toBe('新场景板')
-      expect(store.boards[1].id).toBe('b2')
+      expect(store.boards[0]!.id).toBe('b3')
+      expect(store.boards[0]!.title).toBe('新场景板')
+      expect(store.boards[1]!.id).toBe('b2')
     })
 
     it('目标场景板不存在时不应改动', () => {
@@ -294,7 +300,7 @@ describe('GameStore', () => {
       store.replaceBoard('nonexistent', makeBoard({ id: 'b3' }))
 
       expect(store.boards).toHaveLength(1)
-      expect(store.boards[0].id).toBe('b1')
+      expect(store.boards[0]!.id).toBe('b1')
     })
   })
 
@@ -344,7 +350,7 @@ describe('GameStore', () => {
       })
 
       expect(store.roomPlayers).toHaveLength(1)
-      expect(store.roomPlayers[0].nickname).toBe('Alice')
+      expect(store.roomPlayers[0]!.nickname).toBe('Alice')
       expect(store.roomStatus).toBe('waiting')
       expect(store.hostId).toBe('p1')
     })
@@ -369,7 +375,7 @@ describe('GameStore', () => {
       store.removeRoomPlayer('p1')
 
       expect(store.roomPlayers).toHaveLength(1)
-      expect(store.roomPlayers[0].id).toBe('p2')
+      expect(store.roomPlayers[0]!.id).toBe('p2')
     })
   })
 
@@ -478,7 +484,10 @@ describe('GameStore', () => {
       store.setPhase('discussion-2')
       store.updatePlayers([makePlayer()])
       store.updateBoards([makeBoard()])
-      store.setMurdererSelection({ meansCardId: 'M001', clueCardId: 'C001' })
+      store.setMurdererSelection({
+        meansCard: { id: 'M001', name: '手枪' },
+        clueCard: { id: 'C001', name: '血迹' },
+      })
       store.setBlackout(true)
       store.setSystemMessage('test')
       store.setAccomplicePrompted(true)
