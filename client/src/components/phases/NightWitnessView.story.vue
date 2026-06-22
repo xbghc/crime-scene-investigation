@@ -13,7 +13,10 @@ const murderer = mockPlayers[1]!
     <Variant title="凶手已出牌">
       <NightWitnessView
         :murderer-player="murderer"
-        :selection="{ meansCardId: 'M001', clueCardId: 'C001' }"
+        :selection="{
+          meansCard: { id: 'M001', name: '手枪' },
+          clueCard: { id: 'C001', name: '血迹' },
+        }"
       />
     </Variant>
   </Story>

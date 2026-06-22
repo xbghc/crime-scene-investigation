@@ -20,7 +20,7 @@ const murdererWinScores: Record<string, number> = {
   p6: 0,
   p7: 0,
 }
-const solution = { meansCardId: 'M001', clueCardId: 'C001' }
+const solution = { meansCard: { id: 'M001', name: '手枪' }, clueCard: { id: 'C001', name: '血迹' } }
 </script>
 
 <template>
