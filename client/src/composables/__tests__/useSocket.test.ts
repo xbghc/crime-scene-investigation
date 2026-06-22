@@ -405,14 +405,14 @@ describe('useSocket', () => {
       connectSocket()
 
       fireEvent('murderer_selection_update', {
-        selectedMeansId: 'M003',
-        selectedClueId: 'C005',
+        meansCard: { id: 'M003', name: '手枪' },
+        clueCard: { id: 'C005', name: '脚印' },
         confirmed: false,
       })
 
       expect(gameStore.murdererSelection).toEqual({
-        meansCardId: 'M003',
-        clueCardId: 'C005',
+        meansCard: { id: 'M003', name: '手枪' },
+        clueCard: { id: 'C005', name: '脚印' },
       })
     })
   })
@@ -463,9 +463,15 @@ describe('useSocket', () => {
     it('murderer_selected 事件应设置凶手选牌', () => {
       connectSocket()
 
-      fireEvent('murderer_selected', { meansCardId: 'M001', clueCardId: 'C001' })
+      fireEvent('murderer_selected', {
+        meansCard: { id: 'M001', name: '手枪' },
+        clueCard: { id: 'C001', name: '血迹' },
+      })
 
-      expect(gameStore.murdererSelection).toEqual({ meansCardId: 'M001', clueCardId: 'C001' })
+      expect(gameStore.murdererSelection).toEqual({
+        meansCard: { id: 'M001', name: '手枪' },
+        clueCard: { id: 'C001', name: '血迹' },
+      })
     })
 
     it('phase_change 事件应更新 phase 及可选的 players 和 boards', () => {
@@ -609,17 +615,29 @@ describe('useSocket', () => {
   describe('入站事件 - 破案与线索', () => {
     it('clue_replaced 事件应更新 murdererSelection 的 clueCardId', () => {
       connectSocket()
-      gameStore.setMurdererSelection({ meansCardId: 'M001', clueCardId: 'C001' })
+      gameStore.setMurdererSelection({
+        meansCard: { id: 'M001', name: '手枪' },
+        clueCard: { id: 'C001', name: '血迹' },
+      })
 
-      fireEvent('clue_replaced', { newClueCardId: 'C002' })
+      fireEvent('clue_replaced', {
+        oldClueCardId: 'C001',
+        newClueCard: { id: 'C002', name: '脚印' },
+      })
 
-      expect(gameStore.murdererSelection).toEqual({ meansCardId: 'M001', clueCardId: 'C002' })
+      expect(gameStore.murdererSelection).toEqual({
+        meansCard: { id: 'M001', name: '手枪' },
+        clueCard: { id: 'C002', name: '脚印' },
+      })
     })
 
     it('clue_replaced 事件在无已有选择时不应报错', () => {
       connectSocket()
 
-      fireEvent('clue_replaced', { newClueCardId: 'C002' })
+      fireEvent('clue_replaced', {
+        oldClueCardId: 'C001',
+        newClueCard: { id: 'C002', name: '脚印' },
+      })
 
       expect(gameStore.murdererSelection).toBeUndefined()
     })
