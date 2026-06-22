@@ -31,7 +31,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 坑
 
 - **无 `@/` 路径别名** —— 用相对路径导入。
-- **Lint/format 有存量未清**：ESLint（flat config，`eslint.config.mjs`）和 Prettier（`.prettierrc.json`：`semi:false` / `singleQuote` / `printWidth:100`）刚引入，现有代码尚有 ~73 个 ESLint 报错（多为 `no-explicit-any`）、~61 个文件未按 Prettier 格式化。所以 `pnpm lint` / `pnpm format:check` 当前是红的，**不是你的改动弄坏的**；格式化建议单独开一个 commit 跑 `pnpm format`。ESLint 复用 `.gitignore` 并额外忽略 `e2e/`、`dist` 等。
-- 双端 TypeScript 均为 `strict`。
+- **Lint / format / 构建 / 双端测试当前全绿**，改动后请保持。ESLint（flat config `eslint.config.mjs`，复用 `.gitignore` 并额外忽略 `e2e/`、`dist`；`_` 前缀变量豁免、测试文件豁免 `no-explicit-any`）、Prettier（`.prettierrc.json`：`semi:false` / `singleQuote` / `printWidth:100`）。
+- 双端 TypeScript 均为 `strict`；client 经 `@vue/tsconfig` 还启用了 `noUncheckedIndexedAccess`，数组索引访问（`arr[0].x`）需判空或 `!`。
+- 客户端测试经 `client/vitest.setup.ts` 注入内存版 localStorage（jsdom 28 在 vitest 4 下自带的 `localStorage` 方法缺失），新增测试无需自行 mock。
 - **卡牌 ID 格式**（权威数据在 `server/src/data/cards.ts`）：手段 `M001`–`M090`、线索 `C001`–`C220`（均 3 位），效果 `E01`–`E10`（2 位），场景板 `B-<类型>-<名>`（如 `B-CAUSE`、`B-LOC-A`）。曾因用 2 位 ID 导致卡牌 PNG 404（commit `4e60a4a`）。PNG 资源在 `assets/cards/` 与 `client/public/assets/cards/`（按 means/clues/effects/boards 分目录，目前多为空，待 Stitch 生成）。
 - Stitch / Playwright / Tavily 等 MCP 工具只能在 Claude 会话内调用；卡牌生成工作流见 `.claude/blog/20260423-stitch-card-workflow.md`。
