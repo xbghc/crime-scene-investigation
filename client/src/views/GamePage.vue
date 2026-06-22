@@ -34,7 +34,6 @@ const {
   endDiscussion,
   accompliceChoose,
   attemptSolve,
-  effectAction,
   resetGame,
 } = useSocket()
 
@@ -202,16 +201,6 @@ function handleWitnessFinishAdvance() {
   witnessFinishAdvance()
 }
 
-// Effect card witness action
-// TODO: 效果牌目击者交互尚未接入 UI（效果牌弹窗目前仅展示），保留此 handler 待接线
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function handleEffectAction(payload: {
-  effectId: string
-  data: import('../types').EffectActionData
-}) {
-  effectAction(payload.effectId, payload.data)
-}
-
 // Effect card dismiss
 function handleEffectDismiss() {
   showEffectCard.value = false
@@ -252,6 +241,11 @@ function handleToastDismiss() {
       <NightAccompliceView
         v-else-if="nightView === 'accomplice'"
         :murderer-nickname="murdererPlayer?.nickname || '???'"
+        :means-cards="murdererPlayer?.meansCards ?? []"
+        :clue-cards="murdererPlayer?.clueCards ?? []"
+        :selected-means-id="game.murdererSelection?.meansCard.id ?? null"
+        :selected-clue-id="game.murdererSelection?.clueCard.id ?? null"
+        :confirmed="!!game.murdererSelection"
       />
       <NightWitnessView
         v-else-if="nightView === 'witness'"
