@@ -58,6 +58,7 @@ export class GameEngine {
   private completedRoles: Record<string, Role> | null = null
   private pendingBoards: SceneBoardState[] = []
   private advanceEffectsStarted = false
+  private pendingEffectId: string | null = null
   private disconnectTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
 
   constructor(io: Server, roomCode = 'test-room') {
@@ -96,6 +97,7 @@ export class GameEngine {
     this.completedRoles = null
     this.pendingBoards = []
     this.advanceEffectsStarted = false
+    this.pendingEffectId = null
   }
 
   // RoomManager owns room expiry. Release only timers owned by this engine.
@@ -635,6 +637,7 @@ export class GameEngine {
     this.state.accompliceHasChosen = false
     this.pendingBoards = []
     this.advanceEffectsStarted = false
+    this.pendingEffectId = null
 
     this.io.to(this.roomCode).emit('phase_change', { phase })
     this.io.to(this.roomCode).emit('system_message', { content: '推进阶段开始...', type: 'phase' })
@@ -685,6 +688,10 @@ export class GameEngine {
   private executeAdvanceEffects(accompliceReplaced: boolean): void {
     this.advanceEffectsStarted = true
     const effectCard = this.drawEffectCard()
+    // Only implemented witness actions create a one-use authorization. Automatic
+    // and currently unsupported effects must not authorize a client-selected card.
+    this.pendingEffectId =
+      effectCard && ['E01', 'E03', 'E05', 'E08'].includes(effectCard.id) ? effectCard.id : null
     if (effectCard) {
       const result = this.applyEffectCard(effectCard)
       this.io.to(this.roomCode).emit('effect_card', { card: effectCard, result })
@@ -782,6 +789,8 @@ export class GameEngine {
   }
 
   private isAdvanceReady(): boolean {
+    // Preserve the existing optional interaction/progression contract: the UI
+    // does not yet implement effect actions. Unused authorization expires on exit.
     return this.isAdvancePhase() && this.advanceEffectsStarted && this.pendingBoards.length === 0
   }
 
@@ -806,6 +815,7 @@ export class GameEngine {
   finishAdvancePhase(): void {
     this.pendingBoards = []
     this.advanceEffectsStarted = false
+    this.pendingEffectId = null
     if (this.state.phase === 'advance-1') {
       this.transitionToDiscussion('discussion-2')
     } else if (this.state.phase === 'advance-2') {
@@ -915,6 +925,7 @@ export class GameEngine {
 
   private endGame(winner: 'detective' | 'murderer'): void {
     this.clearPhaseTimer()
+    this.pendingEffectId = null
     logger.game('GAME', `=== GAME OVER ===`, {
       winner,
       solution: this.state.solution,
@@ -991,6 +1002,7 @@ export class GameEngine {
     this.completedRoles = null
     this.pendingBoards = []
     this.advanceEffectsStarted = false
+    this.pendingEffectId = null
     const previousHostId = this.state.hostId
     const players = this.state.players.map((p) => ({
       ...p,
@@ -1074,26 +1086,37 @@ export class GameEngine {
     if (!player || player.role !== 'witness')
       return { ok: false, error: '只有目击者可以执行此操作' }
 
-    if (this.isAdvancePhase() && !this.advanceEffectsStarted)
-      return { ok: false, error: '请先等待帮凶决定' }
+    if (!this.isAdvancePhase()) return { ok: false, error: '当前不在推进阶段' }
+    if (!this.advanceEffectsStarted) return { ok: false, error: '请先等待帮凶决定' }
+    if (this.pendingEffectId === null || effectId !== this.pendingEffectId)
+      return { ok: false, error: '该效果牌未抽取或已执行' }
 
+    let result: OpResult
     switch (effectId) {
       case 'E01':
-        return this.applyAssassination(data)
+        result = this.applyAssassination(data)
+        break
       case 'E03':
-        return this.applyClearSuspicion(data)
+        result = this.applyClearSuspicion(data)
+        break
       case 'E05':
-        return this.applyEvidenceLost(data)
+        result = this.applyEvidenceLost(data)
+        break
       case 'E08':
-        return this.applyInfoLeak(data)
+        result = this.applyInfoLeak(data)
+        break
       default:
         return { ok: false, error: '未知效果' }
     }
+    // Validation failures preserve the drawn action so the witness can retry.
+    if (result.ok) this.pendingEffectId = null
+    return result
   }
 
   private applyAssassination(data: EffectActionData): OpResult {
     const target = data.targetId ? this.findPlayer(data.targetId) : undefined
-    if (!target || target.role === 'witness') return { ok: false, error: '无效的目标' }
+    if (!target || target.role === 'witness' || target.status !== 'alive')
+      return { ok: false, error: '无效的目标' }
     target.hasSolveRight = false
     target.status = 'dead'
     this.io.to(this.roomCode).emit('system_message', {
@@ -1105,7 +1128,8 @@ export class GameEngine {
 
   private applyClearSuspicion(data: EffectActionData): OpResult {
     const cleared = data.targetId ? this.findPlayer(data.targetId) : undefined
-    if (!cleared) return { ok: false, error: '无效的目标' }
+    if (!cleared || cleared.role === 'witness' || cleared.role === 'murderer')
+      return { ok: false, error: '无效的目标' }
     this.io.to(this.roomCode).emit('system_message', {
       content: `目击者宣布：${cleared.nickname} 不是凶手`,
       type: 'info',
@@ -1127,6 +1151,14 @@ export class GameEngine {
   }
 
   private applyInfoLeak(data: EffectActionData): OpResult {
+    const solution = this.state.solution
+    if (
+      !solution ||
+      !data.cardId ||
+      ![solution.meansCard.id, solution.clueCard.id].includes(data.cardId)
+    ) {
+      return { ok: false, error: '请选择凶手所选的手段牌或线索牌' }
+    }
     this.io
       .to(this.roomCode)
       .emit('system_message', { content: '目击者指向了凶手的一张牌', type: 'info' })

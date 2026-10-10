@@ -70,6 +70,26 @@ function getPlayerByRole(
   return undefined
 }
 
+// Enter a real advance with a scripted draw instead of bypassing card authorization.
+function drawWitnessEffect(engine: GameEngine, players: PlayerInfo[], effectId: string): void {
+  const murderer = getPlayerByRole(engine, players, 'murderer')!
+  const witness = getPlayerByRole(engine, players, 'witness')!
+  if (engine.getPhase() === 'night-murder') {
+    engine.handleMurdererSelect(murderer.id, murderer.meansCards[0].id, murderer.clueCards[0].id)
+    engine.handleWitnessConfirmMurder(witness.id)
+  }
+  if (engine.getPhase() === 'witness-accuse') {
+    engine
+      .getActiveBoards()
+      .forEach((board, index) => engine.handleWitnessSetMarker(witness.id, board.id, 0, index + 1))
+    engine.handleWitnessConfirmAccuse(witness.id)
+  }
+  engine.setEffectDeckForTest([{ id: effectId, name: effectId, effect: '' }])
+  engine.handleEndDiscussion(witness.id)
+  const accomplice = getPlayerByRole(engine, players, 'accomplice')
+  if (accomplice) engine.handleAccompliceChoose(accomplice.id, false)
+}
+
 // === Phase advancement helpers (through public API) ===
 
 function advanceToNightMurder(engine: GameEngine): void {
@@ -1002,6 +1022,7 @@ describe('GameEngine', () => {
       const detective = getPlayerByRole(engine, players, 'detective')
       expect(detective).toBeDefined()
 
+      drawWitnessEffect(engine, players, 'E01')
       const result = engine.handleEffectAction(witness!.id, 'E01', { targetId: detective!.id })
       expect(result.ok).toBe(true)
       expect(detective!.hasSolveRight).toBe(false)
@@ -1023,6 +1044,7 @@ describe('GameEngine', () => {
       const detective = getPlayerByRole(engine, players, 'detective')
       expect(detective).toBeDefined()
 
+      drawWitnessEffect(engine, players, 'E03')
       const result = engine.handleEffectAction(witness!.id, 'E03', { targetId: detective!.id })
       expect(result.ok).toBe(true)
     })
@@ -1055,6 +1077,7 @@ describe('GameEngine', () => {
       engine.handleWitnessSetMarker(witness!.id, boards[0].id, 0, 1)
 
       // Now apply E05 - remove marker from the first board
+      drawWitnessEffect(engine, players, 'E05')
       const result = engine.handleEffectAction(witness!.id, 'E05', { boardId: boards[0].id })
       expect(result.ok).toBe(true)
 
@@ -1108,7 +1131,10 @@ describe('GameEngine', () => {
       const witness = getPlayerByRole(engine, players, 'witness')
       expect(witness).toBeDefined()
 
-      const result = engine.handleEffectAction(witness!.id, 'E08', { cardId: 'M001' })
+      drawWitnessEffect(engine, players, 'E08')
+      const result = engine.handleEffectAction(witness!.id, 'E08', {
+        cardId: engine.getSolution()!.meansCard.id,
+      })
       expect(result.ok).toBe(true)
     })
 
@@ -1550,6 +1576,7 @@ describe('GameEngine', () => {
       advanceToNightMurder(engine)
       const witness = getPlayerByRole(engine, players, 'witness')!
       const victim = getPlayerByRole(engine, players, 'detective')!
+      drawWitnessEffect(engine, players, 'E01')
       engine.handleEffectAction(witness.id, 'E01', { targetId: victim.id })
       engine.handleDisconnect(victim.id)
       expect(victim.status).toBe('dead')
