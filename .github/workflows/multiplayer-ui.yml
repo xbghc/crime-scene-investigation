@@ -1,6 +1,11 @@
 name: Multiplayer browser tests
 on:
   workflow_dispatch:
+    inputs:
+      baseline_ref:
+        description: 'Optional previous commit for matching visual evidence'
+        required: false
+        type: string
   pull_request:
     paths:
       - 'client/**'
@@ -10,6 +15,7 @@ on:
       - 'playwright.effects.config.mjs'
       - 'playwright.edges.config.mjs'
       - 'playwright.multiplayer.config.mjs'
+      - 'playwright.ui.config.mjs'
       - 'pnpm-lock.yaml'
       - '.github/workflows/multiplayer-ui.yml'
 permissions:
@@ -21,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [classic, multiplayer, edges, effects]
+        suite: [classic, multiplayer, edges, effects, ui]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,4 +57,72 @@ jobs:
             test-results/**/*.png
             test-results/**/error-context.md
             test-results/*-summary.json
+          retention-days: 7
+
+  baseline-evidence:
+    # Baseline screenshots are evidence, not a claim that an older UI passes the
+    # current appearance checks. The normal ui matrix suite always runs those.
+    if: github.event_name == 'pull_request' || inputs.baseline_ref != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [ui, effects]
+    defaults:
+      run:
+        working-directory: baseline
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: evidence-source
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || inputs.baseline_ref }}
+          path: baseline
+          persist-credentials: false
+      - name: Copy presentation evidence tests only
+        run: |
+          cp ../evidence-source/e2e/design-system-ui.spec.mjs e2e/
+          cp ../evidence-source/e2e/effect-cards.spec.mjs e2e/
+          cp ../evidence-source/playwright.ui.config.mjs .
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: baseline/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: baseline/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: node node_modules/playwright/cli.js install --with-deps chromium
+      - name: Capture baseline ${{ matrix.suite }} evidence
+        env:
+          UI_EVIDENCE_ONLY: '1'
+          EVIDENCE_SUITE: ${{ matrix.suite }}
+        run: |
+          mkdir -p test-results
+          {
+            printf 'Baseline commit: '
+            git rev-parse HEAD
+            printf 'Evidence spec commit: '
+            git -C ../evidence-source rev-parse HEAD
+            printf 'Mode: baseline screenshots only; current appearance checks omitted\n'
+          } > test-results/baseline-provenance.txt
+          if [ "$EVIDENCE_SUITE" = "effects" ]; then
+            node node_modules/playwright/cli.js test --config=playwright.effects.config.mjs --grep '效果01|效果08：公开'
+          else
+            node node_modules/playwright/cli.js test --config=playwright.ui.config.mjs
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: baseline-browser-evidence-${{ matrix.suite }}
+          path: |
+            baseline/playwright-report/
+            baseline/test-results/**/*.png
+            baseline/test-results/**/error-context.md
+            baseline/test-results/*-summary.json
+            baseline/test-results/baseline-provenance.txt
           retention-days: 7

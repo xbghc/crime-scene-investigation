@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from '../ui/AppIcon.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type {
   EffectActionData,
@@ -178,9 +179,7 @@ function submit(skip = false) {
 <template>
   <section class="effect-panel" aria-label="效果牌">
     <header class="effect-panel__header">
-      <span class="material-symbols-outlined effect-panel__icon" aria-hidden="true"
-        >auto_awesome</span
-      >
+      <AppIcon name="auto_awesome" class="app-icon effect-panel__icon" aria-hidden="true" />
       <div>
         <p class="effect-panel__eyebrow">效果牌</p>
         <h3 class="effect-panel__title">{{ card.name }}</h3>
@@ -208,7 +207,7 @@ function submit(skip = false) {
 
     <div v-if="pending" class="effect-panel__action" data-testid="effect-action" :aria-busy="busy">
       <p class="effect-panel__private">
-        <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+        <AppIcon name="lock" class="app-icon" aria-hidden="true" />
         仅你可见 · 目击者操作
       </p>
       <fieldset class="effect-panel__fieldset" :disabled="busy">
@@ -281,57 +280,63 @@ function submit(skip = false) {
 <style scoped>
 .effect-panel {
   min-width: 0;
-  padding: 16px;
-  border: 1px solid rgba(161, 113, 223, 0.5);
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(110, 64, 170, 0.13), var(--bg-secondary));
+  padding: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-4);
   overflow-wrap: anywhere;
 }
 .effect-panel__header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-3);
 }
 .effect-panel__icon {
-  color: #b994ed;
-  font-size: 28px;
+  color: var(--color-purple);
+  font-size: 24px;
+  flex-shrink: 0;
 }
 .effect-panel__eyebrow {
   margin: 0;
-  color: #b994ed;
-  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 16px;
+  margin-bottom: var(--space-1);
 }
 .effect-panel__title {
   margin: 0;
   color: var(--color-text);
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
 }
 .effect-panel__badge {
   margin-left: auto;
   flex-shrink: 0;
-  padding: 3px 8px;
-  border-radius: 20px;
-  color: #d3b5fb;
-  background: rgba(110, 64, 170, 0.22);
-  font-size: 0.75rem;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: var(--muted);
+  font-size: 12px;
+  border: 1px solid var(--border);
 }
 .effect-panel__description,
 .effect-panel__hint {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 0.8rem;
+  font-size: 14px;
   line-height: 1.6;
 }
 .effect-panel__result {
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
   background: var(--bg-primary);
   color: var(--color-text);
-  font-size: 0.9rem;
+  font-size: 14px;
+  border: 1px solid var(--border);
 }
 .effect-panel__result p {
   margin: 0;
@@ -345,9 +350,9 @@ function submit(skip = false) {
 .effect-panel__action {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-4);
   border-top: 1px solid var(--border-color);
-  padding-top: 12px;
+  padding-top: var(--space-4);
 }
 .effect-panel__private {
   display: flex;
@@ -357,7 +362,7 @@ function submit(skip = false) {
   color: #90baff;
   font-size: 0.75rem;
 }
-.effect-panel__private .material-symbols-outlined {
+.effect-panel__private .app-icon {
   font-size: 16px;
 }
 .effect-panel__fieldset {
@@ -380,13 +385,13 @@ function submit(skip = false) {
 .effect-panel__choice {
   min-width: 0;
   min-height: 64px;
-  padding: 10px;
-  border: 1.5px solid var(--border-color);
-  border-radius: 8px;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
+  gap: var(--space-1);
   background: var(--bg-primary);
   text-align: left;
 }
@@ -397,7 +402,7 @@ function submit(skip = false) {
 .effect-panel__choice-name {
   color: var(--color-text);
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 14px;
 }
 .effect-panel__choice-detail {
   color: var(--color-text-muted);
@@ -406,15 +411,15 @@ function submit(skip = false) {
 .effect-panel__selection {
   margin: 0;
   color: var(--color-amber-light);
-  font-size: 0.8rem;
+  font-size: 14px;
 }
 .effect-panel__error {
   margin: 0;
-  padding: 10px;
+  padding: var(--space-3);
   border-radius: 6px;
   background: rgba(211, 47, 47, 0.15);
   color: #ffb7b7;
-  font-size: 0.8rem;
+  font-size: 14px;
 }
 .effect-panel__buttons {
   display: flex;
@@ -424,24 +429,33 @@ function submit(skip = false) {
 .effect-panel__button {
   flex: 1 1 120px;
   min-height: 44px;
-  padding: 10px 12px;
+  padding: var(--space-3);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-card);
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
 }
 .effect-panel__button--primary {
-  background: var(--color-purple);
-  border-color: var(--color-purple);
-  color: #fff;
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
 }
 .effect-panel button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 .effect-panel button:focus-visible {
-  outline: 3px solid var(--color-amber-light);
+  outline: 3px solid var(--ring);
   outline-offset: 3px;
+}
+
+.effect-panel__choice:hover:not(:disabled) {
+  border-color: var(--color-text-muted);
+}
+@media (max-width: 600px) {
+  .effect-panel {
+    padding: var(--space-4);
+  }
 }
 </style>

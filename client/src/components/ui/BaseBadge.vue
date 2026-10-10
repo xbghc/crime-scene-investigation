@@ -19,10 +19,11 @@ withDefaults(defineProps<Props>(), {
 .base-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 10px;
-  border-radius: 999px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+  border-radius: var(--radius-md);
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.4;
   white-space: nowrap;
 }

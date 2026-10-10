@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from '../ui/AppIcon.vue'
 import type { Player } from '../../types'
 import { getMeansCardImage, getClueCardImage } from '../../types/stitch-cards'
 
@@ -26,7 +27,7 @@ defineProps<{
     </div>
 
     <div class="player-card-row__cards">
-      <div class="player-card-row__row">
+      <div class="player-card-row__row" role="group" aria-label="手段牌">
         <div
           v-for="card in player.meansCards"
           :key="card.id"
@@ -35,13 +36,14 @@ defineProps<{
         >
           <img
             :src="getMeansCardImage(card.id)"
-            :alt="card.name"
+            alt=""
             class="player-card-row__img"
             loading="lazy"
           />
+          <span class="player-card-row__card-name">{{ card.name }}</span>
         </div>
       </div>
-      <div class="player-card-row__row">
+      <div class="player-card-row__row" role="group" aria-label="线索牌">
         <div
           v-for="card in player.clueCards"
           :key="card.id"
@@ -50,16 +52,17 @@ defineProps<{
         >
           <img
             :src="getClueCardImage(card.id)"
-            :alt="card.name"
+            alt=""
             class="player-card-row__img"
             loading="lazy"
           />
+          <span class="player-card-row__card-name">{{ card.name }}</span>
         </div>
       </div>
     </div>
 
     <div v-if="player.status === 'dead'" class="player-card-row__dead-overlay">
-      <span class="player-card-row__skull">&#9760;</span>
+      <AppIcon name="skull" class="player-card-row__skull" /><span>已出局</span>
     </div>
   </div>
 </template>
@@ -69,16 +72,16 @@ defineProps<{
   position: relative;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  padding: 10px 12px;
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
   overflow: hidden;
 }
 
 .player-card-row__header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
 }
 
 .player-card-row__dot {
@@ -89,43 +92,47 @@ defineProps<{
 }
 
 .player-card-row__nickname {
-  font-size: 0.85rem;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text);
+  overflow-wrap: anywhere;
 }
 
 .player-card-row__no-solve {
   margin-left: auto;
-  font-size: 0.65rem;
-  color: var(--color-text-dim);
+  font-size: 12px;
+  color: var(--color-text-muted);
   background: var(--bg-secondary);
-  padding: 1px 6px;
-  border-radius: 999px;
-  text-decoration: line-through;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .player-card-row__cards {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3);
 }
 
 .player-card-row__row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .player-card-row__thumb {
-  width: 36px;
-  border-radius: 4px;
+  width: auto;
+  border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1.5px solid transparent;
+  border: 1px solid transparent;
   transition: transform 0.15s ease;
+  min-width: 0;
+  background: var(--bg-secondary);
 }
 
 .player-card-row__thumb:hover {
-  transform: scale(1.15);
+  transform: none;
   z-index: 5;
   position: relative;
 }
@@ -157,10 +164,33 @@ defineProps<{
   background: rgba(0, 0, 0, 0.4);
   z-index: 2;
   pointer-events: none;
+  gap: var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .player-card-row__skull {
   font-size: 2rem;
   opacity: 0.7;
+}
+
+.player-card-row__card-name {
+  display: block;
+  padding: var(--space-1);
+  text-align: center;
+  font-size: 12px;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+.player-card-row__thumb--means .player-card-row__card-name {
+  color: var(--destructive);
+}
+.player-card-row__thumb--clue .player-card-row__card-name {
+  color: var(--color-text-muted);
+}
+@media (max-width: 600px) {
+  .player-card-row {
+    padding: var(--space-4);
+  }
 }
 </style>

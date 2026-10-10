@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from '../ui/AppIcon.vue'
 import type { Player } from '../../types'
 import PlayerAvatar from '../game/PlayerAvatar.vue'
 
@@ -18,7 +19,7 @@ const emit = defineEmits<{
 <template>
   <div class="force-solve">
     <div class="force-solve__header">
-      <span class="material-symbols-outlined text-crimson-light force-solve__pulse">warning</span>
+      <AppIcon name="warning" class="app-icon text-crimson-light force-solve__pulse" />
       <span>强制破案阶段</span>
     </div>
 
@@ -46,7 +47,7 @@ const emit = defineEmits<{
       <div class="force-solve__my-turn">
         <p class="force-solve__turn-text">轮到你破案了！</p>
         <button class="force-solve__btn" @click="emit('solve')">
-          <span class="material-symbols-outlined" style="font-size: 20px">gavel</span>
+          <AppIcon name="gavel" class="app-icon" style="font-size: 20px" />
           开始破案
         </button>
       </div>
@@ -68,20 +69,20 @@ const emit = defineEmits<{
 .force-solve {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .force-solve__header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
+  padding: var(--space-3) var(--space-4);
   background: rgba(166, 28, 28, 0.1);
   border: 1px solid rgba(211, 47, 47, 0.3);
-  border-radius: 8px;
-  font-size: 0.875rem;
+  border-radius: var(--radius-md);
+  font-size: 14px;
   font-weight: 600;
-  color: var(--color-crimson-light);
+  color: var(--destructive);
 }
 
 .force-solve__pulse {
@@ -89,14 +90,14 @@ const emit = defineEmits<{
 }
 
 .force-solve__desc {
-  font-size: 0.85rem;
+  font-size: 14px;
   color: var(--color-text-muted);
   margin: 0;
 }
 
 .force-solve__order {
   display: flex;
-  gap: 12px;
+  gap: var(--space-4);
   overflow-x: auto;
   padding: 8px 0;
 }
@@ -106,9 +107,9 @@ const emit = defineEmits<{
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 8px;
-  border-radius: 8px;
-  border: 2px solid transparent;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
   min-width: 64px;
   flex-shrink: 0;
 }
@@ -123,15 +124,15 @@ const emit = defineEmits<{
 }
 
 .force-solve__current-tag {
-  font-size: 0.6rem;
+  font-size: 12px;
   color: var(--color-amber);
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: normal;
 }
 
 .force-solve__done-tag {
-  font-size: 0.6rem;
+  font-size: 12px;
   color: var(--color-text-dim);
 }
 
@@ -139,13 +140,13 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
   padding: 32px 0;
 }
 
 .force-solve__turn-text {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--color-text);
   margin: 0;
 }
@@ -156,10 +157,10 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 52px;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 700;
+  height: 44px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
   background: var(--color-crimson);
   color: #fff;
   transition: opacity 0.2s;
@@ -173,7 +174,7 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
   padding: 40px 0;
 }
 
@@ -187,7 +188,7 @@ const emit = defineEmits<{
 }
 
 .force-solve__wait-text {
-  font-size: 0.9rem;
+  font-size: 14px;
   color: var(--color-text-muted);
   margin: 0;
 }

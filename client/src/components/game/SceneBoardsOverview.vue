@@ -18,6 +18,6 @@ defineProps<{
 .scene-boards-overview {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-4);
 }
 </style>

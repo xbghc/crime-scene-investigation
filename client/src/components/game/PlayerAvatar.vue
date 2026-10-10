@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from '../ui/AppIcon.vue'
 import type { PlayerStatus } from '../../types'
 
 defineProps<{
@@ -19,7 +20,7 @@ defineProps<{
   >
     <div class="player-avatar__circle" :style="{ backgroundColor: color }">
       <span class="player-avatar__initial">{{ nickname.charAt(0) }}</span>
-      <span v-if="isHost" class="player-avatar__crown">&#9819;</span>
+      <AppIcon v-if="isHost" name="crown" class="player-avatar__crown" />
     </div>
     <span class="player-avatar__name" :class="{ 'player-avatar__name--dead': status === 'dead' }">
       {{ nickname }}
@@ -55,9 +56,9 @@ defineProps<{
 
 .player-avatar__crown {
   position: absolute;
-  top: -10px;
-  right: -6px;
-  font-size: 0.75rem;
+  top: -8px;
+  right: -4px;
+  font-size: 16px;
   color: var(--color-amber);
   line-height: 1;
 }

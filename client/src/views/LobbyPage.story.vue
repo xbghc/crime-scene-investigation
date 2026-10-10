@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from '../components/ui/AppIcon.vue'
 import { ref } from 'vue'
 import LobbyPage from './LobbyPage.vue'
 import IconButton from '../components/ui/IconButton.vue'
@@ -156,7 +157,7 @@ function removeLastPlayer(state: { players: Player[] }) {
               <span class="text-text-primary text-sm font-semibold tracking-wide">调查准备室</span>
             </div>
             <div class="flex items-center gap-1.5 text-text-muted text-sm">
-              <span class="material-symbols-outlined text-lg">groups</span>
+              <AppIcon class="app-icon text-lg" name="groups" />
               <span>{{ state.players.length }}/{{ maxPlayers }}</span>
             </div>
           </header>
@@ -188,9 +189,7 @@ function removeLastPlayer(state: { players: Player[] }) {
                     color: getPlayerColor(index),
                   }"
                 >
-                  <span v-if="player.isHost" class="material-symbols-outlined text-xl"
-                    >local_police</span
-                  >
+                  <AppIcon v-if="player.isHost" class="app-icon text-xl" name="local_police" />
                   <template v-else>{{ getInitial(player.nickname) }}</template>
                 </div>
 
@@ -215,9 +214,10 @@ function removeLastPlayer(state: { players: Player[] }) {
                     :class="networkColor[player.network as NetworkQuality]"
                     @click="togglePing(player.id)"
                   >
-                    <span class="material-symbols-outlined text-base">{{
-                      networkIcon[player.network as NetworkQuality]
-                    }}</span>
+                    <AppIcon
+                      class="app-icon text-base"
+                      :name="networkIcon[player.network as NetworkQuality]"
+                    />
                     <Transition name="ping-fade">
                       <span v-if="showPingId === player.id" class="ping-tooltip"
                         >{{ player.ping }}ms</span

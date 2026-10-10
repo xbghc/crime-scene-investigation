@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from '../ui/AppIcon.vue'
 import { ref, computed } from 'vue'
 import type { Player } from '../../types'
 import PlayerAvatar from '../game/PlayerAvatar.vue'
@@ -68,11 +69,17 @@ function handleConfirm() {
   <div class="solve">
     <!-- Header -->
     <header class="solve__header">
-      <button class="solve__back" @click="goBack">
-        <span class="material-symbols-outlined">arrow_back</span>
+      <button
+        class="solve__back"
+        type="button"
+        :aria-label="step === 1 ? '取消破案' : '返回上一步'"
+        @click="goBack"
+      >
+        <AppIcon name="arrow_back" class="app-icon" />
       </button>
       <h2 class="solve__title">{{ forced ? '强制破案' : '破案' }}</h2>
-      <div class="solve__steps">
+      <div class="solve__steps" role="status" :aria-label="`第 ${step} 步，共 4 步`">
+        <span class="solve__step-label">{{ step }} / 4</span>
         <span
           v-for="s in 4"
           :key="s"
@@ -90,6 +97,8 @@ function handleConfirm() {
           v-for="player in players"
           :key="player.id"
           class="solve__suspect"
+          type="button"
+          :aria-label="`选择 ${player.nickname} 为嫌疑人`"
           :class="{ 'solve__suspect--selected': suspectId === player.id }"
           @click="selectSuspect(player.id)"
         >
@@ -159,7 +168,7 @@ function handleConfirm() {
 
       <div class="solve__confirm-area">
         <button class="solve__confirm-btn" @click="handleConfirm">
-          <span class="material-symbols-outlined" style="font-size: 20px">gavel</span>
+          <AppIcon name="gavel" class="app-icon" style="font-size: 20px" />
           确认破案
         </button>
         <button class="solve__cancel-btn" @click="goBack">返回修改</button>
@@ -179,27 +188,35 @@ function handleConfirm() {
 .solve__header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  padding-top: calc(12px + var(--safe-area-top));
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  padding-top: calc(var(--space-4) + var(--safe-area-top));
   border-bottom: 1px solid var(--border-color);
 }
 
 .solve__back {
   color: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
 .solve__title {
   flex: 1;
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--color-text);
   margin: 0;
 }
 
 .solve__steps {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
+  align-items: center;
 }
 
 .solve__step-dot {
@@ -216,29 +233,35 @@ function handleConfirm() {
 
 .solve__body {
   flex: 1;
-  padding: 24px 16px;
+  padding: var(--space-6);
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
 }
 
 .solve__instruction {
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  margin: 0 0 20px;
-  text-align: center;
+  font-size: 14px;
+  color: var(--color-text);
+  margin: 0 0 var(--space-6);
+  text-align: left;
 }
 
 .solve__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  justify-items: center;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  justify-items: stretch;
 }
 
 .solve__suspect {
-  padding: 12px;
-  border-radius: 8px;
-  border: 2px solid transparent;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
   background: var(--bg-secondary);
-  transition: all 0.2s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .solve__suspect--selected {
@@ -248,18 +271,18 @@ function handleConfirm() {
 
 .solve__card-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
 }
 
 .solve__summary {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px;
+  gap: var(--space-4);
+  padding: var(--space-6);
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-xl);
   margin-bottom: 24px;
 }
 
@@ -267,29 +290,32 @@ function handleConfirm() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-4);
 }
 
 .solve__summary-label {
-  font-size: 0.8rem;
+  font-size: 12px;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: normal;
 }
 
 .solve__summary-value {
-  font-size: 1rem;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text);
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .solve__summary-value--means {
-  color: var(--color-crimson-light);
+  color: var(--destructive);
 }
 
 .solve__confirm-area {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .solve__confirm-btn {
@@ -298,13 +324,13 @@ function handleConfirm() {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 52px;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 700;
+  height: 44px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
   background: var(--color-crimson);
   color: #fff;
-  letter-spacing: 0.06em;
+  letter-spacing: normal;
   transition: opacity 0.2s;
 }
 
@@ -315,8 +341,8 @@ function handleConfirm() {
 .solve__cancel-btn {
   width: 100%;
   height: 44px;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  border-radius: var(--radius-md);
+  font-size: 14px;
   color: var(--color-text-muted);
   background: var(--bg-secondary);
   transition: opacity 0.2s;
@@ -324,5 +350,29 @@ function handleConfirm() {
 
 .solve__cancel-btn:active {
   opacity: 0.85;
+}
+
+.solve__step-label {
+  margin-right: var(--space-2);
+  font: 12px/16px var(--font-mono);
+  color: var(--color-text-muted);
+}
+.solve__card-grid :deep(.game-card) {
+  width: 100%;
+}
+@media (min-width: 640px) {
+  .solve__card-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 380px) {
+  .solve__body,
+  .solve__header {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+  .solve__grid {
+    gap: var(--space-2);
+  }
 }
 </style>

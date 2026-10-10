@@ -3,6 +3,8 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { defineSetupVue3 } from '@histoire/plugin-vue'
 import './assets/main.css'
 
+document.documentElement.dataset.theme = 'dark'
+
 export const setupVue3 = defineSetupVue3(({ app }) => {
   app.use(createPinia())
 

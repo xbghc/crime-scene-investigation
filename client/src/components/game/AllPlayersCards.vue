@@ -17,6 +17,6 @@ defineProps<{
 .all-players-cards {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-4);
 }
 </style>

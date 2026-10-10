@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from '../ui/AppIcon.vue'
 import { ref, computed } from 'vue'
 import type { MeansCard, ClueCard } from '../../types'
 import { getMeansCardImage, getClueCardImage } from '../../types/stitch-cards'
@@ -60,34 +61,30 @@ function isAccomplice(id: string) {
     <!-- Header -->
     <header class="murder-view__header">
       <div class="murder-view__phase">
-        <span class="material-symbols-outlined text-crimson-light murder-view__pulse"
-          >dark_mode</span
-        >
-        <span>Night Phase</span>
+        <AppIcon name="dark_mode" class="app-icon text-crimson-light murder-view__pulse" />
+        <span>夜晚阶段</span>
       </div>
       <div class="murder-view__timer">
-        <span class="material-symbols-outlined text-crimson-light" style="font-size: 16px"
-          >timer</span
-        >
+        <AppIcon name="timer" class="app-icon text-crimson-light" style="font-size: 16px" />
         <span>{{ timerDisplay }}</span>
       </div>
     </header>
 
     <!-- Title -->
     <div class="murder-view__title-area">
-      <h1 class="murder-view__title">SHHH... EVERYONE IS ASLEEP.</h1>
-      <p class="murder-view__role-label">You are the Murderer</p>
+      <h1 class="murder-view__title">夜深了，请选择作案组合</h1>
+      <p class="murder-view__role-label">你的身份：凶手</p>
     </div>
 
     <!-- Means section -->
     <section class="murder-view__section">
       <div class="murder-view__section-header">
         <div class="murder-view__section-icon murder-view__section-icon--means">
-          <span class="material-symbols-outlined" style="font-size: 20px">domino_mask</span>
+          <AppIcon name="domino_mask" class="app-icon" style="font-size: 20px" />
         </div>
         <div>
-          <h3 class="murder-view__section-title">Select Means</h3>
-          <p class="murder-view__section-sub">Weapon of choice</p>
+          <h3 class="murder-view__section-title">选择作案手段</h3>
+          <p class="murder-view__section-sub">选择一张手段牌</p>
         </div>
         <span class="murder-view__counter murder-view__counter--means">{{ meansCount }}</span>
       </div>
@@ -101,6 +98,12 @@ function isAccomplice(id: string) {
             'murder-card--selected-means': selectedMeansId === card.id,
             'murder-card--accomplice': isAccomplice(card.id),
           }"
+          role="button"
+          tabindex="0"
+          :aria-label="card.name"
+          :aria-pressed="selectedMeansId === card.id"
+          @keydown.enter="toggleMeans(card.id)"
+          @keydown.space.prevent="toggleMeans(card.id)"
           @click="toggleMeans(card.id)"
         >
           <!-- Check badge -->
@@ -108,12 +111,12 @@ function isAccomplice(id: string) {
             v-if="selectedMeansId === card.id"
             class="murder-card__check murder-card__check--means"
           >
-            <span class="material-symbols-outlined" style="font-size: 16px">check</span>
+            <AppIcon name="check" class="app-icon" style="font-size: 16px" />
           </div>
           <!-- Accomplice badge -->
           <div v-if="isAccomplice(card.id)" class="murder-card__accomplice-badge">
-            <span class="material-symbols-outlined" style="font-size: 12px">person</span>
-            <span>Accomplice</span>
+            <AppIcon name="person" class="app-icon" style="font-size: 12px" />
+            <span>帮凶</span>
           </div>
           <!-- Card body -->
           <div class="murder-card__body">
@@ -127,7 +130,7 @@ function isAccomplice(id: string) {
           </div>
           <!-- Selected tag -->
           <div v-if="selectedMeansId === card.id" class="murder-card__tag murder-card__tag--means">
-            Selected Weapon
+            已选手段
           </div>
         </div>
       </div>
@@ -135,18 +138,18 @@ function isAccomplice(id: string) {
 
     <!-- Divider -->
     <div class="murder-view__divider">
-      <span class="murder-view__divider-text">and</span>
+      <span class="murder-view__divider-text">与</span>
     </div>
 
     <!-- Clue section -->
     <section class="murder-view__section">
       <div class="murder-view__section-header">
         <div class="murder-view__section-icon murder-view__section-icon--clue">
-          <span class="material-symbols-outlined" style="font-size: 20px">fingerprint</span>
+          <AppIcon name="fingerprint" class="app-icon" style="font-size: 20px" />
         </div>
         <div>
-          <h3 class="murder-view__section-title">Leave a Clue</h3>
-          <p class="murder-view__section-sub">Evidence left behind</p>
+          <h3 class="murder-view__section-title">留下线索</h3>
+          <p class="murder-view__section-sub">选择一张线索牌</p>
         </div>
         <span class="murder-view__counter murder-view__counter--clue">{{ clueCount }}</span>
       </div>
@@ -160,17 +163,23 @@ function isAccomplice(id: string) {
             'murder-card--selected-clue': selectedClueId === card.id,
             'murder-card--accomplice': isAccomplice(card.id),
           }"
+          role="button"
+          tabindex="0"
+          :aria-label="card.name"
+          :aria-pressed="selectedClueId === card.id"
+          @keydown.enter="toggleClue(card.id)"
+          @keydown.space.prevent="toggleClue(card.id)"
           @click="toggleClue(card.id)"
         >
           <div
             v-if="selectedClueId === card.id"
             class="murder-card__check murder-card__check--clue"
           >
-            <span class="material-symbols-outlined" style="font-size: 16px">check</span>
+            <AppIcon name="check" class="app-icon" style="font-size: 16px" />
           </div>
           <div v-if="isAccomplice(card.id)" class="murder-card__accomplice-badge">
-            <span class="material-symbols-outlined" style="font-size: 12px">person</span>
-            <span>Accomplice</span>
+            <AppIcon name="person" class="app-icon" style="font-size: 12px" />
+            <span>帮凶</span>
           </div>
           <div class="murder-card__body">
             <img
@@ -182,7 +191,7 @@ function isAccomplice(id: string) {
             <p class="murder-card__name">{{ card.name }}</p>
           </div>
           <div v-if="selectedClueId === card.id" class="murder-card__tag murder-card__tag--clue">
-            Selected Clue
+            已选线索
           </div>
         </div>
       </div>
@@ -199,7 +208,7 @@ function isAccomplice(id: string) {
         :disabled="!canConfirm"
         @click="handleConfirm"
       >
-        <span class="material-symbols-outlined" style="font-size: 24px">gavel</span>
+        <AppIcon name="gavel" class="app-icon" style="font-size: 24px" />
         Confirm Crime
       </button>
     </div>
@@ -211,7 +220,7 @@ function isAccomplice(id: string) {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: #211111;
+  background: var(--bg-primary);
   overflow-x: hidden;
   padding-bottom: 0;
 }
@@ -221,24 +230,24 @@ function isAccomplice(id: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  padding-top: calc(24px + var(--safe-area-top));
+  padding: var(--space-4) var(--space-6);
+  padding-top: calc(var(--space-4) + var(--safe-area-top));
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgba(33, 17, 17, 0.95);
+  background: var(--card);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border);
 }
 
 .murder-view__phase {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
-  letter-spacing: 0.1em;
+  gap: var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: normal;
   text-transform: uppercase;
 }
 
@@ -249,13 +258,13 @@ function isAccomplice(id: string) {
 .murder-view__timer {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   padding: 4px 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 0.75rem;
-  font-family: 'Space Grotesk', monospace;
+  font-size: 12px;
+  font-family: var(--font-mono);
   font-weight: 500;
   color: rgba(255, 255, 255, 0.8);
 }
@@ -268,34 +277,38 @@ function isAccomplice(id: string) {
 }
 
 .murder-view__title {
-  font-size: 1.5rem;
+  font-size: 24px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.95);
-  letter-spacing: 0.02em;
-  line-height: 1.3;
+  color: var(--color-text);
+  letter-spacing: -0.025em;
+  line-height: 32px;
   margin: 0 0 8px;
 }
 
 .murder-view__role-label {
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 500;
-  color: var(--color-crimson-light);
-  letter-spacing: 0.2em;
+  color: var(--destructive);
+  letter-spacing: normal;
   text-transform: uppercase;
   margin: 0;
 }
 
 /* Section */
 .murder-view__section {
-  padding: 0 16px;
+  padding: 0 var(--space-6);
   margin-top: 16px;
   z-index: 10;
+  width: 100%;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .murder-view__section-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-4);
   margin-bottom: 16px;
   padding: 0 4px;
 }
@@ -312,7 +325,7 @@ function isAccomplice(id: string) {
 
 .murder-view__section-icon--means {
   background: rgba(211, 47, 47, 0.15);
-  color: var(--color-crimson-light);
+  color: var(--destructive);
   border: 1px solid rgba(211, 47, 47, 0.3);
 }
 
@@ -323,33 +336,34 @@ function isAccomplice(id: string) {
 }
 
 .murder-view__section-title {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   color: #fff;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  line-height: 1;
+  letter-spacing: normal;
+  line-height: 28px;
   margin: 0;
 }
 
 .murder-view__section-sub {
-  font-size: 0.625rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+  color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: normal;
   margin: 4px 0 0;
+  line-height: 16px;
 }
 
 .murder-view__counter {
   margin-left: auto;
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
 }
 
 .murder-view__counter--means {
-  color: var(--color-crimson-light);
+  color: var(--destructive);
   border: 1px solid rgba(211, 47, 47, 0.3);
   background: rgba(211, 47, 47, 0.1);
 }
@@ -363,16 +377,16 @@ function isAccomplice(id: string) {
 /* Card grid */
 .murder-view__grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
 }
 
 /* Card */
 .murder-card {
   position: relative;
-  border-radius: 8px;
-  background: #1e1e1e;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  border: 1px solid var(--border);
   cursor: pointer;
   transition: all 0.2s ease;
   overflow: hidden;
@@ -386,8 +400,8 @@ function isAccomplice(id: string) {
   border-color: transparent;
   outline: 2px solid var(--color-crimson-light);
   outline-offset: -1px;
-  box-shadow: 0 0 20px rgba(211, 47, 47, 0.25);
-  transform: scale(1.02);
+  box-shadow: none;
+  transform: none;
   background: #211111;
 }
 
@@ -395,8 +409,8 @@ function isAccomplice(id: string) {
   border-color: transparent;
   outline: 2px solid #fff;
   outline-offset: -1px;
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
-  transform: scale(1.02);
+  box-shadow: none;
+  transform: none;
   background: var(--bg-primary);
 }
 
@@ -449,7 +463,7 @@ function isAccomplice(id: string) {
   color: rgba(255, 255, 255, 0.9);
   border: 1px solid #71717a;
   border-radius: 4px;
-  font-size: 0.5625rem;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -461,8 +475,8 @@ function isAccomplice(id: string) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 8px 12px;
-  gap: 6px;
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  gap: var(--space-2);
 }
 
 .murder-card__card-img {
@@ -479,11 +493,11 @@ function isAccomplice(id: string) {
 }
 
 .murder-card__name {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: normal;
   text-align: center;
   margin: 0;
   transition: color 0.2s;
@@ -496,15 +510,15 @@ function isAccomplice(id: string) {
 
 /* Selected tag */
 .murder-card__tag {
-  padding: 6px;
-  font-size: 0.625rem;
+  padding: var(--space-2);
+  font-size: 12px;
   text-align: center;
-  letter-spacing: 0.04em;
+  letter-spacing: normal;
 }
 
 .murder-card__tag--means {
   background: rgba(211, 47, 47, 0.15);
-  color: rgba(211, 47, 47, 0.8);
+  color: var(--destructive);
 }
 
 .murder-card__tag--clue {
@@ -526,8 +540,8 @@ function isAccomplice(id: string) {
   transform: translateX(-50%);
   background: #211111;
   padding: 0 8px;
-  color: rgba(255, 255, 255, 0.2);
-  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 12px;
   font-style: italic;
 }
 
@@ -537,10 +551,11 @@ function isAccomplice(id: string) {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 40px 16px 24px;
-  padding-bottom: calc(24px + var(--safe-area-bottom));
-  background: linear-gradient(to top, #211111, rgba(33, 17, 17, 0.95), transparent);
+  padding: var(--space-4) max(var(--space-4), calc((100% - 752px) / 2));
+  padding-bottom: calc(var(--space-4) + var(--safe-area-bottom));
+  background: var(--bg-primary);
   z-index: 50;
+  border-top: 1px solid var(--border);
 }
 
 .murder-view__confirm {
@@ -548,13 +563,13 @@ function isAccomplice(id: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  height: 56px;
-  border-radius: 8px;
-  font-size: 1.125rem;
-  font-weight: 700;
+  gap: var(--space-2);
+  height: 44px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: normal;
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.25);
   transition: all 0.3s ease;
@@ -563,7 +578,7 @@ function isAccomplice(id: string) {
 .murder-view__confirm--active {
   background: var(--color-crimson-light);
   color: #fff;
-  box-shadow: 0 4px 14px rgba(211, 47, 47, 0.5);
+  box-shadow: none;
 }
 
 .murder-view__confirm--active:active {
@@ -579,5 +594,21 @@ function isAccomplice(id: string) {
   50% {
     opacity: 0.4;
   }
+}
+
+@media (min-width: 640px) {
+  .murder-view__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .murder-view__section {
+    padding: 0 var(--space-4);
+  }
+}
+
+.murder-card:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
 }
 </style>

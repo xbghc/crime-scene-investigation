@@ -9,7 +9,7 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <div class="loading-spinner">
+  <div class="loading-spinner" role="status" :aria-label="label || '正在加载'">
     <div class="loading-spinner__circle" />
     <p v-if="label" class="loading-spinner__label">{{ label }}</p>
   </div>

@@ -1,6 +1,28 @@
 import { test, expect, state, phase, dismissPhase } from './helpers/multiplayer.mjs'
 import { startCase } from './helpers/effect-game.mjs'
 
+// Add visual evidence without changing the existing scenarios or assertions.
+// Restore presentation state before gameplay continues.
+async function responsiveEffectEvidence(player, name) {
+  const page = player.page
+  const originalViewport = page.viewportSize()
+  const originalScroll = await page.evaluate(() => ({ x: scrollX, y: scrollY }))
+  try {
+    for (const viewport of [
+      { name: 'mobile', width: 390, height: 844 },
+      { name: 'desktop', width: 1440, height: 1000 },
+    ]) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height })
+      const path = test.info().outputPath(`${name}-${viewport.name}.png`)
+      await page.screenshot({ path, fullPage: true, animations: 'disabled' })
+      await test.info().attach(`${name}-${viewport.name}`, { path, contentType: 'image/png' })
+    }
+  } finally {
+    if (originalViewport) await page.setViewportSize(originalViewport)
+    await page.evaluate(({ x, y }) => window.scrollTo(x, y), originalScroll)
+  }
+}
+
 // Deterministic effect draws only. Every action below uses the visible UI;
 // Pinia snapshots are assertion-only and each browser has its own session.
 async function begin(players, effectId, count = 4, changeClue = false) {
@@ -62,6 +84,7 @@ async function refreshPending(game) {
   const screenshot = test.info().outputPath('witness-effect-choices.png')
   await game.witness.page.locator('.effect-panel').screenshot({ path: screenshot })
   await test.info().attach('目击者私有效果选择', { path: screenshot, contentType: 'image/png' })
+  await responsiveEffectEvidence(game.witness, '11-effect-private-choices')
 }
 
 function choice(game, id) {
@@ -107,6 +130,7 @@ async function resolved(game, skipped) {
   const screenshot = test.info().outputPath('detective-public-effect-result.png')
   await game.detectives[0].page.locator('.effect-panel').screenshot({ path: screenshot })
   await test.info().attach('侦探看到的公开效果结果', { path: screenshot, contentType: 'image/png' })
+  await responsiveEffectEvidence(game.detectives[0], '12-effect-public-result')
 }
 
 async function finish(game) {

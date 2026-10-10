@@ -29,6 +29,7 @@ function handleClick(e: MouseEvent) {
       { 'base-button--block': block, 'base-button--loading': loading },
     ]"
     :disabled="disabled || loading"
+    :aria-busy="loading || undefined"
     @click="handleClick"
   >
     <span v-if="loading" class="base-button__spinner" />
@@ -43,19 +44,21 @@ function handleClick(e: MouseEvent) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-height: 44px;
-  padding: 8px 20px;
+  padding: var(--space-2) var(--space-4);
   border: 1px solid transparent;
-  border-radius: var(--border-radius);
-  font-size: 0.95rem;
-  font-weight: 600;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
   cursor: pointer;
   transition:
     opacity 0.2s ease,
     background-color 0.2s ease;
   position: relative;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
 }
 
 .base-button:disabled {
@@ -69,8 +72,8 @@ function handleClick(e: MouseEvent) {
 
 /* Primary */
 .base-button--primary {
-  background-color: var(--color-crimson);
-  color: var(--color-text);
+  background-color: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .base-button--primary:not(:disabled):hover {
@@ -80,7 +83,7 @@ function handleClick(e: MouseEvent) {
 /* Secondary */
 .base-button--secondary {
   background-color: var(--bg-secondary);
-  color: var(--color-text);
+  color: var(--foreground);
   border-color: var(--border-color);
 }
 
@@ -90,8 +93,8 @@ function handleClick(e: MouseEvent) {
 
 /* Danger */
 .base-button--danger {
-  background-color: var(--color-crimson-light);
-  color: var(--color-text);
+  background-color: var(--color-crimson);
+  color: var(--primary-foreground);
 }
 
 .base-button--danger:not(:disabled):hover {
@@ -101,7 +104,7 @@ function handleClick(e: MouseEvent) {
 /* Ghost */
 .base-button--ghost {
   background-color: transparent;
-  color: var(--color-text);
+  color: var(--foreground);
 }
 
 .base-button--ghost:not(:disabled):hover {

@@ -16,7 +16,7 @@ const emit = defineEmits<{
 const typeColor = computed(() => {
   switch (props.board.type) {
     case 'cause':
-      return 'var(--color-crimson-light)'
+      return 'var(--destructive)'
     case 'location':
       return 'var(--color-amber)'
     case 'scene':
@@ -67,6 +67,8 @@ function handleSelect(optionIndex: number) {
       <button
         v-for="(option, index) in board.options"
         :key="index"
+        type="button"
+        :aria-pressed="editable ? board.marker?.optionIndex === index : undefined"
         class="scene-board__cell"
         :class="{
           'scene-board__cell--editable': editable && !hidden,
@@ -93,16 +95,16 @@ function handleSelect(optionIndex: number) {
   position: relative;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  padding: 12px;
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
   overflow: hidden;
 }
 
 .scene-board__header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .scene-board__thumb {
@@ -117,26 +119,29 @@ function handleSelect(optionIndex: number) {
 .scene-board__header-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
 .scene-board__type {
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: normal;
+  line-height: 16px;
 }
 
 .scene-board__title {
-  font-size: 0.85rem;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text);
+  line-height: 20px;
 }
 
 .scene-board__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
 }
 
 .scene-board__cell {
@@ -144,13 +149,13 @@ function handleSelect(optionIndex: number) {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
-  padding: 6px 4px;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-1);
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: calc(var(--border-radius) / 2);
+  border-radius: var(--radius-md);
   color: var(--color-text);
-  font-size: 0.8rem;
+  font-size: 14px;
   cursor: default;
   transition: all 0.15s ease;
 }
@@ -175,7 +180,8 @@ function handleSelect(optionIndex: number) {
 
 .scene-board__option-text {
   text-align: center;
-  line-height: 1.2;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .scene-board__marker {
@@ -186,13 +192,14 @@ function handleSelect(optionIndex: number) {
   height: 20px;
   border-radius: 50%;
   background: var(--color-amber);
-  color: #fff;
-  font-size: 0.65rem;
+  color: var(--bg-primary);
+  font-size: 12px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: none;
+  font-family: var(--font-mono);
 }
 
 /* Blackout overlay */
@@ -216,5 +223,15 @@ function handleSelect(optionIndex: number) {
   font-weight: 700;
   color: var(--color-text-dim);
   letter-spacing: 0.15em;
+}
+
+.scene-board__cell:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+@media (max-width: 600px) {
+  .scene-board {
+    padding: var(--space-4);
+  }
 }
 </style>

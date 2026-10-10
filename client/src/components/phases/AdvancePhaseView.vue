@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from '../ui/AppIcon.vue'
 import { ref, computed, watch } from 'vue'
 import type {
   SceneBoard,
@@ -118,7 +119,7 @@ function handleConfirmReplace() {
 <template>
   <div class="advance">
     <div class="advance__header">
-      <span class="material-symbols-outlined text-amber-accent">fast_forward</span>
+      <AppIcon name="fast_forward" class="app-icon text-amber-accent" />
       <span>推进阶段</span>
     </div>
 
@@ -160,6 +161,8 @@ function handleConfirmReplace() {
               v-for="card in murdererPlayer?.clueCards || []"
               :key="card.id"
               class="advance__clue-card"
+              type="button"
+              :aria-pressed="selectedClueId === card.id"
               :class="{ 'advance__clue-card--selected': selectedClueId === card.id }"
               @click="selectedClueId = card.id"
             >
@@ -209,6 +212,12 @@ function handleConfirmReplace() {
             v-for="board in replaceableBoards"
             :key="board.id"
             class="advance__board-wrap"
+            role="button"
+            tabindex="0"
+            :aria-label="`选择替换${board.title}`"
+            :aria-pressed="selectedOldBoardId === board.id"
+            @keydown.enter="selectOldBoard(board.id)"
+            @keydown.space.prevent="selectOldBoard(board.id)"
             :class="{ 'advance__board-wrap--selected': selectedOldBoardId === board.id }"
             @click="selectOldBoard(board.id)"
           >
@@ -254,57 +263,63 @@ function handleConfirmReplace() {
 .advance {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .advance__header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  background: var(--bg-card);
-  border-radius: 8px;
-  font-size: 0.875rem;
+  padding: var(--space-2) 0;
+  background: transparent;
+  border-radius: var(--radius-md);
+  font-size: 14px;
   font-weight: 600;
-  color: var(--color-amber);
+  color: var(--color-text-muted);
 }
 
 .advance__section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-4);
 }
 
 .advance__section-title {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--color-text);
   margin: 0;
+  line-height: 28px;
 }
 
 .advance__section-desc {
-  font-size: 0.8rem;
+  font-size: 14px;
   color: var(--color-text-muted);
   margin: 0;
 }
 
 .advance__actions {
   display: flex;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .advance__btn {
   flex: 1;
-  height: 48px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.2s;
+  height: auto;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+  min-height: 44px;
+  padding: var(--space-3);
 }
 
 .advance__btn--primary {
   background: var(--color-amber);
-  color: #fff;
+  color: var(--bg-primary);
 }
 
 .advance__btn--primary:disabled {
@@ -318,7 +333,7 @@ function handleConfirmReplace() {
 }
 
 .advance__select-label {
-  font-size: 0.8rem;
+  font-size: 14px;
   color: var(--color-text-muted);
   margin: 0;
 }
@@ -331,13 +346,16 @@ function handleConfirmReplace() {
 
 .advance__clue-card {
   padding: 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--bg-secondary);
-  border: 1.5px solid var(--border-color);
+  border: 1px solid var(--border-color);
   color: var(--color-text);
-  font-size: 0.85rem;
+  font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .advance__clue-card--selected {
@@ -346,28 +364,29 @@ function handleConfirmReplace() {
 }
 
 .advance__boards-label {
-  font-size: 0.8rem;
+  font-size: 12px;
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: normal;
 }
 
 .advance__boards {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .advance__board-wrap {
-  border: 2px solid transparent;
-  border-radius: 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xl);
   transition: border-color 0.2s;
   cursor: pointer;
 }
 
 .advance__board-wrap--selected {
-  border-color: var(--color-crimson-light);
+  border-color: var(--color-amber);
+  box-shadow: 0 0 0 1px var(--color-amber);
 }
 
 .advance__waiting {
@@ -376,7 +395,7 @@ function handleConfirmReplace() {
   align-items: center;
   justify-content: center;
   padding: 60px 0;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .advance__spinner {
@@ -389,7 +408,7 @@ function handleConfirmReplace() {
 }
 
 .advance__waiting-text {
-  font-size: 0.9rem;
+  font-size: 14px;
   color: var(--color-text-muted);
   margin: 0;
 }
@@ -398,5 +417,9 @@ function handleConfirmReplace() {
   to {
     transform: rotate(360deg);
   }
+}
+.advance__board-wrap:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
 }
 </style>
