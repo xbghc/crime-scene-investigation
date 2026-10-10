@@ -127,6 +127,7 @@ describe('useSocket', () => {
       expect(registeredEvents).toContain('room_state')
       expect(registeredEvents).toContain('full_state')
       expect(registeredEvents).toContain('murderer_selection_update')
+      expect(registeredEvents).toContain('advance_ready')
     })
 
     it('connect 已连接时不应重复创建 socket', () => {
@@ -793,6 +794,83 @@ describe('useSocket', () => {
 
       expect(gameStore.newBoards).toHaveLength(1)
       expect(gameStore.newBoards[0]!.id).toBe('nb1')
+    })
+  })
+
+  describe('witness advance readiness events', () => {
+    it('waits for server readiness while the accomplice chooses and effects are drawn', () => {
+      connectSocket()
+      gameStore.setMyInfo('p1', 'witness')
+      fireEvent('phase_change', { phase: 'advance-1' })
+      fireEvent('advance_ready', { ready: false })
+      expect(gameStore.newBoards).toEqual([])
+      expect(gameStore.advanceReady).toBe(false)
+
+      fireEvent('effect_card', { card: { id: 'E01', name: '测试效果', effect: '' } })
+      fireEvent('new_boards', { boards: [] })
+      expect(gameStore.advanceReady).toBe(false)
+      fireEvent('advance_ready', { ready: true })
+      expect(gameStore.advanceReady).toBe(true)
+    })
+
+    it.each([1, 2])(
+      'requires the final readiness event after %i board acknowledgements',
+      (count) => {
+        const { witnessReplaceBoard } = connectSocket()
+        gameStore.setMyInfo('p1', 'witness')
+        gameStore.updateBoards([makeBoard({ id: 'old-0' }), makeBoard({ id: 'old-1' })])
+        fireEvent('phase_change', { phase: 'advance-1' })
+        const newBoards = Array.from({ length: count }, (_, i) => makeBoard({ id: `new-${i}` }))
+        fireEvent('new_boards', { boards: newBoards })
+        fireEvent('advance_ready', { ready: false })
+
+        for (let i = 0; i < count; i++) {
+          witnessReplaceBoard(`old-${i}`, newBoards[i]!.id, 0, i + 1)
+          // Sending a replacement cannot optimistically clear a pending board.
+          expect(gameStore.newBoards).toHaveLength(count - i)
+          expect(gameStore.advanceReady).toBe(false)
+          fireEvent('board_replaced', {
+            oldBoardId: `old-${i}`,
+            newBoard: newBoards[i],
+            optionIndex: 0,
+            markerNumber: i + 1,
+          })
+          expect(gameStore.newBoards).toHaveLength(count - i - 1)
+          expect(gameStore.advanceReady).toBe(false)
+          fireEvent('advance_ready', { ready: i === count - 1 })
+          expect(gameStore.advanceReady).toBe(i === count - 1)
+        }
+      },
+    )
+
+    it('restores readiness on reconnect and clears it for a new advance or reset', () => {
+      connectSocket()
+      const snapshot: GameState = {
+        phase: 'advance-1',
+        round: 1,
+        players: [],
+        boards: [],
+        myRole: 'witness',
+        newBoards: [],
+        advanceReady: true,
+      }
+      fireEvent('full_state', snapshot)
+      expect(gameStore.advanceReady).toBe(true)
+      fireEvent('phase_change', { phase: 'discussion-2' })
+      expect(gameStore.advanceReady).toBe(false)
+      fireEvent('phase_change', { phase: 'advance-2' })
+      expect(gameStore.advanceReady).toBe(false)
+
+      fireEvent('full_state', { ...snapshot, advanceReady: false, newBoards: [makeBoard()] })
+      expect(gameStore.advanceReady).toBe(false)
+      expect(gameStore.newBoards).toHaveLength(1)
+      fireEvent('full_state', snapshot)
+      expect(gameStore.advanceReady).toBe(true)
+      fireEvent('full_state', { phase: 'waiting', players: [], boards: [] })
+      expect(gameStore.advanceReady).toBe(false)
+      expect(gameStore.newBoards).toHaveLength(0)
+      fireEvent('advance_ready', { ready: true })
+      expect(gameStore.advanceReady).toBe(false)
     })
   })
 

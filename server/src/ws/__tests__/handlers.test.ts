@@ -156,6 +156,80 @@ describe('room protocol over real authenticated Socket.IO connections', () => {
     expect(rooms.engineFor(io.sockets.sockets.get(observer.id!)!)).toBeNull()
   })
 
+  it('rejects premature and replayed advance completion over authenticated sockets', async () => {
+    const a = await room(6)
+    const ge = engine(a.host)
+    ge.startGame()
+    ge.triggerNightMurder()
+    const players = ge.getRoomState().players.map((p) => ge.getPlayerById(p.id)!)
+    const witness = players.find((p) => p.role === 'witness')!
+    const accomplice = players.find((p) => p.role === 'accomplice')!
+    const murderer = players.find((p) => p.role === 'murderer')!
+    const witnessSocket = a.members.find((s) => s.id === witness.socketId)!
+    const accompliceSocket = a.members.find((s) => s.id === accomplice.socketId)!
+    ge.handleMurdererSelect(murderer.id, murderer.meansCards[0]!.id, murderer.clueCards[0]!.id)
+    ge.handleWitnessConfirmMurder(witness.id)
+    ge.getActiveBoards().forEach((board, index) =>
+      ge.handleWitnessSetMarker(witness.id, board.id, 0, index + 1),
+    )
+    ge.handleWitnessConfirmAccuse(witness.id)
+    ge.setEffectDeckForTest([{ id: 'E07', name: '停电', effect: '' }])
+    ge.handleEndDiscussion(witness.id)
+    await settle()
+    async function rejectedFinish() {
+      const denied = next(witnessSocket, 'system_message')
+      witnessSocket.emit('witness_finish_advance')
+      expect(await denied).toMatchObject({ type: 'error' })
+      expect(ge.getPhase()).toBe('advance-1')
+    }
+    const effectDenied = next(witnessSocket, 'system_message')
+    witnessSocket.emit('effect_action', { effectId: 'E01', data: { targetId: accomplice.id } })
+    expect(await effectDenied).toMatchObject({ type: 'error' })
+    expect(ge.getPlayerById(accomplice.id)?.status).toBe('alive')
+    await rejectedFinish()
+    const boards = next(witnessSocket, 'new_boards')
+    accompliceSocket.emit('accomplice_choose', { replaceClue: false })
+    const pending = (await boards).boards
+    await rejectedFinish()
+    for (const socket of a.members) {
+      const snapshot = next(socket, 'full_state')
+      socket.emit('request_state')
+      const view = await snapshot
+      expect(view.boards).toHaveLength(socket === witnessSocket ? 6 : 0)
+      if (socket !== witnessSocket) {
+        expect(view.newBoards).toBeUndefined()
+        expect(view.advanceReady).toBeUndefined()
+      }
+    }
+    const leakedBoardEvents: string[] = []
+    for (const socket of a.members.filter((s) => s !== witnessSocket)) {
+      for (const event of ['board_replaced', 'marker_placed', 'boards_revealed', 'advance_ready'])
+        socket.on(event, () => leakedBoardEvents.push(event))
+    }
+    const ready = next(witnessSocket, 'advance_ready')
+    witnessSocket.emit('witness_replace_board', {
+      oldBoardId: ge.getActiveBoards().find((b) => b.type !== 'cause')!.id,
+      newBoardId: pending[0].id,
+      optionIndex: 0,
+      markerNumber: 2,
+    })
+    expect(await ready).toEqual({ ready: true })
+    const changed = next(witnessSocket, 'phase_change')
+    witnessSocket.emit('witness_finish_advance')
+    expect(await changed).toMatchObject({
+      phase: 'discussion-2',
+      data: { boards: [], blackout: true },
+    })
+    await settle()
+    const duplicate = next(witnessSocket, 'system_message')
+    witnessSocket.emit('witness_finish_advance')
+    expect(await duplicate).toMatchObject({ type: 'error' })
+    await settle()
+    expect(ge.getPhase()).toBe('discussion-2')
+    expect(ge.getBlackout()).toBe(true)
+    expect(leakedBoardEvents).toEqual([])
+  })
+
   it('runs two matches simultaneously without cross-room phase, result, or reset changes', async () => {
     const a = await room(4)
     const b = await room(4)

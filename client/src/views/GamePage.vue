@@ -213,6 +213,9 @@ function handleWitnessConfirmMurder() {
 
 // Witness finishes advance phase replacements
 function handleWitnessFinishAdvance() {
+  if (!game.isWitness || !game.isAdvancePhase || !game.advanceReady || game.newBoards.length > 0) {
+    return
+  }
   witnessFinishAdvance()
 }
 
@@ -352,6 +355,7 @@ function handleToastDismiss() {
               :is-witness="game.isWitness"
               :is-accomplice="game.isAccomplice"
               :is-advance1="game.phase === 'advance-1'"
+              :advance-ready="game.advanceReady"
               :accomplice-prompted="game.accomplicePrompted"
               :murderer-player="murdererPlayer"
               @accomplice-choose="handleAccompliceChoose"

@@ -81,6 +81,8 @@ export const useGameStore = defineStore('game', () => {
   const lastSolveResult = ref<SolveResult | null>(null)
   // Witness picks from these during advance phase
   const newBoards = ref<SceneBoard[]>([])
+  // An empty pending list alone does not mean the accomplice/effects have finished.
+  const advanceReady = ref(false)
   const forceSolveTurnPlayerId = ref<string | undefined>()
 
   // Room membership is only set by confirmed server state.
@@ -150,6 +152,7 @@ export const useGameStore = defineStore('game', () => {
     scores.value = state.scores
     blackout.value = state.blackout ?? false
     newBoards.value = state.newBoards ?? []
+    setAdvanceReady(state.advanceReady ?? false)
     accomplicePrompted.value = state.accomplicePrompted ?? false
     if (state.roles) {
       for (const player of players.value) player.role = state.roles[player.id]
@@ -159,6 +162,7 @@ export const useGameStore = defineStore('game', () => {
 
   function setPhase(newPhase: GamePhase) {
     phase.value = newPhase
+    advanceReady.value = false
   }
 
   function setMyInfo(playerId: string, role: Role) {
@@ -198,11 +202,15 @@ export const useGameStore = defineStore('game', () => {
   function setGameOver(winnerSide: Winner, finalScores: Record<string, number>) {
     winner.value = winnerSide
     scores.value = finalScores
-    phase.value = 'game-over'
+    setPhase('game-over')
   }
 
   function setNewBoards(boardsList: SceneBoard[]) {
     newBoards.value = boardsList
+  }
+
+  function setAdvanceReady(ready: boolean) {
+    advanceReady.value = ready && isAdvancePhase.value && isWitness.value
   }
 
   function setSystemMessage(content: string, type: SystemMessageType = 'info') {
@@ -292,6 +300,7 @@ export const useGameStore = defineStore('game', () => {
     systemMessage.value = null
     lastSolveResult.value = null
     newBoards.value = []
+    advanceReady.value = false
     forceSolveTurnPlayerId.value = undefined
     accomplicePrompted.value = false
   }
@@ -323,6 +332,7 @@ export const useGameStore = defineStore('game', () => {
     systemMessage,
     lastSolveResult,
     newBoards,
+    advanceReady,
     forceSolveTurnPlayerId,
     roomCode,
     minPlayers,
@@ -363,6 +373,7 @@ export const useGameStore = defineStore('game', () => {
     setForceSolveTurn,
     setGameOver,
     setNewBoards,
+    setAdvanceReady,
     setSystemMessage,
     clearSystemMessage,
     updateMarker,

@@ -765,6 +765,19 @@ describe('GameEngine', () => {
     })
   })
 
+  it('does not consume a scene-pool board when an accusation replacement has invalid markers', () => {
+    const players = addPlayers(engine, io, 4)
+    advanceToWitnessAccuse(engine, io, players)
+    const witness = getPlayerByRole(engine, players, 'witness')!
+    const old = engine.getActiveBoards().find((board) => board.type !== 'cause')!
+    const poolBefore = [...engine.getSceneBoardPool()]
+    const next = poolBefore[0]
+    expect(engine.handleWitnessReplaceBoard(witness.id, old.id, next.id, -1, 2).ok).toBe(false)
+    expect(engine.getSceneBoardPool()).toEqual(poolBefore)
+    expect(engine.handleWitnessReplaceBoard(witness.id, old.id, next.id, 0, 2).ok).toBe(true)
+    expect(engine.getSceneBoardPool().some((board) => board.id === next.id)).toBe(false)
+  })
+
   // ===== 推进阶段 =====
   describe('推进阶段', () => {
     let players: PlayerInfo[]
@@ -772,6 +785,70 @@ describe('GameEngine', () => {
     beforeEach(() => {
       players = addPlayers(engine, io, 7)
       advanceToAdvance1(engine, io, players)
+    })
+
+    it('gates finish on accomplice decision and every pending replacement, including snapshots', () => {
+      const witness = getPlayerByRole(engine, players, 'witness')!
+      const accomplice = getPlayerByRole(engine, players, 'accomplice')!
+      const murderer = getPlayerByRole(engine, players, 'murderer')!
+      const detective = getPlayerByRole(engine, players, 'detective')!
+      expect(engine.getGameStateForPlayer(witness.id).advanceReady).toBe(false)
+      expect(engine.getGameStateForPlayer(detective.id).advanceReady).toBeUndefined()
+      expect(engine.handleEffectAction(witness.id, 'E01', { targetId: accomplice.id }).ok).toBe(
+        false,
+      )
+      expect(engine.getPlayerById(accomplice.id)?.status).toBe('alive')
+      expect(engine.handleWitnessFinishAdvance(witness.id).ok).toBe(false)
+      expect(engine.handleAccompliceChoose(accomplice.id, true, 'INVALID').ok).toBe(false)
+      expect(engine.handleAccompliceChoose(accomplice.id, true).ok).toBe(false)
+      expect(engine.getGameStateForPlayer(accomplice.id).accomplicePrompted).toBe(true)
+      expect(engine.handleAccompliceChoose(accomplice.id, true, murderer.clueCards[1].id).ok).toBe(
+        true,
+      )
+      const pending = engine.getGameStateForPlayer(witness.id).newBoards as Array<{ id: string }>
+      expect(pending).toHaveLength(2)
+      for (const board of pending) {
+        expect(engine.handleWitnessFinishAdvance(witness.id).ok).toBe(false)
+        const old = engine.getActiveBoards().find((b) => b.type !== 'cause')!
+        expect(engine.handleWitnessReplaceBoard(witness.id, old.id, board.id, -1, 2).ok).toBe(false)
+        expect(engine.handleWitnessReplaceBoard(witness.id, old.id, board.id, 0, 7).ok).toBe(false)
+        expect(engine.getGameStateForPlayer(witness.id).advanceReady).toBe(false)
+        expect(engine.handleWitnessReplaceBoard(witness.id, old.id, board.id, 0, 2).ok).toBe(true)
+        expect(engine.handleWitnessReplaceBoard(witness.id, old.id, board.id, 0, 2).ok).toBe(false)
+      }
+      expect(engine.getGameStateForPlayer(witness.id).advanceReady).toBe(true)
+      expect(engine.handleWitnessFinishAdvance(detective.id).ok).toBe(false)
+      expect(engine.handleWitnessFinishAdvance(witness.id).ok).toBe(true)
+      expect(engine.getPhase()).toBe('discussion-2')
+      expect(engine.handleWitnessFinishAdvance(witness.id).ok).toBe(false)
+    })
+
+    it('keeps witness boards during blackout and restores public boards after the next discussion', () => {
+      const witness = getPlayerByRole(engine, players, 'witness')!
+      const accomplice = getPlayerByRole(engine, players, 'accomplice')!
+      engine.setEffectDeckForTest([{ id: 'E07', name: '停电', effect: '' }])
+      engine.handleAccompliceChoose(accomplice.id, false)
+      for (const player of players) {
+        const snapshot = engine.getGameStateForPlayer(player.userId)
+        expect(snapshot.boards).toHaveLength(player.userId === witness.id ? 6 : 0)
+        if (player.userId !== witness.id) expect(snapshot.newBoards).toBeUndefined()
+      }
+      engine.finishAdvancePhase()
+      expect(engine.getPhase()).toBe('discussion-2')
+      expect(engine.getBlackout()).toBe(true)
+      engine.setEffectDeckForTest([])
+      engine.handleEndDiscussion(witness.id)
+      expect(engine.getBlackout()).toBe(false)
+      expect(io.roomEmit).toHaveBeenCalledWith('boards_revealed', {
+        boards: engine.getGameStateForPlayer(witness.id).boards,
+      })
+      engine.testApplyEffectCard({ id: 'E07', name: '停电', effect: '' })
+      engine.finishAdvancePhase()
+      expect(engine.getPhase()).toBe('discussion-3')
+      expect(engine.getBlackout()).toBe(true)
+      engine.handleEndDiscussion(witness.id)
+      expect(engine.getPhase()).toBe('force-solve')
+      expect(engine.getBlackout()).toBe(false)
     })
 
     it('should be in advance-1 phase', () => {

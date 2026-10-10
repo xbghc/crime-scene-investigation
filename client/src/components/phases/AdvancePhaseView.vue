@@ -9,11 +9,15 @@ interface Props {
   isWitness: boolean
   isAccomplice: boolean
   isAdvance1: boolean
+  advanceReady?: boolean
   accomplicePrompted?: boolean
   murdererPlayer?: Player
 }
 
-const props = withDefaults(defineProps<Props>(), { accomplicePrompted: true })
+const props = withDefaults(defineProps<Props>(), {
+  accomplicePrompted: true,
+  advanceReady: false,
+})
 
 const emit = defineEmits<{
   'accomplice-choose': [payload: { replaceClue: boolean; newClueCardId?: string }]
@@ -137,10 +141,10 @@ function handleConfirmReplace() {
       </div>
     </template>
 
-    <!-- Witness: no new boards, finish advance -->
-    <template v-else-if="isWitness && newBoards.length === 0">
+    <!-- Only the server can confirm that every advance step has completed. -->
+    <template v-else-if="isWitness && advanceReady && newBoards.length === 0">
       <div class="advance__waiting">
-        <p class="advance__waiting-text">推进阶段完成，没有新的场景板</p>
+        <p class="advance__waiting-text">推进阶段完成，可以继续</p>
         <button
           class="advance__btn advance__btn--primary"
           style="max-width: 200px"
@@ -197,7 +201,9 @@ function handleConfirmReplace() {
     <template v-else>
       <div class="advance__waiting">
         <div class="advance__spinner" />
-        <p class="advance__waiting-text">推进阶段，目击者正在调整线索…</p>
+        <p class="advance__waiting-text">
+          {{ isWitness ? '请等待推进阶段准备完成…' : '推进阶段，目击者正在调整线索…' }}
+        </p>
       </div>
     </template>
   </div>

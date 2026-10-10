@@ -119,8 +119,7 @@ async function advance(game, round, replacementClue) {
   }
   const boardCount = replacementClue ? 2 : 1
   await expect.poll(async () => (await state(game.witness)).newBoards.length).toBe(boardCount)
-  // Expected behavior follows current engine code, not the longer card text:
-  // E07 hides boards in advance, then clears on entering the NEXT discussion.
+  // E07 remains active throughout the next discussion, as the card requires.
   for (const player of game.group) {
     await expect.poll(async () => (await state(player)).blackout).toBe(true)
     await expect(
@@ -155,8 +154,8 @@ async function advance(game, round, replacementClue) {
   for (const player of game.group) {
     await phase(player, `discussion-${round + 1}`)
     await dismissPhase(player)
-    expect((await state(player)).blackout).toBe(false)
-    await expect(player.page.locator('.discussion .scene-board')).toHaveCount(6)
+    expect((await state(player)).blackout).toBe(true)
+    await expect(player.page.locator('.discussion .scene-board__blackout-text')).toHaveCount(6)
   }
 }
 
@@ -240,8 +239,27 @@ test('回归05：停电中目击者刷新，仍应能选择旧板继续推进', 
   await phase(game.witness, 'advance-1')
   await expect.poll(async () => (await state(game.witness)).newBoards.length).toBe(1)
   // A witness needs actionable old-board controls even when public boards hide.
-  // Static review predicts this contract assertion will fail; do not skip it.
   await expect(game.witness.page.locator('.advance__board-wrap')).toHaveCount(5)
+  const detective = game.detectives[0]
+  await detective.page.reload()
+  await phase(detective, 'advance-1')
+  expect((await state(detective)).boards).toEqual([])
+  expect((await state(detective)).newBoards).toEqual([])
+  await game.witness.page.locator('.advance__board-wrap').first().click()
+  await game.witness.page.locator('.advance__boards').nth(1).locator('.scene-board__cell').first().click()
+  await game.witness.page.getByRole('button', { name: /确认替换/ }).click()
+  await expect.poll(async () => (await state(game.witness)).newBoards.length).toBe(0)
+  await game.witness.page.reload()
+  await phase(game.witness, 'advance-1')
+  await game.witness.page.locator('.advance').getByRole('button', { name: '继续', exact: true }).click()
+  await phase(game.witness, 'discussion-2')
+  await dismissPhase(game.witness)
+  expect((await state(game.witness)).blackout).toBe(true)
+  await game.witness.page.locator('.discussion__btn--end').click()
+  await phase(game.witness, 'advance-2')
+  // This deterministic deck has E07 again: restoration precedes the next blackout.
+  await expect.poll(async () => (await state(detective)).boards.length).toBe(6)
+
 })
 
 test('回归06：六人等待帮凶决策时，目击者不能提前结束推进', async ({ players }) => {
@@ -251,7 +269,9 @@ test('回归06：六人等待帮凶决策时，目击者不能提前结束推进
   await expect(
     game.accomplice.page.getByRole('button', { name: '不更换', exact: true }),
   ).toBeVisible()
-  // Either hide the premature continuation control or disable it.
+  await game.witness.page.reload()
+  await phase(game.witness, 'advance-1')
+  // Either hide the premature continuation control or disable it, even on reload.
   await expect(
     game.witness.page.locator('.advance button:enabled').filter({ hasText: /^\s*继续\s*$/ }),
   ).toHaveCount(0)
