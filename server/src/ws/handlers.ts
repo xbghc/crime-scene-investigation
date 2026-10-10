@@ -117,14 +117,7 @@ export function registerHandlers(io: Server, socket: Socket, rooms = getRoomMana
       Number.isInteger(d.optionIndex) &&
       Number.isInteger(d.markerNumber),
   )
-  action('witness_finish_advance', (e) => {
-    if (e.getPlayerById(userId)?.role !== 'witness')
-      return { ok: false, error: '只有目击者可以执行此操作' }
-    const phase = e.getGameStateForPlayer(userId).phase
-    if (phase !== 'advance-1' && phase !== 'advance-2')
-      return { ok: false, error: '当前不在推进阶段' }
-    e.finishAdvancePhase()
-  })
+  action('witness_finish_advance', (e) => e.handleWitnessFinishAdvance(userId))
   action('end_discussion', (e) => e.handleEndDiscussion(userId))
   action(
     'accomplice_choose',

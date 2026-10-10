@@ -57,6 +57,7 @@ export class GameEngine {
   private phaseTimer: ReturnType<typeof setTimeout> | null = null
   private completedRoles: Record<string, Role> | null = null
   private pendingBoards: SceneBoardState[] = []
+  private advanceEffectsStarted = false
   private disconnectTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
 
   constructor(io: Server, roomCode = 'test-room') {
@@ -94,6 +95,7 @@ export class GameEngine {
     this.state = this.createInitialState()
     this.completedRoles = null
     this.pendingBoards = []
+    this.advanceEffectsStarted = false
   }
 
   // RoomManager owns room expiry. Release only timers owned by this engine.
@@ -513,7 +515,7 @@ export class GameEngine {
     })
     this.state.phase = 'witness-accuse'
     this.io.to(this.roomCode).emit('phase_change', { phase: 'witness-accuse' })
-    this.io.to(this.roomCode).emit('boards_revealed', { boards: this.getPublicBoards() })
+    this.emitBoardUpdate('boards_revealed', { boards: this.getPublicBoards() })
     this.io.to(this.roomCode).emit('system_message', {
       content: '天亮了！目击者正在布置场景板线索...',
       type: 'phase',
@@ -552,7 +554,7 @@ export class GameEngine {
     }
 
     board.marker = { optionIndex, markerNumber }
-    this.io.to(this.roomCode).emit('marker_placed', { boardId, optionIndex, markerNumber })
+    this.emitBoardUpdate('marker_placed', { boardId, optionIndex, markerNumber })
 
     return { ok: true }
   }
@@ -575,16 +577,6 @@ export class GameEngine {
   // === Discussion Phases ===
 
   private transitionToDiscussion(phase: DiscussionPhase): void {
-    if (this.state.blackout && this.state.blackoutClearsAfterPhase === phase) {
-      this.state.blackout = false
-      this.state.blackoutClearsAfterPhase = null
-      this.io.to(this.roomCode).emit('blackout_end', {})
-      this.io
-        .to(this.roomCode)
-        .emit('system_message', { content: '电力恢复，场景板重新显示', type: 'info' })
-      logger.game('EFFECT', `Blackout cleared`, { phase })
-    }
-
     const roundNum = phase === 'discussion-1' ? 1 : phase === 'discussion-2' ? 2 : 3
     logger.game('PHASE', `=== PHASE TRANSITION: ${phase} (Round ${roundNum}) ===`, {
       from: this.state.phase,
@@ -596,7 +588,7 @@ export class GameEngine {
     this.io.to(this.roomCode).emit('phase_change', {
       phase,
       data: {
-        boards: this.getPublicBoards(),
+        boards: this.state.blackout ? [] : this.getPublicBoards(),
         blackout: this.state.blackout,
       },
     })
@@ -609,6 +601,19 @@ export class GameEngine {
   handleEndDiscussion(userId: string): OpResult {
     const player = this.findPlayer(userId)
     if (!player || player.role !== 'witness') return { ok: false, error: '只有目击者可以结束发言' }
+
+    if (!this.isDiscussionPhase()) return { ok: false, error: '当前阶段不允许此操作' }
+    // E07 lasts through the next discussion, including refreshed clients.
+    if (this.state.blackout && this.state.blackoutClearsAfterPhase === this.state.phase) {
+      this.state.blackout = false
+      this.state.blackoutClearsAfterPhase = null
+      this.io.to(this.roomCode).emit('blackout_end', {})
+      this.emitBoardUpdate('boards_revealed', { boards: this.getPublicBoards() })
+      this.io.to(this.roomCode).emit('system_message', {
+        content: '电力恢复，场景板重新显示',
+        type: 'info',
+      })
+    }
 
     if (this.state.phase === 'discussion-1') {
       this.transitionToAdvance('advance-1')
@@ -628,10 +633,13 @@ export class GameEngine {
   private transitionToAdvance(phase: AdvancePhase): void {
     this.state.phase = phase
     this.state.accompliceHasChosen = false
+    this.pendingBoards = []
+    this.advanceEffectsStarted = false
 
     this.io.to(this.roomCode).emit('phase_change', { phase })
     this.io.to(this.roomCode).emit('system_message', { content: '推进阶段开始...', type: 'phase' })
 
+    this.emitToPlayer(this.getWitness(), 'advance_ready', { ready: false })
     const accomplice = this.getAccomplice()
 
     if (phase === 'advance-1' && accomplice) {
@@ -649,13 +657,14 @@ export class GameEngine {
       return { ok: false, error: '只有帮凶可以执行此操作' }
     if (this.state.accompliceHasChosen) return { ok: false, error: '帮凶已做出选择' }
 
-    this.state.accompliceHasChosen = true
+    if (replaceClue && !newClueCardId) return { ok: false, error: '请选择新的线索牌' }
 
     if (replaceClue && newClueCardId) {
       const murderer = this.getMurderer()
       const hasCard = murderer.clueCards.some((c) => c.id === newClueCardId)
       if (!hasCard) return { ok: false, error: '无效的线索牌选择' }
 
+      this.state.accompliceHasChosen = true
       const oldClueCardId = this.state.solution!.clueCard.id
       const newClueCard = murderer.clueCards.find((c) => c.id === newClueCardId)!
       this.state.solution!.clueCard = newClueCard
@@ -665,6 +674,7 @@ export class GameEngine {
       // Accomplice replaced: 1 effect + 2 boards
       this.executeAdvanceEffects(true)
     } else {
+      this.state.accompliceHasChosen = true
       // Accomplice declined: 1 effect + 1 board
       this.executeAdvanceEffects(false)
     }
@@ -673,6 +683,7 @@ export class GameEngine {
   }
 
   private executeAdvanceEffects(accompliceReplaced: boolean): void {
+    this.advanceEffectsStarted = true
     const effectCard = this.drawEffectCard()
     if (effectCard) {
       const result = this.applyEffectCard(effectCard)
@@ -689,6 +700,7 @@ export class GameEngine {
     const witness = this.getWitness()
 
     this.pendingBoards = newBoards
+    this.emitAdvanceReady()
     if (newBoards.length > 0) {
       this.emitToPlayer(witness, 'new_boards', {
         boards: newBoards.map((b) => this.boardToPublic(b)),
@@ -717,9 +729,26 @@ export class GameEngine {
     if (!oldBoard) return { ok: false, error: '无效的旧场景板' }
     if (oldBoard.type === 'cause') return { ok: false, error: '不能替换死亡原因场景板' }
 
-    const newBoard = this.resolveNewBoard(newBoardId)
+    if (this.isAdvancePhase() && !this.pendingBoards.some((board) => board.id === newBoardId)) {
+      return { ok: false, error: '请选择待替换的新场景板' }
+    }
+    const newBoard = this.isAdvancePhase()
+      ? this.pendingBoards.find((board) => board.id === newBoardId)
+      : this.resolveNewBoard(newBoardId)
     if (!newBoard) return { ok: false, error: '无效的新场景板' }
 
+    if (
+      !Number.isInteger(optionIndex) ||
+      optionIndex < 0 ||
+      optionIndex >= newBoard.options.length ||
+      !Number.isInteger(markerNumber) ||
+      markerNumber < MARKER_MIN ||
+      markerNumber > MARKER_MAX
+    ) {
+      return { ok: false, error: '无效的选项或标记编号' }
+    }
+
+    this.state.sceneBoardPool = this.state.sceneBoardPool.filter((board) => board.id !== newBoardId)
     newBoard.marker = { optionIndex, markerNumber }
 
     const activeIdx = this.state.activeBoards.findIndex((b) => b.id === oldBoardId)
@@ -730,12 +759,14 @@ export class GameEngine {
     }
 
     this.pendingBoards = this.pendingBoards.filter((board) => board.id !== newBoardId)
-    this.io.to(this.roomCode).emit('board_replaced', {
+    const replacement = {
       oldBoardId,
       newBoard: this.boardToPublic(newBoard),
       optionIndex,
       markerNumber,
-    })
+    }
+    this.emitBoardUpdate('board_replaced', replacement)
+    if (this.isAdvancePhase()) this.emitAdvanceReady()
 
     return { ok: true }
   }
@@ -743,15 +774,38 @@ export class GameEngine {
   private resolveNewBoard(newBoardId: string): SceneBoardState | undefined {
     const poolIdx = this.state.sceneBoardPool.findIndex((b) => b.id === newBoardId)
     if (poolIdx >= 0) {
-      return this.state.sceneBoardPool.splice(poolIdx, 1)[0]
+      return this.state.sceneBoardPool[poolIdx]
     }
     // Fallback: board may have been sent via new_boards and removed from pool
     const boardData = ALL_SCENE_BOARDS.find((b) => b.id === newBoardId)
     return boardData ? this.toBoardState(boardData) : undefined
   }
 
+  private isAdvanceReady(): boolean {
+    return this.isAdvancePhase() && this.advanceEffectsStarted && this.pendingBoards.length === 0
+  }
+
+  private emitBoardUpdate(event: string, payload: Record<string, unknown>): void {
+    if (this.state.blackout) this.emitToPlayer(this.getWitness(), event, payload)
+    else this.io.to(this.roomCode).emit(event, payload)
+  }
+
+  private emitAdvanceReady(): void {
+    this.emitToPlayer(this.getWitness(), 'advance_ready', { ready: this.isAdvanceReady() })
+  }
+
+  handleWitnessFinishAdvance(userId: string): OpResult {
+    if (this.findPlayer(userId)?.role !== 'witness')
+      return { ok: false, error: '只有目击者可以执行此操作' }
+    if (!this.isAdvancePhase()) return { ok: false, error: '当前不在推进阶段' }
+    if (!this.isAdvanceReady()) return { ok: false, error: '请等待帮凶决定并完成场景板替换' }
+    this.finishAdvancePhase()
+    return { ok: true }
+  }
+
   finishAdvancePhase(): void {
     this.pendingBoards = []
+    this.advanceEffectsStarted = false
     if (this.state.phase === 'advance-1') {
       this.transitionToDiscussion('discussion-2')
     } else if (this.state.phase === 'advance-2') {
@@ -936,6 +990,7 @@ export class GameEngine {
     this.dispose()
     this.completedRoles = null
     this.pendingBoards = []
+    this.advanceEffectsStarted = false
     const previousHostId = this.state.hostId
     const players = this.state.players.map((p) => ({
       ...p,
@@ -1019,6 +1074,9 @@ export class GameEngine {
     if (!player || player.role !== 'witness')
       return { ok: false, error: '只有目击者可以执行此操作' }
 
+    if (this.isAdvancePhase() && !this.advanceEffectsStarted)
+      return { ok: false, error: '请先等待帮凶决定' }
+
     switch (effectId) {
       case 'E01':
         return this.applyAssassination(data)
@@ -1064,7 +1122,7 @@ export class GameEngine {
     this.io
       .to(this.roomCode)
       .emit('system_message', { content: '一张场景板上的选项物被移除', type: 'warning' })
-    this.io.to(this.roomCode).emit('boards_revealed', { boards: this.getPublicBoards() })
+    this.emitBoardUpdate('boards_revealed', { boards: this.getPublicBoards() })
     return { ok: true }
   }
 
@@ -1119,7 +1177,7 @@ export class GameEngine {
       roomCode: this.roomCode,
       phase: this.state.phase,
       players: this.buildPublicPlayerList(player),
-      boards: this.state.blackout ? [] : this.getPublicBoards(),
+      boards: this.state.blackout && player.role !== 'witness' ? [] : this.getPublicBoards(),
       blackout: this.state.blackout,
     }
 
@@ -1157,6 +1215,7 @@ export class GameEngine {
       result.murdererSelection = this.state.solution
     }
     if (player.role === 'witness' && this.isAdvancePhase()) {
+      result.advanceReady = this.isAdvanceReady()
       result.newBoards = this.pendingBoards.map((board) => this.boardToPublic(board))
     }
     if (player.role === 'accomplice') {

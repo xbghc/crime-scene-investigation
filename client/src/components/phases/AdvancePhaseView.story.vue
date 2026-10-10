@@ -35,6 +35,26 @@ const newBoards: SceneBoard[] = [
         @witness-replace="(p) => console.log('witness-replace:', p)"
       />
     </Variant>
+    <Variant title="目击者等待推进准备">
+      <AdvancePhaseView
+        :boards="mockBoards"
+        :new-boards="[]"
+        :is-witness="true"
+        :is-accomplice="false"
+        :is-advance1="true"
+      />
+    </Variant>
+    <Variant title="目击者推进完成">
+      <AdvancePhaseView
+        :boards="mockBoards"
+        :new-boards="[]"
+        :is-witness="true"
+        :is-accomplice="false"
+        :is-advance1="true"
+        :advance-ready="true"
+        @witness-finish-advance="() => console.log('witness-finish-advance')"
+      />
+    </Variant>
     <Variant title="目击者换板（推进 2）">
       <AdvancePhaseView
         :boards="mockBoards"

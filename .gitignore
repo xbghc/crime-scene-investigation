@@ -56,3 +56,7 @@ e2e/player[0-9]*-*.mjs
 e2e/player2-game/
 e2e/player[0-9]-screenshots/
 e2e/player[0-9]-game-screenshots/
+
+# Playwright browser test artifacts (kept as CI artifacts, never committed)
+/playwright-report/
+/test-results/

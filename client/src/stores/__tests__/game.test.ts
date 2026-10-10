@@ -185,6 +185,105 @@ describe('GameStore', () => {
     })
   })
 
+  // ===== advance readiness =====
+  describe('advance readiness', () => {
+    function readyWitness() {
+      store.setMyInfo('p1', 'witness')
+      store.setPhase('advance-1')
+      store.setAdvanceReady(true)
+    }
+
+    it('starts unavailable and only accepts readiness for a witness in an advance phase', () => {
+      expect(store.advanceReady).toBe(false)
+      store.setAdvanceReady(true)
+      expect(store.advanceReady).toBe(false)
+      store.setPhase('advance-1')
+      store.setMyInfo('p1', 'detective')
+      store.setAdvanceReady(true)
+      expect(store.advanceReady).toBe(false)
+
+      readyWitness()
+      expect(store.advanceReady).toBe(true)
+      store.setAdvanceReady(false)
+      expect(store.advanceReady).toBe(false)
+    })
+
+    it.each(['advance-1', 'advance-2', 'discussion-2', 'waiting'] as const)(
+      'clears readiness on a %s phase change',
+      (phase) => {
+        readyWitness()
+        store.setPhase(phase)
+        expect(store.advanceReady).toBe(false)
+      },
+    )
+
+    it('does not infer readiness from an empty new-board list', () => {
+      store.setMyInfo('p1', 'witness')
+      store.setPhase('advance-1')
+      store.setNewBoards([makeBoard()])
+      store.setNewBoards([])
+      expect(store.advanceReady).toBe(false)
+    })
+
+    it('restores an authoritative snapshot and clears readiness when the field is omitted', () => {
+      const snapshot: GameState = {
+        phase: 'advance-2',
+        round: 2,
+        players: [],
+        boards: [],
+        myRole: 'witness',
+      }
+      store.syncFullState({ ...snapshot, advanceReady: true })
+      expect(store.advanceReady).toBe(true)
+      store.syncFullState(snapshot)
+      expect(store.advanceReady).toBe(false)
+      store.syncFullState({ ...snapshot, advanceReady: false, newBoards: [makeBoard()] })
+      expect(store.advanceReady).toBe(false)
+      expect(store.newBoards).toHaveLength(1)
+    })
+
+    it('does not carry readiness into a snapshot for another role or phase', () => {
+      readyWitness()
+      store.syncFullState({
+        phase: 'advance-1',
+        round: 1,
+        players: [],
+        boards: [],
+        myRole: 'detective',
+      })
+      expect(store.advanceReady).toBe(false)
+      readyWitness()
+      store.syncFullState({
+        phase: 'discussion-2',
+        round: 2,
+        players: [],
+        boards: [],
+        myRole: 'witness',
+        advanceReady: true,
+      })
+      expect(store.advanceReady).toBe(false)
+    })
+
+    it('clears readiness on reset, room switch, and game over', () => {
+      readyWitness()
+      store.reset()
+      expect(store.advanceReady).toBe(false)
+      readyWitness()
+      store.setRoomState({
+        code: 'NEW123',
+        minPlayers: 4,
+        maxPlayers: 10,
+        status: 'playing',
+        hostId: null,
+        players: [],
+      })
+      expect(store.advanceReady).toBe(false)
+      readyWitness()
+      store.setGameOver('detective', {})
+      expect(store.advanceReady).toBe(false)
+    })
+  })
+
   // ===== setSolveResult =====
   describe('setSolveResult', () => {
     it('破案失败时应移除对应玩家的破案权', () => {

@@ -27,6 +27,10 @@ interface PlayerLeftPayload {
 
 type AccomplicePromptPayload = Record<string, never>
 
+interface AdvanceReadyPayload {
+  ready: boolean
+}
+
 interface MurdererSelectionUpdatePayload {
   meansCard: { id: string; name: string }
   clueCard: { id: string; name: string }
@@ -401,6 +405,10 @@ function setupGameEventHandlers(sock: Socket) {
 
   on('accomplice_prompt', (_data: AccomplicePromptPayload) => {
     gameStore.setAccomplicePrompted(true)
+  })
+
+  on('advance_ready', (data: AdvanceReadyPayload) => {
+    gameStore.setAdvanceReady(data.ready)
   })
 
   // Accomplice sees murderer's card selection in real-time

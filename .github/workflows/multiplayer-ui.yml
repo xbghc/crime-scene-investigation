@@ -1,0 +1,53 @@
+name: Multiplayer browser tests
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'client/**'
+      - 'server/**'
+      - 'e2e/**'
+      - 'playwright.classic.config.mjs'
+      - 'playwright.edges.config.mjs'
+      - 'playwright.multiplayer.config.mjs'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/multiplayer-ui.yml'
+permissions:
+  contents: read
+jobs:
+  browser-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [classic, multiplayer, edges]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node node_modules/playwright/cli.js install --with-deps chromium
+      - name: Run ${{ matrix.suite }} browser scenarios
+        run: node node_modules/playwright/cli.js test --config=playwright.${{ matrix.suite }}.config.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: multiplayer-browser-report-${{ matrix.suite }}
+          path: |
+            playwright-report/
+            test-results/*-summary.json
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: multiplayer-screenshots-and-results-${{ matrix.suite }}
+          path: |
+            test-results/**/*.png
+            test-results/**/error-context.md
+            test-results/*-summary.json
+          retention-days: 7

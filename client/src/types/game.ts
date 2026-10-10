@@ -100,6 +100,7 @@ export interface GameState {
   scores?: Record<string, number>
   blackout?: boolean // 停电效果
   newBoards?: SceneBoard[]
+  advanceReady?: boolean // 仅目击者：推进步骤和场景板替换全部完成
   accomplicePrompted?: boolean
   roles?: Record<string, Role>
 }
