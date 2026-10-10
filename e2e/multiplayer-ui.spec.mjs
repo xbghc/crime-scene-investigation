@@ -19,7 +19,7 @@ test('invalid room, two independent rooms, host transfer and lobby reload/rejoin
   await d.page.getByRole('button', { name: '加入房间', exact: true }).click()
   await d.page.getByLabel('房间码', { exact: true }).fill('000000')
   await d.page.getByRole('button', { name: '加入调查' }).click()
-  await expect(d.page.getByRole('alert')).toContainText('房间')
+  await expect(d.page.locator('.entry-message[role="alert"]')).toContainText('房间')
   await expect(d.page.locator('.room-controls__code')).toHaveCount(0)
   // A created-then-emptied room gives a valid code that is definitely absent.
   const expiredCode = await create(a)
@@ -27,7 +27,7 @@ test('invalid room, two independent rooms, host transfer and lobby reload/rejoin
   await expect(a.page.getByLabel('你的代号')).toBeVisible()
   await d.page.getByLabel('房间码', { exact: true }).fill(expiredCode)
   await d.page.getByRole('button', { name: '加入调查' }).click()
-  await expect(d.page.getByRole('alert')).toHaveText('房间不存在或已过期')
+  await expect(d.page.locator('.entry-message[role="alert"]')).toHaveText('房间不存在或已过期')
   const codeA = await create(a)
   const codeB = await create(c)
   expect(codeA).not.toBe(codeB)

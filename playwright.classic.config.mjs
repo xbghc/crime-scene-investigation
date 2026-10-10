@@ -7,7 +7,11 @@ export default defineConfig({
   testMatch: 'classic-paths.spec.mjs',
   timeout: 180_000,
   outputDir: 'test-results/classic',
-  reporter: [['list'], ['html', { outputFolder: 'playwright-report/classic', open: 'never' }]],
+  reporter: [
+    ['list'],
+    ['json', { outputFile: 'test-results/classic-summary.json' }],
+    ['html', { outputFolder: 'playwright-report/classic', open: 'never' }],
+  ],
   webServer: [
     {
       command: 'node --import tsx e2e/scenario-server.ts',

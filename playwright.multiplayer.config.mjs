@@ -10,7 +10,11 @@ export default defineConfig({
   timeout: 120_000,
   expect: { timeout: 15_000 },
   outputDir: 'test-results/multiplayer',
-  reporter: [['list'], ['html', { outputFolder: 'playwright-report/rooms', open: 'never' }]],
+  reporter: [
+    ['list'],
+    ['json', { outputFile: 'test-results/rooms-summary.json' }],
+    ['html', { outputFolder: 'playwright-report/rooms', open: 'never' }],
+  ],
   use: {
     baseURL: 'http://127.0.0.1:8030',
     headless: true,

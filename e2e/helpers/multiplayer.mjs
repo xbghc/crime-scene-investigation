@@ -60,13 +60,16 @@ const test = base.extend({
           body: JSON.stringify({ pageErrors: session.errors, diagnostics: session.diagnostics }),
           contentType: 'application/json',
         })
-        await session.context.tracing.stop({
-          path: testInfo.outputPath(`${session.name}-trace.zip`),
-        })
-        await testInfo.attach(`${session.name}-trace`, {
-          path: testInfo.outputPath(`${session.name}-trace.zip`),
-          contentType: 'application/zip',
-        })
+        if (testInfo.status !== testInfo.expectedStatus) {
+          const tracePath = testInfo.outputPath(`${session.name}-trace.zip`)
+          await session.context.tracing.stop({ path: tracePath })
+          await testInfo.attach(`${session.name}-trace`, {
+            path: tracePath,
+            contentType: 'application/zip',
+          })
+        } else {
+          await session.context.tracing.stop()
+        }
         await session.context.close()
       }
     }
