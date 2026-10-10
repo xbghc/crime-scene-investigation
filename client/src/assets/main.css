@@ -1,8 +1,8 @@
 /* Upstream tokens/components are pinned in design-system/. Game palette overrides
    are intentional: the project keeps its noir atmosphere and semantic role colors. */
-@import "tailwindcss";
-@import "./design-system/tokens.css";
 @import "./design-system/bundle.css";
+@import "./design-system/tokens.css";
+@import "tailwindcss";
 
 @theme {
   /* Background */

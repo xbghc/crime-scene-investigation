@@ -12,9 +12,38 @@ const viewports = [
 ]
 
 async function screenshot(page, name) {
+  if (!baselineEvidence) await healthyArtwork(page)
   const path = test.info().outputPath(`${name}.png`)
-  await page.screenshot({ path, fullPage: true, animations: 'disabled' })
+  // Fixed overlays cover the viewport, not the full scrollable document. A full
+  // page capture would misleadingly expose inaccessible content below them.
+  const hasOverlay = await page.locator('.modal-overlay, .pwa-overlay').count()
+  await page.screenshot({ path, fullPage: !hasOverlay, animations: 'disabled' })
+  if (!baselineEvidence) await healthyArtwork(page)
   await test.info().attach(name, { path, contentType: 'image/png' })
+}
+
+async function healthyArtwork(page) {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          [...document.images].flatMap((image) => {
+            const rect = image.getBoundingClientRect()
+            const style = getComputedStyle(image)
+            if (!rect.width || !rect.height || style.visibility === 'hidden') return []
+            const inViewport =
+              rect.bottom > 0 && rect.top < innerHeight && rect.right > 0 && rect.left < innerWidth
+            // Don't force offscreen lazy images to load. Once an image has
+            // completed, however, a failed decode must render the real fallback.
+            if (image.complete ? image.naturalWidth === 0 : inViewport) {
+              return [{ src: image.currentSrc || image.src, complete: image.complete }]
+            }
+            return []
+          }),
+        ),
+      { message: 'Visible artwork must load or display its fallback, never a broken image' },
+    )
+    .toEqual([])
 }
 
 async function noHorizontalOverflow(page) {

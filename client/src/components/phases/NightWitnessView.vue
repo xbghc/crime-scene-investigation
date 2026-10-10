@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CardArtwork from '../game/CardArtwork.vue'
 import AppIcon from '../ui/AppIcon.vue'
 import { computed } from 'vue'
 import type { MurdererSelection } from '../../types'
@@ -59,20 +60,18 @@ const selectedClueImage = computed(() =>
 
         <div class="witness-night__cards">
           <div class="witness-night__card witness-night__card--means">
-            <img
+            <CardArtwork
               v-if="selectedMeansImage"
               :src="selectedMeansImage"
-              :alt="selectedMeansName"
               class="witness-night__card-img"
             />
             <span class="witness-night__card-label">手段</span>
             <span class="witness-night__card-name">{{ selectedMeansName }}</span>
           </div>
           <div class="witness-night__card witness-night__card--clue">
-            <img
+            <CardArtwork
               v-if="selectedClueImage"
               :src="selectedClueImage"
-              :alt="selectedClueName"
               class="witness-night__card-img"
             />
             <span class="witness-night__card-label">线索</span>

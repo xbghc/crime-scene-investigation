@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CardArtwork from './CardArtwork.vue'
 import type { SceneBoard } from '../../types'
 import { computed } from 'vue'
 import { getBoardImage } from '../../types/stitch-cards'
@@ -51,10 +52,10 @@ function handleSelect(optionIndex: number) {
 <template>
   <div class="scene-board" :class="{ 'scene-board--hidden': hidden }">
     <div class="scene-board__header">
-      <img
+      <CardArtwork
         v-if="boardImageUrl"
         :src="boardImageUrl"
-        :alt="board.title"
+        shape="square"
         class="scene-board__thumb"
       />
       <div class="scene-board__header-text">

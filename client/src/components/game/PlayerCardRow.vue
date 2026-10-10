@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CardArtwork from './CardArtwork.vue'
 import AppIcon from '../ui/AppIcon.vue'
 import type { Player } from '../../types'
 import { getMeansCardImage, getClueCardImage } from '../../types/stitch-cards'
@@ -34,9 +35,8 @@ defineProps<{
           class="player-card-row__thumb player-card-row__thumb--means"
           :title="card.name"
         >
-          <img
+          <CardArtwork
             :src="getMeansCardImage(card.id)"
-            alt=""
             class="player-card-row__img"
             loading="lazy"
           />
@@ -50,9 +50,8 @@ defineProps<{
           class="player-card-row__thumb player-card-row__thumb--clue"
           :title="card.name"
         >
-          <img
+          <CardArtwork
             :src="getClueCardImage(card.id)"
-            alt=""
             class="player-card-row__img"
             loading="lazy"
           />

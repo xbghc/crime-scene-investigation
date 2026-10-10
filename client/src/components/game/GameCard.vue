@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CardArtwork from './CardArtwork.vue'
 import { computed } from 'vue'
 import { getCardImage } from '../../types/stitch-cards'
 
@@ -25,7 +26,7 @@ const imageUrl = computed(() => (props.id ? getCardImage(props.type, props.id) :
       { 'game-card--selected': selected, 'game-card--disabled': disabled },
     ]"
   >
-    <img v-if="imageUrl" :src="imageUrl" alt="" class="game-card__img" loading="lazy" />
+    <CardArtwork v-if="imageUrl" :src="imageUrl" class="game-card__img" loading="lazy" />
     <span class="game-card__name">{{ name }}</span>
   </component>
 </template>

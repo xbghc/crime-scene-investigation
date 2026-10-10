@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CardArtwork from '../game/CardArtwork.vue'
 import AppIcon from '../ui/AppIcon.vue'
 import { ref, computed } from 'vue'
 import type { MeansCard, ClueCard } from '../../types'
@@ -120,9 +121,8 @@ function isAccomplice(id: string) {
           </div>
           <!-- Card body -->
           <div class="murder-card__body">
-            <img
+            <CardArtwork
               :src="getMeansCardImage(card.id)"
-              :alt="card.name"
               class="murder-card__card-img"
               loading="lazy"
             />
@@ -182,9 +182,8 @@ function isAccomplice(id: string) {
             <span>帮凶</span>
           </div>
           <div class="murder-card__body">
-            <img
+            <CardArtwork
               :src="getClueCardImage(card.id)"
-              :alt="card.name"
               class="murder-card__card-img"
               loading="lazy"
             />
