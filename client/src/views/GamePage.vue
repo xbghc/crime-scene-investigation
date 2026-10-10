@@ -648,7 +648,6 @@ function handleToastDismiss() {
 
 .game-layout__body {
   flex: 1;
-  overflow-y: auto;
   padding: var(--space-6);
   width: 100%;
   max-width: 1104px;
@@ -899,6 +898,39 @@ function handleToastDismiss() {
   .game-layout__role {
     flex-wrap: wrap;
     justify-content: flex-end;
+  }
+}
+@media (max-height: 500px) {
+  .game-layout__header {
+    position: static;
+    min-height: 56px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .game-layout__eyebrow {
+    display: none;
+  }
+}
+.game-page__room,
+.game-layout__body {
+  padding-left: max(var(--space-4), var(--safe-area-left));
+  padding-right: max(var(--space-4), var(--safe-area-right));
+}
+.game-layout__header {
+  padding-left: max(var(--space-4), var(--safe-area-left), calc((100% - 1056px) / 2));
+  padding-right: max(var(--space-4), var(--safe-area-right), calc((100% - 1056px) / 2));
+}
+@media (max-width: 380px) {
+  .game-layout__header {
+    gap: 8px;
+  }
+  .game-layout__header-right,
+  .game-layout__role {
+    gap: 4px;
+  }
+  .game-layout__eyebrow,
+  .game-layout__phase-icon {
+    display: none;
   }
 }
 </style>

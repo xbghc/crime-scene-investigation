@@ -1118,4 +1118,11 @@ button:disabled,
     font-size: 9px;
   }
 }
+.entry-page,
+.lobby-header,
+.lobby-content,
+.lobby-footer {
+  padding-left: max(var(--space-4), var(--safe-area-left));
+  padding-right: max(var(--space-4), var(--safe-area-right));
+}
 </style>

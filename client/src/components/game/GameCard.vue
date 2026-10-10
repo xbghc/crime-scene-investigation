@@ -59,9 +59,9 @@ const imageUrl = computed(() => (props.id ? getCardImage(props.type, props.id) :
 }
 
 .game-card__name {
-  font-size: 12px;
+  font-size: 14px;
   text-align: center;
-  line-height: 16px;
+  line-height: 20px;
   word-break: keep-all;
   font-weight: 500;
   overflow-wrap: anywhere;

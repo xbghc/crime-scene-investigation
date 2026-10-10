@@ -67,7 +67,9 @@
 
   /* Spacing */
   --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
 }
 
 /* Tailwind v4 preflight 已包含 box-sizing reset，不再手写 margin/padding reset
@@ -89,7 +91,6 @@ body {
   background: var(--bg-primary);
   color: var(--color-text);
   line-height: 1.5;
-  overflow-x: hidden;
   overscroll-behavior: none;
 
 }
@@ -179,6 +180,16 @@ input::placeholder, textarea::placeholder {
 
 button:disabled {
   cursor: not-allowed;
+}
+
+/* iOS zooms focused controls below 16px. Keep this floor even when a component
+   uses smaller desktop typography, without disabling the user's pinch zoom. */
+@media (max-width: 767px), (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

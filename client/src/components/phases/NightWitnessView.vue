@@ -319,4 +319,17 @@ const selectedClueImage = computed(() =>
     transform: translateX(-100%);
   }
 }
+.witness-night__header,
+.witness-night__body,
+.witness-night__section,
+.witness-night__title-area,
+.witness-night__footer {
+  padding-left: max(var(--space-4), var(--safe-area-left));
+  padding-right: max(var(--space-4), var(--safe-area-right));
+}
+@media (max-height: 500px) {
+  .witness-night__header {
+    position: static;
+  }
+}
 </style>

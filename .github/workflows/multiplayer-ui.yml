@@ -16,18 +16,15 @@ on:
       - 'playwright.edges.config.mjs'
       - 'playwright.multiplayer.config.mjs'
       - 'playwright.ui.config.mjs'
+      - 'playwright.mobile.config.mjs'
       - 'pnpm-lock.yaml'
       - '.github/workflows/multiplayer-ui.yml'
 permissions:
   contents: read
 jobs:
-  browser-tests:
+  validation:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        suite: [classic, multiplayer, edges, effects, ui]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,7 +35,47 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: node node_modules/playwright/cli.js install --with-deps chromium
+      - name: Client unit tests
+        run: pnpm --filter client test
+      - name: Server unit and integration tests
+        run: pnpm --filter server exec vitest run
+      - name: Client type check and production build
+        run: pnpm --filter client build
+      - name: Server type check
+        run: pnpm --filter server exec tsc --noEmit
+      - name: Lint
+        run: pnpm lint
+      - name: Formatting
+        run: pnpm format:check
+      - name: Build component stories (no deployment)
+        run: pnpm --filter client story:build
+      - name: Check diff whitespace
+        run: git diff --check
+
+  browser-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [classic, multiplayer, edges, effects, ui, mobile]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install browser engines
+        run: |
+          if [ "${{ matrix.suite }}" = "mobile" ]; then
+            node node_modules/playwright/cli.js install --with-deps chromium webkit
+          else
+            node node_modules/playwright/cli.js install --with-deps chromium
+          fi
       - name: Run ${{ matrix.suite }} browser scenarios
         run: node node_modules/playwright/cli.js test --config=playwright.${{ matrix.suite }}.config.mjs
       - uses: actions/upload-artifact@v4
@@ -56,6 +93,7 @@ jobs:
           path: |
             test-results/**/*.png
             test-results/**/error-context.md
+            test-results/**/*-trace.zip
             test-results/*-summary.json
           retention-days: 7
 

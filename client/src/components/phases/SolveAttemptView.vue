@@ -179,7 +179,7 @@ function handleConfirm() {
 
 <style scoped>
 .solve {
-  min-height: 100dvh;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
@@ -190,7 +190,7 @@ function handleConfirm() {
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-4) var(--space-6);
-  padding-top: calc(var(--space-4) + var(--safe-area-top));
+  padding-top: var(--space-4);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -373,6 +373,45 @@ function handleConfirm() {
   }
   .solve__grid {
     gap: var(--space-2);
+  }
+}
+.solve__suspect {
+  min-width: 0;
+}
+.solve__suspect :deep(.player-avatar__name) {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.solve__body {
+  padding-bottom: var(--space-6);
+}
+@media (max-width: 600px) {
+  .solve__header {
+    gap: 12px;
+  }
+  .solve__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .solve__suspect {
+    padding: 12px 8px;
+  }
+  .solve__card-grid :deep(.game-card__name) {
+    font-size: 16px;
+    line-height: 24px;
+  }
+}
+@media (max-height: 500px) {
+  .solve__header {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .solve__body {
+    padding-top: 16px;
+  }
+  .solve__card-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 </style>

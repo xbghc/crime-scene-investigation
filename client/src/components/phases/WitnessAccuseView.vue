@@ -138,7 +138,7 @@ function moveBoard(index: number, direction: 'up' | 'down') {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding-bottom: 100px;
+  padding-bottom: calc(100px + var(--safe-area-bottom));
 }
 
 .witness-accuse__hint {
@@ -298,5 +298,23 @@ function moveBoard(index: number, direction: 'up' | 'down') {
 
 .witness-accuse__confirm--active:active {
   transform: scale(0.98);
+}
+@media (max-width: 600px) {
+  .witness-accuse__board-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .witness-accuse__reorder {
+    width: 100%;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+  .witness-accuse__position {
+    margin-right: auto;
+  }
+}
+.witness-accuse__footer {
+  padding-left: max(var(--space-4), var(--safe-area-left), calc((100% - 1056px) / 2));
+  padding-right: max(var(--space-4), var(--safe-area-right), calc((100% - 1056px) / 2));
 }
 </style>

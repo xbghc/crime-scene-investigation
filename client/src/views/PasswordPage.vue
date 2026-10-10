@@ -361,4 +361,28 @@ async function handleSubmit() {
     max-width: 432px;
   }
 }
+.password-page {
+  padding-left: max(var(--space-4), var(--safe-area-left));
+  padding-right: max(var(--space-4), var(--safe-area-right));
+}
+@media (max-width: 380px) {
+  .password-page {
+    padding-left: max(8px, var(--safe-area-left));
+    padding-right: max(8px, var(--safe-area-right));
+  }
+  .access-panel {
+    padding: 16px 8px;
+  }
+  .pin-divider {
+    display: none;
+  }
+  .pin-cell {
+    min-width: 44px;
+  }
+  .access-panel__header,
+  .access-panel__footer {
+    margin-left: 8px;
+    margin-right: 8px;
+  }
+}
 </style>
