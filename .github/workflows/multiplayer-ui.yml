@@ -16,7 +16,11 @@ permissions:
 jobs:
   browser-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [classic, multiplayer, edges]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,18 +32,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: node node_modules/playwright/cli.js install --with-deps chromium
-      - name: Classic paths and interruption regressions
-        run: node node_modules/playwright/cli.js test --config=playwright.classic.config.mjs
-      - name: Room and replay paths
-        if: success() || failure()
-        run: node node_modules/playwright/cli.js test --config=playwright.multiplayer.config.mjs
-      - name: Room capacity, identity and gameplay edges
-        if: success() || failure()
-        run: node node_modules/playwright/cli.js test --config=playwright.edges.config.mjs
+      - name: Run ${{ matrix.suite }} browser scenarios
+        run: node node_modules/playwright/cli.js test --config=playwright.${{ matrix.suite }}.config.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: multiplayer-browser-report
+          name: multiplayer-browser-report-${{ matrix.suite }}
           path: |
             playwright-report/
             test-results/*-summary.json
@@ -47,7 +45,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: multiplayer-screenshots-and-results
+          name: multiplayer-screenshots-and-results-${{ matrix.suite }}
           path: |
             test-results/**/*.png
             test-results/**/error-context.md

@@ -100,7 +100,7 @@ test('边界：连续点击确认破案只结算一次、只消耗本人破案�
     window.__socket.on('solve_result', (result) => window.__edgeSolveResults.push(result))
   })
   await prepareSolve(solver, game, game.hand.meansCards[1])
-  await solver.page.getByRole('button', { name: '确认破案', exact: true }).dblclick()
+  await solver.page.locator('.solve__confirm-btn').dblclick()
   for (const player of game.group) {
     await expect
       .poll(async () => (await state(player)).lastSolveResult)
@@ -127,7 +127,7 @@ test('边界：连续点击确认破案只结算一次、只消耗本人破案�
   await expect(solver.page.getByText('已用破案权', { exact: true })).toBeVisible()
   await assertDetectivePrivacy(game)
   await prepareSolve(nextSolver, game)
-  await nextSolver.page.getByRole('button', { name: '确认破案', exact: true }).click()
+  await nextSolver.page.locator('.solve__confirm-btn').click()
   await assertDetectiveWin(game, nextSolver)
   // The later successful solve is an ordered protocol boundary, rather than an
   // arbitrary sleep, after which the earlier result count must still be one.
@@ -150,6 +150,7 @@ test('边界：夜晚、指证、讨论刷新恢复各自身份与秘密，侦�
   async function refreshEveryone(expectedPhase) {
     const boardsBefore = (await state(game.witness)).boards
     await Promise.all(game.group.map((player) => player.page.reload()))
+    await Promise.all(game.group.map((player) => phase(player, expectedPhase)))
     for (const [index, player] of game.group.entries()) {
       await phase(player, expectedPhase)
       await dismissPhase(player)
@@ -196,7 +197,7 @@ test('边界：夜晚、指证、讨论刷新恢复各自身份与秘密，侦�
   for (const player of game.group)
     await expect(player.page.locator('.discussion .scene-board')).toHaveCount(6)
   await prepareSolve(game.detectives[0], game)
-  await game.detectives[0].page.getByRole('button', { name: '确认破案', exact: true }).click()
+  await game.detectives[0].page.locator('.solve__confirm-btn').click()
   await assertDetectiveWin(game, game.detectives[0])
 })
 
@@ -265,7 +266,7 @@ test('协议攻击（浏览器）：跨房间代码与伪造目击者身份不�
   await assertDetectivePrivacy(game)
   await expect(outsider.page.locator('.room-controls__code')).toHaveText(otherCode)
   await prepareSolve(game.detectives[0], game)
-  await game.detectives[0].page.getByRole('button', { name: '确认破案', exact: true }).click()
+  await game.detectives[0].page.locator('.solve__confirm-btn').click()
   await assertDetectiveWin(game, game.detectives[0])
   expect((await state(outsider)).phase).toBe('waiting')
   expect((await state(outsider)).lastSolveResult).toBeNull()

@@ -18,6 +18,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:8030',
     headless: true,
+    actionTimeout: 15_000,
+    navigationTimeout: 30_000,
     launchOptions: process.env.PLAYWRIGHT_EXECUTABLE_PATH
       ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
       : {},
