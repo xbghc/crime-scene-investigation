@@ -180,6 +180,34 @@ async function sweep(page, name, sizes = stressSizes) {
   }
 }
 
+async function stickyHeaderSafeArea(page) {
+  const viewport = page.viewportSize()
+  const previous = await page.evaluate(() => ({
+    value: document.documentElement.style.getPropertyValue('--safe-area-top'),
+    scrollY,
+  }))
+  try {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty('--safe-area-top', '47px')
+      window.scrollTo(0, 500)
+    })
+    await expect.poll(() => page.locator('.game-layout__header').evaluate((header) => {
+      const bounds = header.getBoundingClientRect()
+      const title = header.querySelector('h1').getBoundingClientRect()
+      return Math.abs(bounds.top) < 1 && title.top >= 47
+    }), { message: 'Scrolled sticky header must keep its title below a simulated top notch' }).toBe(true)
+    await evidence(page, '4-sticky-header-synthetic-top-inset')
+  } finally {
+    await page.evaluate((previous) => {
+      if (previous.value) document.documentElement.style.setProperty('--safe-area-top', previous.value)
+      else document.documentElement.style.removeProperty('--safe-area-top')
+      window.scrollTo(0, previous.scrollY)
+    }, previous)
+    await page.setViewportSize(viewport)
+  }
+}
+
 async function simulatedSafeArea(page, selector, name, horizontalOnly = false) {
   const viewport = page.viewportSize()
   const previous = await page.evaluate(() => {
@@ -428,6 +456,7 @@ test('four touch sessions complete private night, effect, accusation, result, re
   await reconnect(detective, game.witness, 'discussion-1')
   await privacy(game)
   await sweep(detective.page, '4-discussion')
+  await stickyHeaderSafeArea(detective.page)
   await simulatedSafeArea(detective.page, '.discussion__footer button', '4-discussion-synthetic-safe-area')
   await tap(detective.page.locator('.discussion__tab').filter({ hasText: '玩家卡牌' }))
   await expect(detective.page.locator('.player-card-row')).toHaveCount(3)

@@ -578,7 +578,7 @@ function handleToastDismiss() {
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) max(var(--space-4), calc((100% - 1056px) / 2));
-  padding-top: var(--space-3);
+  padding-top: calc(var(--space-3) + var(--safe-area-top));
   background: var(--card);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
