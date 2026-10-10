@@ -31,7 +31,6 @@ import {
   MARKER_MIN,
   MARKER_MAX,
   ROLE_REVEAL_DELAY_MS,
-  RECONNECT_TIMEOUT_MS,
   getScores,
   getRoleAssignment,
 } from '../types.js'
@@ -39,6 +38,7 @@ import {
 const DISCUSSION_PHASES: readonly GamePhase[] = ['discussion-1', 'discussion-2', 'discussion-3']
 
 const INITIAL_SCENE_BOARD_COUNT = 4 // blue scene boards drawn at game start
+export const HOST_TRANSFER_DELAY_MS = 30_000
 
 // Fisher-Yates shuffle - returns a new shuffled array without mutating input
 function shuffle<T>(arr: readonly T[]): T[] {
@@ -53,10 +53,15 @@ function shuffle<T>(arr: readonly T[]): T[] {
 export class GameEngine {
   private state: GameInternalState
   private io: Server
+  private readonly roomCode: string
+  private phaseTimer: ReturnType<typeof setTimeout> | null = null
+  private completedRoles: Record<string, Role> | null = null
+  private pendingBoards: SceneBoardState[] = []
   private disconnectTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
 
-  constructor(io: Server) {
+  constructor(io: Server, roomCode = 'test-room') {
     this.io = io
+    this.roomCode = roomCode
     this.state = this.createInitialState()
   }
 
@@ -85,8 +90,32 @@ export class GameEngine {
 
   // Reset state completely (for server restart or initial setup)
   resetToInitial(): void {
+    this.dispose()
     this.state = this.createInitialState()
+    this.completedRoles = null
+    this.pendingBoards = []
+  }
+
+  // RoomManager owns room expiry. Release only timers owned by this engine.
+  dispose(): void {
+    this.clearPhaseTimer()
+    for (const timer of this.disconnectTimers.values()) clearTimeout(timer)
     this.disconnectTimers.clear()
+  }
+
+  private clearPhaseTimer(): void {
+    if (this.phaseTimer !== null) {
+      clearTimeout(this.phaseTimer)
+      this.phaseTimer = null
+    }
+  }
+
+  private clearDisconnectTimer(userId: string): void {
+    const timer = this.disconnectTimers.get(userId)
+    if (timer !== undefined) {
+      clearTimeout(timer)
+      this.disconnectTimers.delete(userId)
+    }
   }
 
   // === Player Lookup Helpers ===
@@ -111,14 +140,17 @@ export class GameEngine {
     return this.state.players.find((p) => p.role === 'accomplice' && p.status === 'alive')
   }
 
-  private getSocket(socketId: string | null): Socket | undefined {
-    if (!socketId) return undefined
-    return this.io.sockets.sockets.get(socketId)
+  private getSocket(player: PlayerState): Socket | undefined {
+    if (!player.socketId) return undefined
+    const socket = this.io.sockets.sockets.get(player.socketId)
+    if (socket?.data.userId !== player.id || socket.data.roomCode !== this.roomCode) {
+      return undefined
+    }
+    return socket
   }
 
   private emitToPlayer(player: PlayerState, event: string, data: unknown): void {
-    const socket = this.getSocket(player.socketId)
-    socket?.emit(event, data)
+    this.getSocket(player)?.emit(event, data)
   }
 
   // === Phase Helpers ===
@@ -161,20 +193,17 @@ export class GameEngine {
 
     this.state.players.push(player)
     if (isHost) this.state.hostId = userId
+    this.transferExpiredDisconnectedHost()
 
     return player
   }
 
   private reconnectPlayer(player: PlayerState, socketId: string): PlayerState {
     player.socketId = socketId
-    player.status = player.status === 'disconnected' ? 'alive' : player.status
     player.disconnectedAt = null
 
-    const timer = this.disconnectTimers.get(player.id)
-    if (timer) {
-      clearTimeout(timer)
-      this.disconnectTimers.delete(player.id)
-    }
+    this.clearDisconnectTimer(player.id)
+    this.transferExpiredDisconnectedHost()
 
     return player
   }
@@ -183,7 +212,9 @@ export class GameEngine {
     const idx = this.state.players.findIndex((p) => p.id === userId)
     if (idx === -1) return
 
-    if (this.state.roomStatus === 'waiting') {
+    // An active round keeps its membership stable. Completed results remain intact.
+    if (this.state.roomStatus === 'waiting' || this.state.phase === 'game-over') {
+      this.clearDisconnectTimer(userId)
       this.state.players.splice(idx, 1)
       this.transferHostIfNeeded(userId)
     }
@@ -201,48 +232,49 @@ export class GameEngine {
   private transferHostIfNeeded(departedId: string): void {
     if (this.state.hostId !== departedId) return
 
-    if (this.state.players.length > 0) {
-      this.state.players[0].isHost = true
-      this.state.hostId = this.state.players[0].id
-    } else {
-      this.state.hostId = null
-    }
+    const nextHost =
+      this.state.players.find((player) => player.socketId !== null) ?? this.state.players[0]
+    this.state.hostId = nextHost?.id ?? null
+    for (const player of this.state.players) player.isHost = player.id === this.state.hostId
+    if (nextHost?.socketId === null) this.startDisconnectTimer(nextHost)
   }
 
   handleDisconnect(userId: string): void {
     const player = this.findPlayer(userId)
-    if (!player) return
+    if (!player || player.socketId === null) return
 
+    // Connection state is separate from alive/dead state, including in the lobby.
+    // Membership expiry belongs to RoomManager so the same JWT can resume a seat.
     player.socketId = null
-
-    if (this.state.roomStatus === 'playing') {
-      player.status = 'disconnected'
-      player.disconnectedAt = Date.now()
-      this.startDisconnectTimer(userId, player)
-    } else {
-      this.removePlayer(userId)
-    }
+    player.disconnectedAt = Date.now()
+    this.startDisconnectTimer(player)
   }
 
-  private startDisconnectTimer(userId: string, _player: PlayerState): void {
-    // In a face-to-face scenario, players frequently lock their phones
-    // during discussion. Keep their status as 'disconnected' (not 'dead')
-    // so they can reconnect at any time. Never auto-end the game.
+  private startDisconnectTimer(player: PlayerState): void {
+    this.clearDisconnectTimer(player.id)
+    if (!player.isHost || player.disconnectedAt === null) return
 
-    // Host transfers faster (5s) to prevent game lockup
-    const isHost = this.state.hostId === userId
-    const timeout = isHost ? 5000 : RECONNECT_TIMEOUT_MS
-
+    const remaining = Math.max(0, HOST_TRANSFER_DELAY_MS - (Date.now() - player.disconnectedAt))
     const timer = setTimeout(() => {
-      this.disconnectTimers.delete(userId)
-      // If disconnected player is the host, transfer host to next connected player
-      if (this.state.hostId === userId) {
-        this.transferHostToConnected()
-      }
+      this.disconnectTimers.delete(player.id)
+      if (this.state.hostId !== player.id || player.socketId !== null) return
+      this.transferHostToConnected()
       this.broadcastRoomState()
-    }, timeout)
+      if (this.isPlaying()) this.broadcastGameState()
+    }, remaining)
+    this.disconnectTimers.set(player.id, timer)
+  }
 
-    this.disconnectTimers.set(userId, timer)
+  private transferExpiredDisconnectedHost(): void {
+    const host = this.state.hostId ? this.findPlayer(this.state.hostId) : undefined
+    if (
+      host?.socketId === null &&
+      host.disconnectedAt !== null &&
+      Date.now() - host.disconnectedAt >= HOST_TRANSFER_DELAY_MS
+    ) {
+      this.clearDisconnectTimer(host.id)
+      this.transferHostToConnected()
+    }
   }
 
   private transferHostToConnected(): void {
@@ -272,12 +304,16 @@ export class GameEngine {
     const count = this.state.players.length
     if (count < MIN_PLAYERS) return { ok: false, error: `至少需要${MIN_PLAYERS}人才能开始游戏` }
     if (count > MAX_PLAYERS) return { ok: false, error: `最多支持${MAX_PLAYERS}人` }
+    if (this.state.players.some((player) => player.socketId === null)) {
+      return { ok: false, error: '请等待所有玩家重新连接后再开始游戏' }
+    }
     return { ok: true }
   }
 
   startGame(): void {
     logger.game('GAME', `=== GAME STARTING ===`, { playerCount: this.state.players.length })
     this.state.roomStatus = 'playing'
+    this.broadcastRoomState()
     this.assignRoles()
     logger.game('ROLES', `Roles assigned`, {
       roles: this.state.players.map((p) => ({ id: p.id, nickname: p.nickname, role: p.role })),
@@ -302,7 +338,11 @@ export class GameEngine {
     this.state.phase = 'role-reveal'
     this.emitGameStarted()
 
-    setTimeout(() => this.transitionToNightMurder(), ROLE_REVEAL_DELAY_MS)
+    this.clearPhaseTimer()
+    this.phaseTimer = setTimeout(() => {
+      this.phaseTimer = null
+      if (this.state.phase === 'role-reveal') this.transitionToNightMurder()
+    }, ROLE_REVEAL_DELAY_MS)
   }
 
   private assignRoles(): void {
@@ -384,14 +424,18 @@ export class GameEngine {
   // === Night Murder Phase ===
 
   private transitionToNightMurder(): void {
+    this.clearPhaseTimer()
+    if (this.state.phase !== 'role-reveal') return
     logger.game('PHASE', `=== PHASE TRANSITION: night-murder ===`, {
       from: this.state.phase,
       to: 'night-murder',
     })
     this.state.phase = 'night-murder'
 
-    this.io.emit('phase_change', { phase: 'night-murder' })
-    this.io.emit('system_message', { content: '夜晚降临，请闭眼...', type: 'phase' })
+    this.io.to(this.roomCode).emit('phase_change', { phase: 'night-murder' })
+    this.io
+      .to(this.roomCode)
+      .emit('system_message', { content: '夜晚降临，请闭眼...', type: 'phase' })
 
     const murderer = this.getMurderer()
     const accomplice = this.getAccomplice()
@@ -409,6 +453,8 @@ export class GameEngine {
         this.emitToPlayer(p, 'night_phase', {})
       }
     }
+    // This transition runs on a timer, outside the socket handlers' normal sync.
+    this.broadcastGameState()
   }
 
   handleMurdererSelect(userId: string, meansCardId: string, clueCardId: string): OpResult {
@@ -439,7 +485,9 @@ export class GameEngine {
       })
     }
 
-    this.io.emit('system_message', { content: '凶手已完成选择，等待目击者确认...', type: 'info' })
+    this.io
+      .to(this.roomCode)
+      .emit('system_message', { content: '凶手已完成选择，等待目击者确认...', type: 'info' })
 
     return { ok: true }
   }
@@ -464,9 +512,9 @@ export class GameEngine {
       solution: this.state.solution,
     })
     this.state.phase = 'witness-accuse'
-    this.io.emit('phase_change', { phase: 'witness-accuse' })
-    this.io.emit('boards_revealed', { boards: this.getPublicBoards() })
-    this.io.emit('system_message', {
+    this.io.to(this.roomCode).emit('phase_change', { phase: 'witness-accuse' })
+    this.io.to(this.roomCode).emit('boards_revealed', { boards: this.getPublicBoards() })
+    this.io.to(this.roomCode).emit('system_message', {
       content: '天亮了！目击者正在布置场景板线索...',
       type: 'phase',
     })
@@ -504,7 +552,7 @@ export class GameEngine {
     }
 
     board.marker = { optionIndex, markerNumber }
-    this.io.emit('marker_placed', { boardId, optionIndex, markerNumber })
+    this.io.to(this.roomCode).emit('marker_placed', { boardId, optionIndex, markerNumber })
 
     return { ok: true }
   }
@@ -530,8 +578,10 @@ export class GameEngine {
     if (this.state.blackout && this.state.blackoutClearsAfterPhase === phase) {
       this.state.blackout = false
       this.state.blackoutClearsAfterPhase = null
-      this.io.emit('blackout_end', {})
-      this.io.emit('system_message', { content: '电力恢复，场景板重新显示', type: 'info' })
+      this.io.to(this.roomCode).emit('blackout_end', {})
+      this.io
+        .to(this.roomCode)
+        .emit('system_message', { content: '电力恢复，场景板重新显示', type: 'info' })
       logger.game('EFFECT', `Blackout cleared`, { phase })
     }
 
@@ -543,14 +593,14 @@ export class GameEngine {
     })
     this.state.phase = phase
 
-    this.io.emit('phase_change', {
+    this.io.to(this.roomCode).emit('phase_change', {
       phase,
       data: {
         boards: this.getPublicBoards(),
         blackout: this.state.blackout,
       },
     })
-    this.io.emit('system_message', {
+    this.io.to(this.roomCode).emit('system_message', {
       content: `进入第${roundNum}轮发言，请面对面讨论`,
       type: 'phase',
     })
@@ -579,8 +629,8 @@ export class GameEngine {
     this.state.phase = phase
     this.state.accompliceHasChosen = false
 
-    this.io.emit('phase_change', { phase })
-    this.io.emit('system_message', { content: '推进阶段开始...', type: 'phase' })
+    this.io.to(this.roomCode).emit('phase_change', { phase })
+    this.io.to(this.roomCode).emit('system_message', { content: '推进阶段开始...', type: 'phase' })
 
     const accomplice = this.getAccomplice()
 
@@ -626,7 +676,7 @@ export class GameEngine {
     const effectCard = this.drawEffectCard()
     if (effectCard) {
       const result = this.applyEffectCard(effectCard)
-      this.io.emit('effect_card', { card: effectCard, result })
+      this.io.to(this.roomCode).emit('effect_card', { card: effectCard, result })
     }
 
     const boardCount = accompliceReplaced ? 2 : 1
@@ -638,6 +688,7 @@ export class GameEngine {
 
     const witness = this.getWitness()
 
+    this.pendingBoards = newBoards
     if (newBoards.length > 0) {
       this.emitToPlayer(witness, 'new_boards', {
         boards: newBoards.map((b) => this.boardToPublic(b)),
@@ -678,7 +729,8 @@ export class GameEngine {
       this.state.activeBoards[activeIdx] = newBoard
     }
 
-    this.io.emit('board_replaced', {
+    this.pendingBoards = this.pendingBoards.filter((board) => board.id !== newBoardId)
+    this.io.to(this.roomCode).emit('board_replaced', {
       oldBoardId,
       newBoard: this.boardToPublic(newBoard),
       optionIndex,
@@ -699,6 +751,7 @@ export class GameEngine {
   }
 
   finishAdvancePhase(): void {
+    this.pendingBoards = []
     if (this.state.phase === 'advance-1') {
       this.transitionToDiscussion('discussion-2')
     } else if (this.state.phase === 'advance-2') {
@@ -739,8 +792,8 @@ export class GameEngine {
     const result = { playerId: userId, success }
     this.state.solveResults.push(result)
 
-    this.io.emit('solve_result', result)
-    this.io.emit('system_message', {
+    this.io.to(this.roomCode).emit('solve_result', result)
+    this.io.to(this.roomCode).emit('system_message', {
       content: success ? `${player.nickname} 破案成功！` : `${player.nickname} 破案失败`,
       type: success ? 'success' : 'warning',
     })
@@ -767,8 +820,10 @@ export class GameEngine {
       .map((p) => p.id)
     this.state.forceSolveIndex = 0
 
-    this.io.emit('phase_change', { phase: 'force-solve' })
-    this.io.emit('system_message', { content: '进入强制破案阶段，按顺序破案', type: 'phase' })
+    this.io.to(this.roomCode).emit('phase_change', { phase: 'force-solve' })
+    this.io
+      .to(this.roomCode)
+      .emit('system_message', { content: '进入强制破案阶段，按顺序破案', type: 'phase' })
 
     if (this.state.forceSolveOrder.length === 0) {
       this.endGame('murderer')
@@ -785,9 +840,9 @@ export class GameEngine {
       return
     }
 
-    this.io.emit('force_solve_turn', { playerId: currentId })
+    this.io.to(this.roomCode).emit('force_solve_turn', { playerId: currentId })
     const player = this.findPlayer(currentId)
-    this.io.emit('system_message', {
+    this.io.to(this.roomCode).emit('system_message', {
       content: `等待 ${player?.nickname ?? '未知玩家'} 破案中...`,
       type: 'info',
     })
@@ -805,6 +860,7 @@ export class GameEngine {
   // === Game End ===
 
   private endGame(winner: 'detective' | 'murderer'): void {
+    this.clearPhaseTimer()
     logger.game('GAME', `=== GAME OVER ===`, {
       winner,
       solution: this.state.solution,
@@ -827,6 +883,8 @@ export class GameEngine {
       if (p.role) roles[p.id] = p.role
     }
 
+    this.completedRoles = roles
+
     logger.game('GAME', `Final scores`, {
       winner,
       scores: this.state.players.map((p) => ({
@@ -837,14 +895,14 @@ export class GameEngine {
       })),
     })
 
-    this.io.emit('game_over', {
+    this.io.to(this.roomCode).emit('game_over', {
       winner,
       roles,
       solution: this.state.solution,
       scores,
     })
 
-    this.io.emit('system_message', {
+    this.io.to(this.roomCode).emit('system_message', {
       content: winner === 'detective' ? '侦探方获胜！' : '凶手方获胜！',
       type: 'success',
     })
@@ -865,7 +923,7 @@ export class GameEngine {
   }
 
   private endGameEarly(): void {
-    this.io.emit('system_message', {
+    this.io.to(this.roomCode).emit('system_message', {
       content: '由于玩家人数不足，游戏提前结束',
       type: 'warning',
     })
@@ -875,6 +933,10 @@ export class GameEngine {
   // === Reset ===
 
   resetGame(): void {
+    this.dispose()
+    this.completedRoles = null
+    this.pendingBoards = []
+    const previousHostId = this.state.hostId
     const players = this.state.players.map((p) => ({
       ...p,
       role: null as Role | null,
@@ -887,13 +949,14 @@ export class GameEngine {
     this.state = this.createInitialState()
     this.state.players = players
 
-    if (players.length > 0) {
-      this.state.hostId = players[0].id
-      players[0].isHost = true
-      for (let i = 1; i < players.length; i++) {
-        players[i].isHost = false
-      }
-    }
+    const host =
+      players.find((player) => player.id === previousHostId && player.socketId !== null) ??
+      players.find((player) => player.socketId !== null) ??
+      players.find((player) => player.id === previousHostId) ??
+      players[0]
+    this.state.hostId = host?.id ?? null
+    for (const player of players) player.isHost = player.id === this.state.hostId
+    if (host?.socketId === null) this.startDisconnectTimer(host)
 
     this.broadcastRoomState()
   }
@@ -975,7 +1038,7 @@ export class GameEngine {
     if (!target || target.role === 'witness') return { ok: false, error: '无效的目标' }
     target.hasSolveRight = false
     target.status = 'dead'
-    this.io.emit('system_message', {
+    this.io.to(this.roomCode).emit('system_message', {
       content: `${target.nickname} 被暗杀，失去破案权`,
       type: 'warning',
     })
@@ -985,7 +1048,7 @@ export class GameEngine {
   private applyClearSuspicion(data: EffectActionData): OpResult {
     const cleared = data.targetId ? this.findPlayer(data.targetId) : undefined
     if (!cleared) return { ok: false, error: '无效的目标' }
-    this.io.emit('system_message', {
+    this.io.to(this.roomCode).emit('system_message', {
       content: `目击者宣布：${cleared.nickname} 不是凶手`,
       type: 'info',
     })
@@ -998,14 +1061,18 @@ export class GameEngine {
       : undefined
     if (!board || !board.marker) return { ok: false, error: '无效的场景板' }
     board.marker = undefined
-    this.io.emit('system_message', { content: '一张场景板上的选项物被移除', type: 'warning' })
-    this.io.emit('boards_revealed', { boards: this.getPublicBoards() })
+    this.io
+      .to(this.roomCode)
+      .emit('system_message', { content: '一张场景板上的选项物被移除', type: 'warning' })
+    this.io.to(this.roomCode).emit('boards_revealed', { boards: this.getPublicBoards() })
     return { ok: true }
   }
 
   private applyInfoLeak(data: EffectActionData): OpResult {
-    this.io.emit('system_message', { content: '目击者指向了凶手的一张牌', type: 'info' })
-    this.io.emit('effect_card', {
+    this.io
+      .to(this.roomCode)
+      .emit('system_message', { content: '目击者指向了凶手的一张牌', type: 'info' })
+    this.io.to(this.roomCode).emit('effect_card', {
       card: { id: 'E08', name: '信息泄露' },
       result: { applied: true, pointedCardId: data.cardId },
     })
@@ -1015,16 +1082,29 @@ export class GameEngine {
   // === Public State Getters ===
 
   getRoomState(): {
-    players: Array<{ id: string; nickname: string; color: string; isHost: boolean }>
+    code: string
+    minPlayers: number
+    maxPlayers: number
+    players: Array<{
+      id: string
+      nickname: string
+      color: string
+      isHost: boolean
+      connected: boolean
+    }>
     status: string
     hostId: string | null
   } {
     return {
+      code: this.roomCode,
+      minPlayers: MIN_PLAYERS,
+      maxPlayers: MAX_PLAYERS,
       players: this.state.players.map((p) => ({
         id: p.id,
         nickname: p.nickname,
         color: p.color,
         isHost: p.isHost,
+        connected: p.socketId !== null,
       })),
       status: this.state.roomStatus,
       hostId: this.state.hostId,
@@ -1033,31 +1113,36 @@ export class GameEngine {
 
   getGameStateForPlayer(userId: string): Record<string, unknown> {
     const player = this.findPlayer(userId)
+    if (!player) throw new Error('玩家不在此房间中')
+
     const result: Record<string, unknown> = {
+      roomCode: this.roomCode,
       phase: this.state.phase,
-      players: this.buildPublicPlayerList(),
+      players: this.buildPublicPlayerList(player),
       boards: this.state.blackout ? [] : this.getPublicBoards(),
       blackout: this.state.blackout,
     }
 
-    if (player) {
-      result.myRole = player.role
-      this.attachPrivateInfo(result, player)
-    }
+    result.myRole = player.role
+    this.attachPrivateInfo(result, player)
 
     this.attachPhaseSpecificInfo(result)
 
     return result
   }
 
-  private buildPublicPlayerList(): Array<Record<string, unknown>> {
+  private buildPublicPlayerList(recipient: PlayerState): Array<Record<string, unknown>> {
+    const knowsMurderer =
+      (recipient.role === 'accomplice' && this.state.phase !== 'role-reveal') ||
+      (recipient.role === 'witness' && this.state.solution !== null)
     return this.state.players.map((p) => ({
       id: p.id,
       nickname: p.nickname,
       color: p.color,
       isHost: p.isHost,
-      role: p.role === 'witness' ? 'witness' : undefined,
-      status: p.status,
+      role: p.role === 'witness' || (p.role === 'murderer' && knowsMurderer) ? p.role : undefined,
+      status: p.status === 'alive' && p.socketId === null ? 'disconnected' : p.status,
+      connected: p.socketId !== null,
       hasSolveRight: p.hasSolveRight,
       meansCards: p.role !== 'witness' ? p.meansCards : [],
       clueCards: p.role !== 'witness' ? p.clueCards : [],
@@ -1071,6 +1156,15 @@ export class GameEngine {
     if (this.state.solution && canSeeSolution) {
       result.murdererSelection = this.state.solution
     }
+    if (player.role === 'witness' && this.isAdvancePhase()) {
+      result.newBoards = this.pendingBoards.map((board) => this.boardToPublic(board))
+    }
+    if (player.role === 'accomplice') {
+      result.accomplicePrompted =
+        this.state.phase === 'advance-1' &&
+        player.status === 'alive' &&
+        !this.state.accompliceHasChosen
+    }
   }
 
   private attachPhaseSpecificInfo(result: Record<string, unknown>): void {
@@ -1083,24 +1177,17 @@ export class GameEngine {
       result.scores = this.state.scores
       result.murdererSelection = this.state.solution
 
-      const roles: Record<string, string> = {}
-      for (const p of this.state.players) {
-        if (p.role) roles[p.id] = p.role
-      }
-      result.roles = roles
+      result.roles = this.completedRoles
     }
   }
 
   broadcastRoomState(): void {
-    this.io.emit('room_state', this.getRoomState())
+    this.io.to(this.roomCode).emit('room_state', this.getRoomState())
   }
 
   broadcastGameState(): void {
     for (const player of this.state.players) {
-      const socket = this.getSocket(player.socketId)
-      if (socket) {
-        socket.emit('full_state', this.getGameStateForPlayer(player.id))
-      }
+      this.emitToPlayer(player, 'full_state', this.getGameStateForPlayer(player.id))
     }
   }
 

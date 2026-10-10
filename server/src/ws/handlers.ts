@@ -1,318 +1,188 @@
 import type { Server, Socket } from 'socket.io'
-import { GameEngine } from '../engine/GameEngine.js'
+import type { GameEngine } from '../engine/GameEngine.js'
+import { RoomManager, type RoomResult } from '../rooms/RoomManager.js'
 import type { EffectActionData, OpResult } from '../types.js'
-import { logger } from '../utils/logger.js'
 
-let engine: GameEngine | null = null
-
-function getEngine(io: Server): GameEngine {
-  if (!engine) {
-    engine = new GameEngine(io)
-    // Reset engine state on server restart to avoid stale 'playing' status
-    engine.resetToInitial()
+const managers = new WeakMap<Server, RoomManager>()
+export function getRoomManager(io: Server): RoomManager {
+  let manager = managers.get(io)
+  if (!manager) {
+    manager = new RoomManager(io)
+    managers.set(io, manager)
   }
-  return engine
+  return manager
 }
 
-/** Send error result back to the client */
+type Payload = Record<string, unknown>
+type Ack = (result: RoomResult) => void
+function object(value: unknown): Payload {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Payload)
+    : {}
+}
+function strings(data: Payload, ...keys: string[]): boolean {
+  return keys.every((key) => typeof data[key] === 'string' && (data[key] as string).length <= 100)
+}
 function emitError(socket: Socket, result: OpResult): void {
   socket.emit('system_message', { content: result.error ?? '操作失败', type: 'error' })
 }
 
-export function registerHandlers(io: Server, socket: Socket): void {
-  const ge = getEngine(io)
+export function registerHandlers(io: Server, socket: Socket, rooms = getRoomManager(io)): void {
   const userId = socket.data.userId as string | undefined
-
-  if (!userId) {
-    socket.emit('system_message', { content: '身份验证失败', type: 'error' })
+  if (typeof userId !== 'string' || !userId) {
+    emitError(socket, { ok: false, error: '身份验证失败' })
     socket.disconnect(true)
     return
   }
 
-  console.log(`Client connected: ${socket.id} (user: ${userId})`)
+  const reply = (result: RoomResult, ack: unknown) => {
+    if (!result.ok) emitError(socket, result)
+    if (typeof ack === 'function') (ack as Ack)(result)
+  }
+  socket.on('create_room', (raw: unknown, ack?: Ack) => {
+    reply(rooms.create(socket, object(raw).nickname), ack)
+  })
+  socket.on('join_room', (raw: unknown, ack?: Ack) => {
+    const data = object(raw)
+    reply(rooms.join(socket, data.code, data.nickname), ack)
+  })
+  socket.on('resume_room', (raw: unknown, ack?: Ack) => {
+    reply(rooms.join(socket, object(raw).code, undefined, true), ack)
+  })
+  socket.on('leave_room', (ack?: Ack) => reply(rooms.leave(socket), ack))
 
-  // === Room Management ===
-
-  socket.on('join_room', ({ nickname }: { nickname: string }) => {
-    console.log(`${nickname} joining room (user: ${userId})`)
-    logger.game('PLAYER', `Player joining room`, { userId, nickname, socketId: socket.id })
-
-    const player = ge.addPlayer(userId, nickname, socket.id)
-    if (!player) {
-      logger.warn('PLAYER', `Failed to join room`, {
-        userId,
-        nickname,
-        reason: 'room_full_or_playing',
-      })
-      socket.emit('system_message', {
-        content: '无法加入房间（房间已满或游戏已在进行中）',
-        type: 'error',
-      })
-      return
-    }
-
-    logger.game('PLAYER', `Player joined successfully`, {
-      userId,
-      nickname,
-      isReconnect: ge.isPlaying(),
+  // Never select a room or identity from an action payload. Verify current socket ownership
+  // for every operation, including read-only state, to invalidate replaced connections.
+  function action(
+    event: string,
+    run: (engine: GameEngine, data: Payload) => OpResult | void,
+    valid: (data: Payload) => boolean = () => true,
+  ) {
+    socket.on(event, (raw?: unknown) => {
+      const engine = rooms.engineFor(socket)
+      if (!engine) {
+        emitError(socket, { ok: false, error: '请先加入房间，或重新连接当前房间' })
+        return
+      }
+      const data = object(raw)
+      if ((data.code !== undefined && data.code !== socket.data.roomCode) || !valid(data)) {
+        emitError(socket, { ok: false, error: '无效的操作参数或房间' })
+        return
+      }
+      const result = run(engine, data)
+      if (result && !result.ok) emitError(socket, result)
     })
+  }
 
-    // If reconnecting during a game, send full game state
-    if (ge.isPlaying()) {
-      socket.emit('full_state', ge.getGameStateForPlayer(userId))
-      // Also send room state to ensure hostId and other room metadata are synced
-      socket.emit('room_state', ge.getRoomState())
-      io.emit('system_message', {
-        content: `${player.nickname} 已重新连接`,
-        type: 'info',
-      })
-    } else {
-      io.emit('player_joined', {
-        player: {
-          id: player.id,
-          nickname: player.nickname,
-          color: player.color,
-          isHost: player.isHost,
-        },
-      })
-    }
-
-    ge.broadcastRoomState()
+  action('start_game', (engine) => {
+    const result = engine.canStartGame(userId)
+    if (result.ok) engine.startGame()
+    return result
   })
-
-  socket.on('leave_room', () => {
-    ge.removePlayer(userId)
-    io.emit('player_left', { playerId: userId })
-    ge.broadcastRoomState()
+  action('request_state', (engine) => {
+    socket.emit('room_state', engine.getRoomState())
+    if (engine.isPlaying()) socket.emit('full_state', engine.getGameStateForPlayer(userId))
   })
-
-  // === Game Start ===
-
-  socket.on('start_game', () => {
-    logger.game('GAME', `Start game requested`, {
-      userId,
-      playerCount: ge.getRoomState().players.length,
-    })
-    const check = ge.canStartGame(userId)
-    if (!check.ok) {
-      logger.warn('GAME', `Start game failed`, { userId, reason: check.error })
-      emitError(socket, check)
-      return
-    }
-    logger.game('GAME', `Starting game...`, { userId })
-    ge.startGame()
-  })
-
-  // === Night Phase - Murderer ===
-
-  socket.on(
+  action(
     'murderer_select',
-    ({ meansCardId, clueCardId }: { meansCardId: string; clueCardId: string }) => {
-      logger.game('MURDERER', `Murderer selecting cards`, { userId, meansCardId, clueCardId })
-      const result = ge.handleMurdererSelect(userId, meansCardId, clueCardId)
-      if (!result.ok) {
-        logger.warn('MURDERER', `Murderer select failed`, { userId, reason: result.error })
-        emitError(socket, result)
-      } else {
-        logger.game('MURDERER', `Murderer selection complete`, { userId, meansCardId, clueCardId })
-      }
-    },
+    (e, d) => e.handleMurdererSelect(userId, d.meansCardId as string, d.clueCardId as string),
+    (d) => strings(d, 'meansCardId', 'clueCardId'),
   )
-
-  // === Night Phase - Witness confirms murder selection ===
-
-  socket.on('witness_confirm_murder', () => {
-    logger.game('WITNESS', `Witness confirming murder`, { userId })
-    const result = ge.handleWitnessConfirmMurder(userId)
-    if (!result.ok) {
-      logger.warn('WITNESS', `Witness confirm failed`, { userId, reason: result.error })
-      emitError(socket, result)
-    } else {
-      logger.game('WITNESS', `Witness confirmed murder, transitioning to witness-accuse`, {
-        userId,
-      })
-    }
-  })
-
-  // === Witness Marker Placement ===
-
-  socket.on(
+  action('witness_confirm_murder', (e) => e.handleWitnessConfirmMurder(userId))
+  action(
     'witness_set_marker',
-    ({
-      boardId,
-      optionIndex,
-      markerNumber,
-    }: {
-      boardId: string
-      optionIndex: number
-      markerNumber: number
-    }) => {
-      const result = ge.handleWitnessSetMarker(userId, boardId, optionIndex, markerNumber)
-      if (!result.ok) emitError(socket, result)
-    },
+    (e, d) =>
+      e.handleWitnessSetMarker(
+        userId,
+        d.boardId as string,
+        d.optionIndex as number,
+        d.markerNumber as number,
+      ),
+    (d) =>
+      strings(d, 'boardId') && Number.isInteger(d.optionIndex) && Number.isInteger(d.markerNumber),
   )
-
-  // === Witness Confirms Accusation Setup ===
-
-  socket.on('witness_confirm', () => {
-    const result = ge.handleWitnessConfirmAccuse(userId)
-    if (!result.ok) emitError(socket, result)
-  })
-
-  // === Witness Replace Board ===
-
-  socket.on(
+  action('witness_confirm', (e) => e.handleWitnessConfirmAccuse(userId))
+  action(
     'witness_replace_board',
-    ({
-      oldBoardId,
-      newBoardId,
-      optionIndex,
-      markerNumber,
-    }: {
-      oldBoardId: string
-      newBoardId: string
-      optionIndex: number
-      markerNumber: number
-    }) => {
-      const result = ge.handleWitnessReplaceBoard(
+    (e, d) =>
+      e.handleWitnessReplaceBoard(
         userId,
-        oldBoardId,
-        newBoardId,
-        optionIndex,
-        markerNumber,
-      )
-      if (!result.ok) emitError(socket, result)
-    },
+        d.oldBoardId as string,
+        d.newBoardId as string,
+        d.optionIndex as number,
+        d.markerNumber as number,
+      ),
+    (d) =>
+      strings(d, 'oldBoardId', 'newBoardId') &&
+      Number.isInteger(d.optionIndex) &&
+      Number.isInteger(d.markerNumber),
   )
-
-  // === Witness finishes advance phase board replacement ===
-
-  socket.on('witness_finish_advance', () => {
-    const player = ge.getPlayerById(userId)
-    if (!player || player.role !== 'witness') {
-      socket.emit('system_message', { content: '只有目击者可以执行此操作', type: 'error' })
-      return
-    }
-    ge.finishAdvancePhase()
+  action('witness_finish_advance', (e) => {
+    if (e.getPlayerById(userId)?.role !== 'witness')
+      return { ok: false, error: '只有目击者可以执行此操作' }
+    const phase = e.getGameStateForPlayer(userId).phase
+    if (phase !== 'advance-1' && phase !== 'advance-2')
+      return { ok: false, error: '当前不在推进阶段' }
+    e.finishAdvancePhase()
   })
-
-  // === End Discussion ===
-
-  socket.on('end_discussion', () => {
-    const result = ge.handleEndDiscussion(userId)
-    if (!result.ok) emitError(socket, result)
-  })
-
-  // === Accomplice Choice ===
-
-  socket.on(
+  action('end_discussion', (e) => e.handleEndDiscussion(userId))
+  action(
     'accomplice_choose',
-    ({ replaceClue, newClueCardId }: { replaceClue: boolean; newClueCardId?: string }) => {
-      const result = ge.handleAccompliceChoose(userId, replaceClue, newClueCardId)
-      if (!result.ok) emitError(socket, result)
-    },
-  )
-
-  // === Solve ===
-
-  socket.on(
-    'attempt_solve',
-    ({
-      suspectId,
-      meansCardId,
-      clueCardId,
-    }: {
-      suspectId: string
-      meansCardId: string
-      clueCardId: string
-    }) => {
-      logger.game('SOLVE', `Player attempting to solve`, {
+    (e, d) =>
+      e.handleAccompliceChoose(
         userId,
-        suspectId,
-        meansCardId,
-        clueCardId,
-      })
-      const result = ge.handleAttemptSolve(userId, { suspectId, meansCardId, clueCardId })
-      if (!result.ok) {
-        logger.warn('SOLVE', `Solve attempt failed`, { userId, reason: result.error })
-        emitError(socket, result)
-      } else if ('success' in result) {
-        logger.game('SOLVE', `Solve attempt result`, {
-          userId,
-          success: result.success,
-          suspectId,
-          meansCardId,
-          clueCardId,
-        })
-      }
-    },
+        d.replaceClue as boolean,
+        d.newClueCardId as string | undefined,
+      ),
+    (d) =>
+      typeof d.replaceClue === 'boolean' &&
+      (d.newClueCardId === undefined || strings(d, 'newClueCardId')),
   )
-
-  // === Effect Card Actions (witness) ===
-
-  socket.on('effect_action', ({ effectId, data }: { effectId: string; data: EffectActionData }) => {
-    const result = ge.handleEffectAction(userId, effectId, data)
-    if (!result.ok) emitError(socket, result)
+  action(
+    'attempt_solve',
+    (e, d) =>
+      e.handleAttemptSolve(userId, {
+        suspectId: d.suspectId as string,
+        meansCardId: d.meansCardId as string,
+        clueCardId: d.clueCardId as string,
+      }),
+    (d) => strings(d, 'suspectId', 'meansCardId', 'clueCardId'),
+  )
+  action(
+    'effect_action',
+    (e, d) => {
+      const phase = e.getGameStateForPlayer(userId).phase
+      if (phase !== 'advance-1' && phase !== 'advance-2')
+        return { ok: false, error: '当前不在推进阶段' }
+      return e.handleEffectAction(userId, d.effectId as string, object(d.data) as EffectActionData)
+    },
+    (d) =>
+      strings(d, 'effectId') &&
+      d.data !== null &&
+      typeof d.data === 'object' &&
+      !Array.isArray(d.data) &&
+      ['targetId', 'boardId', 'cardId'].every(
+        (key) => object(d.data)[key] === undefined || strings(object(d.data), key),
+      ),
+  )
+  action('reset_game', (engine) => {
+    if (!engine.getPlayerById(userId)?.isHost) return { ok: false, error: '只有房主可以重新开始' }
+    engine.resetGame()
+    io.to(socket.data.roomCode).emit('system_message', {
+      content: '游戏已重置，等待房主开始新一局',
+      type: 'info',
+    })
   })
-
-  // === Reset Game ===
-
-  socket.on('reset_game', () => {
-    const player = ge.getPlayerById(userId)
-    if (!player || !player.isHost) {
-      socket.emit('system_message', { content: '只有房主可以重新开始', type: 'error' })
-      return
-    }
-    ge.resetGame()
-    io.emit('system_message', { content: '游戏已重置，等待房主开始新一局', type: 'info' })
-  })
-
-  // === Update Nickname ===
-
-  socket.on('update_nickname', (data: { nickname: string }) => {
-    const { nickname } = data
-    if (!nickname || typeof nickname !== 'string') {
-      socket.emit('system_message', { content: '昵称不能为空', type: 'error' })
-      return
-    }
-    const trimmed = nickname.trim()
-    if (trimmed.length === 0 || trimmed.length > 10) {
-      socket.emit('system_message', { content: '昵称长度必须在1-10个字符之间', type: 'error' })
-      return
-    }
-    const result = ge.updatePlayerNickname(userId, trimmed)
-    if (result.ok) {
-      io.emit('system_message', { content: `${trimmed} 更新了昵称`, type: 'info' })
-      ge.broadcastRoomState()
-    } else {
-      socket.emit('system_message', { content: result.error || '更新昵称失败', type: 'error' })
-    }
-  })
-
-  // === Request State (reconnection) ===
-
-  socket.on('request_state', () => {
-    if (ge.isPlaying()) {
-      socket.emit('full_state', ge.getGameStateForPlayer(userId))
-    } else {
-      socket.emit('room_state', ge.getRoomState())
-    }
-  })
-
-  // === Disconnect ===
-
-  socket.on('disconnect', (reason: string) => {
-    console.log(`Client disconnected: ${socket.id}, reason: ${reason}`)
-    ge.handleDisconnect(userId)
-
-    const player = ge.getPlayerById(userId)
-    if (player) {
-      io.emit('system_message', {
-        content: `${player.nickname} 已断开连接`,
-        type: 'warning',
-      })
-    }
-
-    ge.broadcastRoomState()
-  })
+  action(
+    'update_nickname',
+    (engine, data) => {
+      const name = (data.nickname as string).trim()
+      if (!name || name.length > 10) return { ok: false, error: '昵称长度必须在1-10个字符之间' }
+      const result = engine.updatePlayerNickname(userId, name)
+      if (result.ok) engine.broadcastRoomState()
+      return result
+    },
+    (d) => strings(d, 'nickname'),
+  )
+  socket.on('disconnect', () => rooms.disconnect(socket))
 }

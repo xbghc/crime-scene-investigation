@@ -83,7 +83,10 @@ export const useGameStore = defineStore('game', () => {
   const newBoards = ref<SceneBoard[]>([])
   const forceSolveTurnPlayerId = ref<string | undefined>()
 
-  // Room state (lobby)
+  // Room membership is only set by confirmed server state.
+  const roomCode = ref<string | null>(null)
+  const minPlayers = ref(4)
+  const maxPlayers = ref(10)
   const roomPlayers = ref<RoomState['players']>([])
   const roomStatus = ref<RoomState['status']>('waiting')
   const hostId = ref<string | null>(null)
@@ -135,20 +138,23 @@ export const useGameStore = defineStore('game', () => {
     round.value = state.round
     players.value = state.players
     boards.value = state.boards
-    if (state.myRole) {
-      myRole.value = state.myRole
-      // Restore myPlayerId from auth store on reconnect
-      if (!myPlayerId.value) {
-        const auth = useAuthStore()
-        if (auth.userId) myPlayerId.value = auth.userId
-      }
+    // Full snapshots replace private state as well as public state. Omitted secrets
+    // must never survive a reset, room switch, or a change in role.
+    myRole.value = state.myRole
+    myPlayerId.value = state.myRole ? (useAuthStore().userId ?? undefined) : undefined
+    murdererSelection.value = state.murdererSelection
+    currentSolverId.value = state.currentSolverId
+    forceSolveTurnPlayerId.value = state.currentSolverId
+    effectCard.value = state.effectCard
+    winner.value = state.winner
+    scores.value = state.scores
+    blackout.value = state.blackout ?? false
+    newBoards.value = state.newBoards ?? []
+    accomplicePrompted.value = state.accomplicePrompted ?? false
+    if (state.roles) {
+      for (const player of players.value) player.role = state.roles[player.id]
     }
-    if (state.murdererSelection) murdererSelection.value = state.murdererSelection
-    if (state.currentSolverId) currentSolverId.value = state.currentSolverId
-    if (state.effectCard) effectCard.value = state.effectCard
-    if (state.winner) winner.value = state.winner
-    if (state.scores) scores.value = state.scores
-    if (state.blackout !== undefined) blackout.value = state.blackout
+    if (state.phase === 'waiting') reset()
   }
 
   function setPhase(newPhase: GamePhase) {
@@ -231,9 +237,28 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function setRoomState(state: RoomState) {
+    if (roomCode.value !== state.code || state.status === 'waiting') reset()
+    roomCode.value = state.code
+    minPlayers.value = state.minPlayers
+    maxPlayers.value = state.maxPlayers
     roomPlayers.value = state.players
     roomStatus.value = state.status
     hostId.value = state.hostId
+    // Host changes also matter in a running game (reset/play-again controls).
+    for (const player of players.value) {
+      player.isHost = player.id === state.hostId
+      const roomPlayer = state.players.find((p) => p.id === player.id)
+      if (roomPlayer) {
+        player.nickname = roomPlayer.nickname
+        if (roomPlayer.connected !== undefined) {
+          player.connected = roomPlayer.connected
+          // Presence changes cannot revive a player killed during the game.
+          if (player.status !== 'dead') {
+            player.status = roomPlayer.connected ? 'alive' : 'disconnected'
+          }
+        }
+      }
+    }
   }
 
   function addRoomPlayer(player: RoomState['players'][number]) {
@@ -271,6 +296,16 @@ export const useGameStore = defineStore('game', () => {
     accomplicePrompted.value = false
   }
 
+  function clearRoom() {
+    reset()
+    roomCode.value = null
+    roomPlayers.value = []
+    roomStatus.value = 'waiting'
+    hostId.value = null
+    minPlayers.value = 4
+    maxPlayers.value = 10
+  }
+
   return {
     // State
     phase,
@@ -289,6 +324,9 @@ export const useGameStore = defineStore('game', () => {
     lastSolveResult,
     newBoards,
     forceSolveTurnPlayerId,
+    roomCode,
+    minPlayers,
+    maxPlayers,
     roomPlayers,
     roomStatus,
     hostId,
@@ -336,5 +374,6 @@ export const useGameStore = defineStore('game', () => {
     removeRoomPlayer,
     setAccomplicePrompted,
     reset,
+    clearRoom,
   }
 })

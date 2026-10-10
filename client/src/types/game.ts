@@ -11,6 +11,7 @@ export interface Player {
   isHost: boolean
   role?: Role
   status: PlayerStatus
+  connected?: boolean
   hasSolveRight: boolean
   meansCards: MeansCard[]
   clueCards: ClueCard[]
@@ -98,6 +99,9 @@ export interface GameState {
   winner?: 'detective' | 'murderer'
   scores?: Record<string, number>
   blackout?: boolean // 停电效果
+  newBoards?: SceneBoard[]
+  accomplicePrompted?: boolean
+  roles?: Record<string, Role>
 }
 
 // === 效果牌操作 ===
@@ -113,7 +117,10 @@ export interface EffectActionData {
 export type RoomStatus = 'waiting' | 'playing'
 
 export interface RoomState {
-  players: Pick<Player, 'id' | 'nickname' | 'color' | 'isHost'>[]
+  code: string
+  minPlayers: number
+  maxPlayers: number
+  players: (Pick<Player, 'id' | 'nickname' | 'color' | 'isHost'> & { connected?: boolean })[]
   status: RoomStatus
   hostId: string | null
 }

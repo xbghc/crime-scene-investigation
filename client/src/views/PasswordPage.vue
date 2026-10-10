@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import IconButton from '../components/ui/IconButton.vue'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const digitCount = 6
@@ -78,7 +79,7 @@ async function handleSubmit() {
   try {
     const success = await authStore.verifyPassword(password.value)
     if (success) {
-      router.push('/lobby')
+      router.push({ path: '/lobby', query: route.query })
     } else {
       error.value = '密码错误'
       // Shake + clear on error

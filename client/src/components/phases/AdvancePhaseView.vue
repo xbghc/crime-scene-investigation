@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { SceneBoard, Player } from '../../types'
 import SceneBoardPanel from '../game/SceneBoardPanel.vue'
 
@@ -9,10 +9,11 @@ interface Props {
   isWitness: boolean
   isAccomplice: boolean
   isAdvance1: boolean
+  accomplicePrompted?: boolean
   murdererPlayer?: Player
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), { accomplicePrompted: true })
 
 const emit = defineEmits<{
   'accomplice-choose': [payload: { replaceClue: boolean; newClueCardId?: string }]
@@ -26,6 +27,12 @@ const emit = defineEmits<{
 const showClueSelect = ref(false)
 const selectedClueId = ref<string | null>(null)
 const accompliceDecided = ref(false)
+watch(
+  () => props.accomplicePrompted,
+  (prompted) => {
+    if (prompted) accompliceDecided.value = false
+  },
+)
 
 // Witness state
 const selectedOldBoardId = ref<string | null>(null)
@@ -90,7 +97,7 @@ function handleConfirmReplace() {
     </div>
 
     <!-- Accomplice decision (only in advance-1 with accomplice) -->
-    <template v-if="isAccomplice && isAdvance1 && !accompliceDecided">
+    <template v-if="isAccomplice && isAdvance1 && accomplicePrompted && !accompliceDecided">
       <div class="advance__section">
         <h3 class="advance__section-title">是否更换凶手的线索牌？</h3>
         <p class="advance__section-desc">更换后目击者将获得额外场景板</p>

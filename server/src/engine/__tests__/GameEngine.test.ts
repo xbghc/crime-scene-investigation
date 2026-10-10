@@ -1,22 +1,30 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { GameEngine } from '../GameEngine.js'
-import { getRoleAssignment, getScores } from '../../types.js'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { GameEngine, HOST_TRANSFER_DELAY_MS } from '../GameEngine.js'
+import {
+  getRoleAssignment,
+  getScores,
+  ROLE_REVEAL_DELAY_MS,
+  RECONNECT_TIMEOUT_MS,
+} from '../../types.js'
 import type { PlayerState, EffectCardRef } from '../../types.js'
 
 // === Mock Socket.IO ===
 
-function createMockSocket(id: string) {
+function createMockSocket(id: string, userId = id, roomCode = 'test-room') {
   return {
     id,
     emit: vi.fn(),
-    data: { userId: id },
+    data: { userId, roomCode },
   }
 }
 
 function createMockIO() {
   const sockets = new Map<string, ReturnType<typeof createMockSocket>>()
+  const roomEmit = vi.fn()
   return {
     emit: vi.fn(),
+    roomEmit,
+    to: vi.fn((_roomCode: string) => ({ emit: roomEmit })),
     sockets: { sockets },
     _addSocket(sock: ReturnType<typeof createMockSocket>) {
       sockets.set(sock.id, sock)
@@ -40,7 +48,7 @@ function addPlayers(engine: GameEngine, io: MockIO, count: number): PlayerInfo[]
     const userId = `user-${i}`
     const nickname = `Player${i}`
     const socketId = `socket-${i}`
-    const sock = createMockSocket(socketId)
+    const sock = createMockSocket(socketId, userId, engine.getRoomState().code)
     io._addSocket(sock)
     engine.addPlayer(userId, nickname, socketId)
     players.push({ userId, nickname, socketId })
@@ -142,8 +150,16 @@ describe('GameEngine', () => {
   let io: MockIO
 
   beforeEach(() => {
+    vi.useFakeTimers()
     io = createMockIO()
     engine = new GameEngine(io as any)
+  })
+
+  afterEach(() => {
+    expect(io.emit).not.toHaveBeenCalled()
+    engine.dispose()
+    vi.clearAllTimers()
+    vi.useRealTimers()
   })
 
   // ===== 玩家管理 =====
@@ -335,6 +351,17 @@ describe('GameEngine', () => {
       expect(engine.getPhase()).toBe('night-murder')
     })
 
+    it('publishes the playing room state before privately revealing roles', () => {
+      addPlayers(engine, io, 4)
+      engine.startGame()
+      expect(io.roomEmit).toHaveBeenCalledWith(
+        'room_state',
+        expect.objectContaining({ code: 'test-room', status: 'playing' }),
+      )
+      const firstRoleEmission = io.sockets.sockets.get('socket-0')!.emit.mock.invocationCallOrder[0]
+      expect(io.roomEmit.mock.invocationCallOrder[0]).toBeLessThan(firstRoleEmission)
+    })
+
     it('should emit game_started to each player with their assigned role', () => {
       addPlayers(engine, io, 4)
       engine.startGame()
@@ -482,7 +509,7 @@ describe('GameEngine', () => {
       expect(witness).toBeDefined()
       engine.handleWitnessConfirmMurder(witness!.id)
 
-      const calls = io.emit.mock.calls.filter((c: any[]) => c[0] === 'boards_revealed')
+      const calls = io.roomEmit.mock.calls.filter((c: any[]) => c[0] === 'boards_revealed')
       expect(calls.length).toBeGreaterThanOrEqual(1)
       expect(calls[calls.length - 1][1].boards).toHaveLength(6)
     })
@@ -556,7 +583,7 @@ describe('GameEngine', () => {
 
       engine.handleWitnessSetMarker(witness!.id, boards[0].id, 0, 1)
 
-      const calls = io.emit.mock.calls.filter((c: any[]) => c[0] === 'marker_placed')
+      const calls = io.roomEmit.mock.calls.filter((c: any[]) => c[0] === 'marker_placed')
       expect(calls.length).toBeGreaterThanOrEqual(1)
     })
 
@@ -725,7 +752,7 @@ describe('GameEngine', () => {
     it('should broadcast solve_result event after attempt', () => {
       const detective = getPlayerByRole(engine, players, 'detective')
       expect(detective).toBeDefined()
-      io.emit.mockClear()
+      io.roomEmit.mockClear()
 
       engine.handleAttemptSolve(detective!.id, {
         suspectId: 'user-0',
@@ -733,7 +760,7 @@ describe('GameEngine', () => {
         clueCardId: 'WRONG',
       })
 
-      const calls = io.emit.mock.calls.filter((c: any[]) => c[0] === 'solve_result')
+      const calls = io.roomEmit.mock.calls.filter((c: any[]) => c[0] === 'solve_result')
       expect(calls.length).toBeGreaterThanOrEqual(1)
     })
   })
@@ -1209,9 +1236,10 @@ describe('GameEngine', () => {
       engine.handleDisconnect('user-0')
       const disconnectedPlayer = engine.getPlayerById('user-0')
       expect(disconnectedPlayer).toBeDefined()
-      expect(disconnectedPlayer!.status).toBe('disconnected')
+      expect(disconnectedPlayer!.status).toBe('alive')
+      expect(disconnectedPlayer!.disconnectedAt).not.toBeNull()
 
-      const newSock = createMockSocket('s-reconnect')
+      const newSock = createMockSocket('s-reconnect', 'user-0')
       io._addSocket(newSock)
       const reconnected = engine.addPlayer('user-0', 'Player0', 's-reconnect')
       expect(reconnected).not.toBeNull()
@@ -1219,14 +1247,15 @@ describe('GameEngine', () => {
       expect(reconnected!.socketId).toBe('s-reconnect')
     })
 
-    it('should mark player as disconnected on disconnect during game', () => {
+    it('should retain alive status and record disconnection separately during game', () => {
       addPlayers(engine, io, 4)
       engine.startGame()
 
       engine.handleDisconnect('user-0')
       const player = engine.getPlayerById('user-0')
       expect(player).toBeDefined()
-      expect(player!.status).toBe('disconnected')
+      expect(player!.status).toBe('alive')
+      expect(player!.disconnectedAt).not.toBeNull()
       expect(player!.socketId).toBeNull()
     })
   })
@@ -1282,6 +1311,314 @@ describe('GameEngine', () => {
 
       engine.resetGame()
       expect(engine.getSolution()).toBeNull()
+    })
+  })
+
+  describe('房间隔离和私密状态', () => {
+    it('includes room code, limits, and connection status in the room snapshot', () => {
+      addPlayers(engine, io, 4)
+      engine.handleDisconnect('user-1')
+      expect(engine.getRoomState()).toMatchObject({
+        code: 'test-room',
+        minPlayers: 4,
+        maxPlayers: 10,
+      })
+      expect(engine.getRoomState().players[1].connected).toBe(false)
+      expect(engine.getGameStateForPlayer('user-0').players).toContainEqual(
+        expect.objectContaining({ id: 'user-1', status: 'disconnected', connected: false }),
+      )
+    })
+
+    it('scopes room, phase, solve, and game-over broadcasts to its own room', () => {
+      engine = new GameEngine(io as any, 'ABC123')
+      const players = addPlayers(engine, io, 4)
+      engine.broadcastRoomState()
+      advanceToDiscussion1(engine, io, players)
+      const detective = getPlayerByRole(engine, players, 'detective')!
+      const murderer = getPlayerByRole(engine, players, 'murderer')!
+      const solution = getSolution(engine, players)
+      engine.handleAttemptSolve(detective.id, {
+        suspectId: murderer.id,
+        meansCardId: solution.meansCardId,
+        clueCardId: solution.clueCardId,
+      })
+      expect(io.roomEmit.mock.calls.map(([event]) => event)).toEqual(
+        expect.arrayContaining(['room_state', 'phase_change', 'solve_result', 'game_over']),
+      )
+      expect(io.to.mock.calls.every(([roomCode]) => roomCode === 'ABC123')).toBe(true)
+      expect(io.emit).not.toHaveBeenCalled()
+    })
+
+    it('keeps two simultaneous games isolated on the same Socket.IO server', () => {
+      const first = new GameEngine(io as any, 'FIRST2')
+      const second = new GameEngine(io as any, 'SECOND')
+      const firstSockets: ReturnType<typeof createMockSocket>[] = []
+      const secondSockets: ReturnType<typeof createMockSocket>[] = []
+      io.to.mockImplementation((roomCode) => ({
+        emit: vi.fn((event: string, data: unknown) => {
+          io.roomEmit(event, data)
+          for (const socket of io.sockets.sockets.values()) {
+            if (socket.data.roomCode === roomCode) socket.emit(event, data)
+          }
+        }),
+      }))
+      for (const [room, sockets] of [
+        [first, firstSockets],
+        [second, secondSockets],
+      ] as const) {
+        for (let i = 0; i < 4; i++) {
+          const id = `${room.getRoomState().code}-${i}`
+          const socket = createMockSocket(id, id, room.getRoomState().code)
+          sockets.push(socket)
+          io._addSocket(socket)
+          room.addPlayer(id, id, socket.id)
+        }
+      }
+      first.startGame()
+      second.startGame()
+      for (const socket of [...firstSockets, ...secondSockets]) socket.emit.mockClear()
+      first.triggerNightMurder()
+      first.broadcastGameState()
+      first.triggerEndGame('murderer')
+      expect(firstSockets.every((socket) => socket.emit.mock.calls.length > 0)).toBe(true)
+      expect(secondSockets.every((socket) => socket.emit.mock.calls.length === 0)).toBe(true)
+      expect(second.getPhase()).toBe('role-reveal')
+      first.dispose()
+      second.dispose()
+    })
+
+    it('never sends private events to a socket with another user or room', () => {
+      addPlayers(engine, io, 4)
+      const wrongUser = io.sockets.sockets.get('socket-0')!
+      const wrongRoom = io.sockets.sockets.get('socket-1')!
+      wrongUser.data.userId = 'somebody-else'
+      wrongRoom.data.roomCode = 'another-room'
+      engine.startGame()
+      engine.broadcastGameState()
+      engine.triggerNightMurder()
+      expect(wrongUser.emit).not.toHaveBeenCalled()
+      expect(wrongRoom.emit).not.toHaveBeenCalled()
+      expect(io.sockets.sockets.get('socket-2')!.emit).toHaveBeenCalledWith(
+        'full_state',
+        expect.objectContaining({ myRole: engine.getPlayerById('user-2')!.role }),
+      )
+    })
+
+    it('rejects nonmember snapshots even after the game reveals its answer', () => {
+      const players = addPlayers(engine, io, 4)
+      advanceToWitnessAccuse(engine, io, players)
+      expect(() => engine.getGameStateForPlayer('outsider')).toThrow('玩家不在此房间中')
+      engine.triggerEndGame('murderer')
+      expect(() => engine.getGameStateForPlayer('outsider')).toThrow('玩家不在此房间中')
+    })
+
+    it('reveals murderer identity only to roles that know it', () => {
+      const players = addPlayers(engine, io, 7)
+      advanceToNightMurder(engine)
+      const murderer = getPlayerByRole(engine, players, 'murderer')!
+      const accomplice = getPlayerByRole(engine, players, 'accomplice')!
+      const witness = getPlayerByRole(engine, players, 'witness')!
+      const detective = getPlayerByRole(engine, players, 'detective')!
+      const rolesFor = (userId: string) =>
+        (engine.getGameStateForPlayer(userId).players as Array<{ id: string; role?: string }>).find(
+          (player) => player.id === murderer.id,
+        )!.role
+      expect(rolesFor(accomplice.id)).toBe('murderer')
+      expect(rolesFor(witness.id)).toBeUndefined()
+      expect(rolesFor(detective.id)).toBeUndefined()
+      engine.handleMurdererSelect(murderer.id, murderer.meansCards[0].id, murderer.clueCards[0].id)
+      expect(rolesFor(witness.id)).toBe('murderer')
+      expect(rolesFor(detective.id)).toBeUndefined()
+    })
+
+    it('restores pending boards only for the witness and the prompt only for the accomplice', () => {
+      const players = addPlayers(engine, io, 7)
+      advanceToAdvance1(engine, io, players)
+      const accomplice = getPlayerByRole(engine, players, 'accomplice')!
+      const witness = getPlayerByRole(engine, players, 'witness')!
+      const detective = getPlayerByRole(engine, players, 'detective')!
+      expect(engine.getGameStateForPlayer(accomplice.id).accomplicePrompted).toBe(true)
+      expect(engine.getGameStateForPlayer(witness.id).accomplicePrompted).toBeUndefined()
+      engine.handleAccompliceChoose(accomplice.id, false)
+      const witnessState = engine.getGameStateForPlayer(witness.id)
+      expect(witnessState.newBoards).toHaveLength(1)
+      expect(engine.getGameStateForPlayer(accomplice.id).accomplicePrompted).toBe(false)
+      expect(engine.getGameStateForPlayer(accomplice.id).newBoards).toBeUndefined()
+      expect(engine.getGameStateForPlayer(detective.id).newBoards).toBeUndefined()
+      const newBoard = (witnessState.newBoards as Array<{ id: string }>)[0]
+      const oldBoard = engine.getActiveBoards().find((board) => board.type !== 'cause')!
+      engine.handleWitnessReplaceBoard(witness.id, oldBoard.id, newBoard.id, 0, 1)
+      expect(engine.getGameStateForPlayer(witness.id).newBoards).toEqual([])
+      engine.finishAdvancePhase()
+      expect(engine.getGameStateForPlayer(witness.id).newBoards).toBeUndefined()
+    })
+  })
+
+  describe('连接和房主生命周期', () => {
+    it('retains disconnected lobby memberships until the manager expires them', () => {
+      addPlayers(engine, io, 4)
+      engine.handleDisconnect('user-1')
+      vi.advanceTimersByTime(RECONNECT_TIMEOUT_MS * 2)
+      expect(engine.getRoomState().players).toHaveLength(4)
+      expect(engine.canStartGame('user-0')).toMatchObject({ ok: false })
+      const reconnect = createMockSocket('new-socket', 'user-1')
+      io._addSocket(reconnect)
+      engine.addPlayer('user-1', 'Player1', reconnect.id)
+      expect(engine.canStartGame('user-0')).toEqual({ ok: true })
+      expect(engine.getPlayerById('user-1')!.disconnectedAt).toBeNull()
+    })
+
+    it('preserves a dead player and their lost solve right across reconnects', () => {
+      const players = addPlayers(engine, io, 4)
+      advanceToNightMurder(engine)
+      const witness = getPlayerByRole(engine, players, 'witness')!
+      const victim = getPlayerByRole(engine, players, 'detective')!
+      engine.handleEffectAction(witness.id, 'E01', { targetId: victim.id })
+      engine.handleDisconnect(victim.id)
+      expect(victim.status).toBe('dead')
+      const reconnect = createMockSocket('dead-reconnect', victim.id)
+      io._addSocket(reconnect)
+      const resumed = engine.addPlayer(victim.id, victim.nickname, reconnect.id)!
+      expect(resumed.status).toBe('dead')
+      expect(resumed.hasSolveRight).toBe(false)
+      expect(resumed.disconnectedAt).toBeNull()
+    })
+
+    it.each([false, true])(
+      'transfers an offline host after the grace period (playing=%s)',
+      (playing) => {
+        addPlayers(engine, io, 4)
+        if (playing) engine.startGame()
+        engine.handleDisconnect('user-0')
+        vi.advanceTimersByTime(HOST_TRANSFER_DELAY_MS - 1)
+        expect(engine.getRoomState().hostId).toBe('user-0')
+        vi.advanceTimersByTime(1)
+        expect(engine.getRoomState().hostId).toBe('user-1')
+        expect(engine.getPlayerById('user-0')!.isHost).toBe(false)
+        expect(engine.getPlayerById('user-1')!.isHost).toBe(true)
+        expect(engine.getRoomState().players).toHaveLength(4)
+      },
+    )
+
+    it('keeps the host when they resume before the grace period ends', () => {
+      addPlayers(engine, io, 4)
+      engine.handleDisconnect('user-0')
+      vi.advanceTimersByTime(HOST_TRANSFER_DELAY_MS - 1)
+      engine.addPlayer('user-0', 'Player0', 'socket-0')
+      vi.advanceTimersByTime(HOST_TRANSFER_DELAY_MS)
+      expect(engine.getRoomState().hostId).toBe('user-0')
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('transfers an expired offline host when another player reconnects later', () => {
+      addPlayers(engine, io, 4)
+      for (let i = 0; i < 4; i++) engine.handleDisconnect(`user-${i}`)
+      vi.advanceTimersByTime(HOST_TRANSFER_DELAY_MS)
+      expect(engine.getRoomState().hostId).toBe('user-0')
+      engine.addPlayer('user-2', 'Player2', 'socket-2')
+      expect(engine.getRoomState().hostId).toBe('user-2')
+    })
+
+    it('transfers an expired offline host to a new lobby member', () => {
+      addPlayers(engine, io, 1)
+      engine.handleDisconnect('user-0')
+      vi.advanceTimersByTime(HOST_TRANSFER_DELAY_MS)
+      const newcomer = createMockSocket('newcomer-socket', 'newcomer')
+      io._addSocket(newcomer)
+      engine.addPlayer('newcomer', 'Newcomer', newcomer.id)
+      expect(engine.getRoomState().hostId).toBe('newcomer')
+    })
+
+    it('prevents active-round removal but allows leaving after game-over', () => {
+      const players = addPlayers(engine, io, 4)
+      advanceToWitnessAccuse(engine, io, players)
+      engine.removePlayer('user-0')
+      expect(engine.getPlayerById('user-0')).toBeDefined()
+      engine.triggerEndGame('murderer')
+      const oldResult = engine.getGameStateForPlayer('user-1')
+      engine.removePlayer('user-0')
+      expect(engine.getPlayerById('user-0')).toBeUndefined()
+      expect(engine.getGameStateForPlayer('user-1')).toMatchObject({
+        phase: 'game-over',
+        roles: oldResult.roles,
+        scores: oldResult.scores,
+        murdererSelection: oldResult.murdererSelection,
+      })
+    })
+  })
+
+  describe('定时器和重置', () => {
+    it('cancels the pending role transition when the round resets', () => {
+      addPlayers(engine, io, 4)
+      engine.startGame()
+      engine.resetGame()
+      io.roomEmit.mockClear()
+      vi.advanceTimersByTime(ROLE_REVEAL_DELAY_MS + 1)
+      expect(engine.getPhase()).toBe('waiting')
+      expect(io.roomEmit).not.toHaveBeenCalled()
+    })
+
+    it('does not let the previous round timer advance a newly started round early', () => {
+      addPlayers(engine, io, 4)
+      engine.startGame()
+      vi.advanceTimersByTime(1000)
+      engine.resetGame()
+      engine.startGame()
+      vi.advanceTimersByTime(ROLE_REVEAL_DELAY_MS - 1000)
+      expect(engine.getPhase()).toBe('role-reveal')
+      vi.advanceTimersByTime(1000)
+      expect(engine.getPhase()).toBe('night-murder')
+    })
+
+    it('does not let the role timer reverse a completed game', () => {
+      addPlayers(engine, io, 4)
+      engine.startGame()
+      engine.triggerEndGame('murderer')
+      vi.advanceTimersByTime(ROLE_REVEAL_DELAY_MS)
+      expect(engine.getPhase()).toBe('game-over')
+    })
+
+    it('cancels phase and host timers when the room is disposed', () => {
+      addPlayers(engine, io, 4)
+      engine.startGame()
+      engine.handleDisconnect('user-0')
+      engine.dispose()
+      io.roomEmit.mockClear()
+      vi.advanceTimersByTime(HOST_TRANSFER_DELAY_MS + ROLE_REVEAL_DELAY_MS)
+      expect(engine.getPhase()).toBe('role-reveal')
+      expect(engine.getRoomState().hostId).toBe('user-0')
+      expect(io.roomEmit).not.toHaveBeenCalled()
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('clears every timer before resetting to an empty initial room', () => {
+      addPlayers(engine, io, 4)
+      engine.startGame()
+      engine.handleDisconnect('user-0')
+      engine.resetToInitial()
+      vi.advanceTimersByTime(HOST_TRANSFER_DELAY_MS + ROLE_REVEAL_DELAY_MS)
+      expect(engine.getPhase()).toBe('waiting')
+      expect(engine.getRoomState().players).toEqual([])
+      expect(engine.getRoomState().hostId).toBeNull()
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('preserves a transferred host and offline memberships when resetting', () => {
+      addPlayers(engine, io, 4)
+      engine.startGame()
+      engine.handleDisconnect('user-0')
+      const disconnectedAt = engine.getPlayerById('user-0')!.disconnectedAt
+      vi.advanceTimersByTime(HOST_TRANSFER_DELAY_MS)
+      engine.resetGame()
+      expect(engine.getRoomState().hostId).toBe('user-1')
+      expect(engine.getPlayerById('user-0')).toMatchObject({
+        socketId: null,
+        disconnectedAt,
+        status: 'alive',
+        role: null,
+        isHost: false,
+      })
+      expect(engine.canStartGame('user-1').ok).toBe(false)
     })
   })
 

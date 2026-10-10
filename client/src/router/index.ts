@@ -45,12 +45,12 @@ router.beforeEach((to) => {
 
   // Must authenticate first
   if (to.name !== 'password' && !authStore.isAuthenticated) {
-    return { name: 'password' }
+    return { name: 'password', query: to.query }
   }
 
   // Already authenticated → skip password page
   if (to.name === 'password' && authStore.isAuthenticated) {
-    return { name: 'lobby' }
+    return { name: 'lobby', query: to.query }
   }
 
   // If game is active, redirect lobby → game
@@ -60,7 +60,7 @@ router.beforeEach((to) => {
 
   // If no game is active, redirect game → lobby
   if (to.name === 'game' && !GAME_ACTIVE_PHASES.has(gameStore.phase)) {
-    return { name: 'lobby' }
+    return { name: 'lobby', query: to.query }
   }
 })
 
