@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import type { SceneBoard, Player } from '../../types'
+import type {
+  SceneBoard,
+  Player,
+  EffectCard,
+  EffectResult,
+  PendingEffect,
+  MurdererSelection,
+  EffectActionData,
+} from '../../types'
 import SceneBoardPanel from '../game/SceneBoardPanel.vue'
+import EffectCardPanel from '../game/EffectCardPanel.vue'
 
 interface Props {
   boards: SceneBoard[]
@@ -12,11 +21,22 @@ interface Props {
   advanceReady?: boolean
   accomplicePrompted?: boolean
   murdererPlayer?: Player
+  players?: Player[]
+  effectCard?: EffectCard
+  effectResult?: EffectResult
+  pendingEffect?: PendingEffect | null
+  murdererSelection?: MurdererSelection
+  effectSubmitting?: boolean
+  effectError?: string | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   accomplicePrompted: true,
   advanceReady: false,
+  players: () => [],
+  pendingEffect: null,
+  effectSubmitting: false,
+  effectError: null,
 })
 
 const emit = defineEmits<{
@@ -25,6 +45,7 @@ const emit = defineEmits<{
     payload: { oldBoardId: string; newBoardId: string; optionIndex: number; markerNumber: number },
   ]
   'witness-finish-advance': []
+  'effect-action': [payload: { effectId: string; data: EffectActionData }]
 }>()
 
 // Accomplice state
@@ -73,6 +94,7 @@ function handleNewBoardOption(boardId: string, optionIndex: number) {
 }
 
 function handleConfirmReplace() {
+  if (props.pendingEffect) return
   if (
     selectedOldBoardId.value &&
     selectedNewBoardId.value &&
@@ -99,6 +121,20 @@ function handleConfirmReplace() {
       <span class="material-symbols-outlined text-amber-accent">fast_forward</span>
       <span>推进阶段</span>
     </div>
+
+    <EffectCardPanel
+      v-if="effectCard"
+      :card="effectCard"
+      :result="effectResult"
+      :pending-effect="isWitness ? pendingEffect : null"
+      :is-witness="isWitness"
+      :players="players"
+      :boards="boards"
+      :murderer-selection="isWitness ? murdererSelection : undefined"
+      :submitting="effectSubmitting"
+      :error="effectError"
+      @action="emit('effect-action', $event)"
+    />
 
     <!-- Accomplice decision (only in advance-1 with accomplice) -->
     <template v-if="isAccomplice && isAdvance1 && accomplicePrompted && !accompliceDecided">
@@ -140,6 +176,11 @@ function handleConfirmReplace() {
         </template>
       </div>
     </template>
+
+    <!-- Keep required and optional decisions explicit, before board replacement. -->
+    <p v-else-if="isWitness && pendingEffect" class="advance__section-desc" role="status">
+      请先完成效果牌操作，再继续推进。
+    </p>
 
     <!-- Only the server can confirm that every advance step has completed. -->
     <template v-else-if="isWitness && advanceReady && newBoards.length === 0">

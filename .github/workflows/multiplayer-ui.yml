@@ -7,6 +7,7 @@ on:
       - 'server/**'
       - 'e2e/**'
       - 'playwright.classic.config.mjs'
+      - 'playwright.effects.config.mjs'
       - 'playwright.edges.config.mjs'
       - 'playwright.multiplayer.config.mjs'
       - 'pnpm-lock.yaml'
@@ -20,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [classic, multiplayer, edges]
+        suite: [classic, multiplayer, edges, effects]
     steps:
       - uses: actions/checkout@v4
         with:

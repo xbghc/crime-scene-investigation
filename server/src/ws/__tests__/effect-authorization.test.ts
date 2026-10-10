@@ -22,9 +22,15 @@ type Round = Members & {
   accomplice: PlayerState | undefined
 }
 
-function next<T = any>(socket: Socket, event: string): Promise<T> {
+function next<T = any>(
+  socket: Socket,
+  event: string,
+  accept: (data: T) => boolean = () => true,
+): Promise<T> {
   return new Promise((resolve, reject) => {
     const receive = (data: T) => {
+      if (!accept(data)) return
+      socket.off(event, receive)
       clearTimeout(timer)
       resolve(data)
     }
@@ -32,7 +38,7 @@ function next<T = any>(socket: Socket, event: string): Promise<T> {
       socket.off(event, receive)
       reject(new Error(`Timed out waiting for ${event}`))
     }, 2500)
-    socket.once(event, receive)
+    socket.on(event, receive)
   })
 }
 
@@ -223,8 +229,8 @@ describe('effect authorization over real authenticated Socket.IO connections', (
         expect(events).toContainEqual({
           name: 'effect_card',
           data: {
-            card: { id: 'E08', name: '信息泄露' },
-            result: { applied: true, pointedCardId: data.cardId },
+            card: { id: 'E08', name: 'E08', effect: '' },
+            result: expect.objectContaining({ applied: true, pointedCardId: data.cardId }),
           },
         })
         break
@@ -406,9 +412,10 @@ describe('effect authorization over real authenticated Socket.IO connections', (
   })
 
   it.each([null, 'E03', 'E07'])(
-    'clears unused E01 authorization on advance exit, including the next %s draw',
+    'clears consumed E01 authorization on advance exit, including the next %s draw',
     async (nextEffect) => {
       const round = await setup('E01')
+      await succeed(round, 'E01', validData(round, 'E01'))
       await finishAdvance(round)
       await deny(round, 'E01', validData(round, 'E01'))
       await draw(round, nextEffect)
@@ -490,6 +497,7 @@ describe('effect authorization over real authenticated Socket.IO connections', (
       { effectId: 'E01', data: null },
       { effectId: 'E01', data: [] },
       { effectId: 'E01', data: { targetId: 123 } },
+      { effectId: 'E01', data: { skip: 'true' } },
     ]) {
       const before = snapshot(round)
       const events = await act(round.witnessSocket, 'effect_action', payload)
@@ -499,5 +507,109 @@ describe('effect authorization over real authenticated Socket.IO connections', (
       expect(snapshot(round)).toEqual(before)
     }
     await succeed(round, 'E01', validData(round, 'E01'))
+  })
+
+  it.each(INTERACTIVE_EFFECTS)(
+    '%s keeps live choices private, resumes its pending action, and refreshes the public result',
+    async (effectId) => {
+      const round = await startRound(await room())
+      const observations = round.members.map((socket) => {
+        const events: Event[] = []
+        const record = (name: string, data: any) => events.push({ name, data })
+        socket.onAny(record)
+        return { socket, events, record }
+      })
+      await draw(round, effectId)
+      await Promise.all(round.members.map(sync))
+      const pending = snapshot(round).pendingEffect
+      expect(pending).toMatchObject({ effectId, optional: effectId === 'E08' })
+      for (const observation of observations) {
+        const events = observation.events.filter((event) => event.name === 'effect_pending')
+        if (observation.socket === round.witnessSocket) {
+          expect(events).toEqual([{ name: 'effect_pending', data: { pendingEffect: pending } }])
+        } else {
+          expect(events).toEqual([])
+          for (const event of observation.events.filter((event) => event.name === 'full_state')) {
+            expect(event.data).not.toHaveProperty('pendingEffect')
+            expect(event.data).not.toHaveProperty('newBoards')
+          }
+        }
+        observation.socket.offAny(observation.record)
+      }
+
+      const replacement = await client(round.witness.id)
+      const resumedState = next(replacement, 'full_state')
+      expect(await command(replacement, 'resume_room', { code: round.code })).toMatchObject({
+        ok: true,
+      })
+      expect(await resumedState).toMatchObject({
+        pendingEffect: pending,
+        effectCard: { id: effectId },
+        effectResult: { applied: false, requiresWitnessAction: true },
+      })
+      round.witnessSocket = replacement
+      const detective = round.detectives[0]!
+      const detectiveSocket = round.members.find((socket) => socket.id === detective.socketId)!
+      await sync(detectiveSocket)
+      const liveState = next(
+        detectiveSocket,
+        'full_state',
+        (snapshot) =>
+          snapshot.effectCard?.id === effectId && snapshot.effectResult?.applied === true,
+      )
+      await succeed(round, effectId, validData(round, effectId))
+      const appliedState = await liveState
+      expect(appliedState).not.toHaveProperty('pendingEffect')
+      expect(appliedState).not.toHaveProperty('murdererSelection')
+      expect(appliedState.effectResult).toMatchObject({ applied: true })
+      if (effectId === 'E01') {
+        expect(
+          appliedState.players.find((player: PlayerState) => player.id === detective.id),
+        ).toMatchObject({
+          status: 'dead',
+          hasSolveRight: false,
+        })
+      }
+      const detectiveReplacement = await client(detective.id)
+      const refreshedState = next(detectiveReplacement, 'full_state')
+      expect(
+        await command(detectiveReplacement, 'resume_room', { code: round.code }),
+      ).toMatchObject({ ok: true })
+      const refreshed = await refreshedState
+      expect(refreshed.effectCard).toEqual(appliedState.effectCard)
+      expect(refreshed.effectResult).toEqual(appliedState.effectResult)
+      expect(refreshed).not.toHaveProperty('pendingEffect')
+      expect(refreshed).not.toHaveProperty('murdererSelection')
+      await deny(round, effectId, validData(round, effectId))
+    },
+  )
+
+  it('requires a boolean E08 skip and persists explicit skip through witness resume', async () => {
+    const round = await setup('E08')
+    const data = validData(round, 'E08')
+    await deny(round, 'E08', { ...data, skip: 'true' })
+    await deny(round, 'E08', { ...data, skip: 1 })
+    const events = await act(round.witnessSocket, 'effect_action', {
+      effectId: 'E08',
+      data: { skip: true },
+    })
+    expect(events).toContainEqual({ name: 'effect_pending', data: { pendingEffect: null } })
+    expect(events.find((event) => event.name === 'effect_card')?.data).toMatchObject({
+      card: { id: 'E08', effect: '' },
+      result: { applied: false, skipped: true },
+    })
+    const replacement = await client(round.witness.id)
+    const resumedState = next(replacement, 'full_state')
+    expect(await command(replacement, 'resume_room', { code: round.code })).toMatchObject({
+      ok: true,
+    })
+    expect(await resumedState).toMatchObject({
+      pendingEffect: null,
+      effectResult: { skipped: true },
+    })
+    round.witnessSocket = replacement
+    await deny(round, 'E08', data)
+    await deny(round, 'E08', { skip: true })
+    await finishAdvance(round)
   })
 })

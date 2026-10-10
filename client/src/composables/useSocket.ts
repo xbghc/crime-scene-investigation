@@ -9,6 +9,8 @@ import type {
   Role,
   SceneBoard,
   EffectCard,
+  EffectResult,
+  PendingEffect,
   MurdererSelection,
   RoomState,
   EffectActionData,
@@ -85,11 +87,7 @@ interface BoardReplacedPayload {
 
 interface EffectCardPayload {
   card: EffectCard
-  result?: {
-    message?: string
-    players?: Player[]
-    blackout?: boolean
-  }
+  result?: EffectResult
 }
 
 interface ClueReplacedPayload {
@@ -141,8 +139,10 @@ const roomPending = ref<RoomAction | null>(null)
 const roomError = ref<string | null>(null)
 const sessionReplaced = ref(false)
 let finishRoomRequest: ((result: RoomActionResult, authoritative?: boolean) => void) | null = null
+let finishEffectRequest: ((error?: string) => void) | null = null
 
 function clearMembership() {
+  finishEffectRequest?.()
   useGameStore().clearRoom()
   localStorage.removeItem(ROOM_CODE_KEY)
 }
@@ -209,6 +209,7 @@ export function useSocket() {
   }
 
   function disconnect() {
+    finishEffectRequest?.()
     socket?.disconnect()
     socket = null
     connected.value = false
@@ -286,7 +287,25 @@ export function useSocket() {
   }
 
   function effectAction(effectId: string, data: EffectActionData) {
-    socket?.emit('effect_action', { effectId, data })
+    const game = useGameStore()
+    if (!socket || !connected.value || roomPending.value || sessionReplaced.value) {
+      game.finishEffectAction('尚未连接服务器，请等待重连后重试')
+      return
+    }
+    if (finishEffectRequest || !game.beginEffectAction(effectId)) return
+    const finish = (error?: string) => {
+      if (finishEffectRequest !== finish) return
+      clearTimeout(timer)
+      finishEffectRequest = null
+      game.finishEffectAction(error)
+    }
+    const timer = setTimeout(
+      () => finish('服务器响应超时，可重试；已完成的效果不会重复执行'),
+      ROOM_REQUEST_TIMEOUT,
+    )
+    finishEffectRequest = finish
+    // Never buffer actions offline; only the server's result consumes a choice.
+    socket.emit('effect_action', { effectId, data })
   }
 
   function witnessFinishAdvance() {
@@ -339,6 +358,7 @@ function setupConnectionHandlers(sock: Socket) {
 
   sock.on('disconnect', () => {
     connected.value = false
+    finishEffectRequest?.('连接已断开，重连后将恢复效果牌选择')
     finishRoomRequest?.({ ok: false, error: '连接已断开，恢复后将自动重试' }, false)
   })
 
@@ -383,6 +403,7 @@ function setupGameEventHandlers(sock: Socket) {
   })
 
   on('session_replaced', (data?: { message?: string }) => {
+    finishEffectRequest?.()
     sessionReplaced.value = true
     gameStore.clearRoom()
     const error = data?.message || '已在其他窗口连接，请在该窗口继续游戏'
@@ -422,6 +443,7 @@ function setupGameEventHandlers(sock: Socket) {
   // === Game lifecycle events ===
 
   on('game_started', (data: GameStartedPayload) => {
+    finishEffectRequest?.()
     gameStore.reset()
     const myId = authStore.userId
     if (myId) {
@@ -461,6 +483,7 @@ function setupGameEventHandlers(sock: Socket) {
   })
 
   on('phase_change', (data: PhaseChangePayload) => {
+    finishEffectRequest?.()
     gameStore.setPhase(data.phase)
     if (data.players) gameStore.updatePlayers(data.players)
     if (data.boards) gameStore.updateBoards(data.boards)
@@ -486,8 +509,14 @@ function setupGameEventHandlers(sock: Socket) {
     gameStore.setNewBoards(gameStore.newBoards.filter((b) => b.id !== data.newBoard.id))
   })
 
+  on('effect_pending', (data: { pendingEffect: PendingEffect | null }) => {
+    finishEffectRequest?.()
+    gameStore.setPendingEffect(data.pendingEffect)
+  })
+
   on('effect_card', (data: EffectCardPayload) => {
-    gameStore.setEffectCard(data.card)
+    if (data.result?.applied || data.result?.skipped) finishEffectRequest?.()
+    gameStore.setEffectCard(data.card, data.result)
     if (data.result?.message) {
       gameStore.setSystemMessage(data.result.message, 'info')
     }
@@ -524,6 +553,7 @@ function setupGameEventHandlers(sock: Socket) {
   })
 
   on('game_over', (data: GameOverPayload) => {
+    finishEffectRequest?.()
     if (data.roles) {
       for (const player of gameStore.players) {
         if (data.roles[player.id]) {
@@ -536,6 +566,7 @@ function setupGameEventHandlers(sock: Socket) {
   })
 
   on('system_message', (data: SystemMessagePayload) => {
+    if (data.type === 'error') finishEffectRequest?.(data.content)
     gameStore.setSystemMessage(data.content, data.type || 'info')
   })
 
@@ -548,6 +579,7 @@ function setupGameEventHandlers(sock: Socket) {
   })
 
   on('full_state', (data: Partial<GameState> & Pick<GameState, 'phase' | 'players' | 'boards'>) => {
+    finishEffectRequest?.()
     gameStore.syncFullState({
       ...data,
       round: data.round ?? 1,

@@ -145,3 +145,29 @@ describe('Witness advance readiness', () => {
     expect(findContinue()).toBeUndefined()
   })
 })
+
+describe('effect sequencing', () => {
+  it.each(['E01', 'E03', 'E05', 'E08'])(
+    'keeps %s ahead of board replacement and Continue',
+    async (effectId) => {
+      const props = await mountAdvance(false, {
+        isWitness: true,
+        isAccomplice: false,
+        advanceReady: true,
+        boards: [makeBoard('old')],
+        newBoards: [makeBoard('new')],
+        effectCard: { id: effectId, name: '待处理效果', effect: '处理效果' },
+        pendingEffect: { effectId, targetIds: [], optional: effectId === 'E08' },
+      })
+      expect(container!.querySelector('[data-testid="effect-action"]')).not.toBeNull()
+      expect(container!.textContent).not.toContain('选择替换的场景板')
+      expect(findContinue()).toBeUndefined()
+      props.pendingEffect = null
+      await nextTick()
+      expect(container!.textContent).toContain('选择替换的场景板')
+      props.newBoards = []
+      await nextTick()
+      expect(findContinue()).toBeDefined()
+    },
+  )
+})

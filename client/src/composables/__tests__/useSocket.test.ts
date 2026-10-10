@@ -529,6 +529,13 @@ describe('useSocket', () => {
 
     it('effectAction 应 emit effect_action 并携带效果 ID 和数据', () => {
       const { effectAction } = connectSocket()
+      localStorage.removeItem(ROOM_CODE_KEY)
+      fireEvent('connect')
+      gameStore.setMyInfo('p1', 'witness')
+      gameStore.setPhase('advance-1')
+      fireEvent('effect_pending', {
+        pendingEffect: { effectId: 'E01', targetIds: ['p2'], optional: false },
+      })
 
       effectAction('E01', { targetId: 'p2' })
 
@@ -1052,6 +1059,145 @@ describe('useSocket', () => {
       expect(gameStore.phase).toBe('discussion-3')
       expect(gameStore.round).toBe(3)
       expect(gameStore.myRole).toBe('witness')
+    })
+  })
+  describe('interactive effect lifecycle', () => {
+    function prepareEffect(effectId = 'E01', optional = false) {
+      localStorage.removeItem(ROOM_CODE_KEY)
+      const api = connectSocket()
+      fireEvent('connect')
+      gameStore.setMyInfo('p1', 'witness')
+      gameStore.setPhase('advance-1')
+      fireEvent('effect_pending', { pendingEffect: { effectId, targetIds: ['p2'], optional } })
+      return api
+    }
+
+    it('keeps eligibility through the draw and suppresses repeated submits until completion', () => {
+      const api = prepareEffect()
+      fireEvent('effect_card', { card: { id: 'E01', name: '暗杀', effect: '选择玩家' } })
+      expect(gameStore.pendingEffect?.targetIds).toEqual(['p2'])
+      api.effectAction('E01', { targetId: 'p2' })
+      api.effectAction('E01', { targetId: 'p2' })
+      expect(mockSocket.emit.mock.calls.filter(([name]) => name === 'effect_action')).toHaveLength(
+        1,
+      )
+      expect(gameStore.effectSubmitting).toBe(true)
+      expect(gameStore.pendingEffect).not.toBeNull()
+
+      fireEvent('effect_pending', { pendingEffect: null })
+      fireEvent('effect_card', {
+        card: { id: 'E01', name: '暗杀', effect: '选择玩家' },
+        result: { applied: true, targetId: 'p2', message: 'Bob 被暗杀' },
+      })
+      expect(gameStore.effectSubmitting).toBe(false)
+      expect(gameStore.effectResult?.targetId).toBe('p2')
+      expect(gameStore.pendingEffect).toBeNull()
+      expect(gameStore.effectAnnouncement).toBe(1)
+      api.effectAction('E01', { targetId: 'p2' })
+      expect(mockSocket.emit.mock.calls.filter(([name]) => name === 'effect_action')).toHaveLength(
+        1,
+      )
+    })
+
+    it('unlocks on server rejection, preserves pending options, and permits retry', () => {
+      const api = prepareEffect()
+      api.effectAction('E01', { targetId: 'p2' })
+      fireEvent('system_message', { content: '目标无效，请重新选择', type: 'error' })
+      expect(gameStore.effectSubmitting).toBe(false)
+      expect(gameStore.effectError).toBe('目标无效，请重新选择')
+      expect(gameStore.pendingEffect?.targetIds).toEqual(['p2'])
+      api.effectAction('E01', { targetId: 'p2' })
+      expect(gameStore.effectError).toBeNull()
+      expect(mockSocket.emit.mock.calls.filter(([name]) => name === 'effect_action')).toHaveLength(
+        2,
+      )
+    })
+
+    it('times out safely without consuming eligibility or leaving a permanent lock', () => {
+      vi.useFakeTimers()
+      const api = prepareEffect()
+      api.effectAction('E01', { targetId: 'p2' })
+      vi.advanceTimersByTime(8000)
+      expect(gameStore.effectSubmitting).toBe(false)
+      expect(gameStore.effectError).toContain('响应超时')
+      expect(gameStore.pendingEffect).not.toBeNull()
+      api.effectAction('E01', { targetId: 'p2' })
+      expect(mockSocket.emit.mock.calls.filter(([name]) => name === 'effect_action')).toHaveLength(
+        2,
+      )
+    })
+
+    it('does not queue offline choices and restores unresolved choices on reconnect', () => {
+      const api = prepareEffect()
+      api.effectAction('E01', { targetId: 'p2' })
+      fireEvent('disconnect')
+      expect(gameStore.effectSubmitting).toBe(false)
+      api.effectAction('E01', { targetId: 'p2' })
+      expect(mockSocket.emit.mock.calls.filter(([name]) => name === 'effect_action')).toHaveLength(
+        1,
+      )
+      fireEvent('connect')
+      fireEvent('full_state', {
+        phase: 'advance-1',
+        round: 1,
+        players: [],
+        boards: [],
+        myRole: 'witness',
+        effectCard: { id: 'E01', name: '暗杀', effect: '选择玩家' },
+        pendingEffect: { effectId: 'E01', targetIds: ['p2'], optional: false },
+      })
+      expect(gameStore.effectSubmitting).toBe(false)
+      expect(gameStore.effectError).toBeNull()
+      api.effectAction('E01', { targetId: 'p2' })
+      expect(mockSocket.emit.mock.calls.filter(([name]) => name === 'effect_action')).toHaveLength(
+        2,
+      )
+    })
+
+    it('sends an explicit optional skip and persists its completed result from snapshots', () => {
+      const api = prepareEffect('E08', true)
+      api.effectAction('E08', { skip: true })
+      expect(mockSocket.emit).toHaveBeenCalledWith('effect_action', {
+        effectId: 'E08',
+        data: { skip: true },
+      })
+      fireEvent('full_state', {
+        phase: 'advance-1',
+        round: 1,
+        players: [],
+        boards: [],
+        myRole: 'witness',
+        effectCard: { id: 'E08', name: '信息泄露', effect: '公开一张牌' },
+        effectResult: { applied: false, skipped: true, message: '已跳过信息泄露' },
+        pendingEffect: null,
+      })
+      expect(gameStore.effectSubmitting).toBe(false)
+      expect(gameStore.effectResult?.skipped).toBe(true)
+      expect(gameStore.pendingEffect).toBeNull()
+    })
+
+    it('does not store private eligibility or emit actions for non-witnesses', () => {
+      const api = prepareEffect()
+      gameStore.setMyInfo('p1', 'detective')
+      fireEvent('effect_pending', {
+        pendingEffect: { effectId: 'E08', cardIds: ['M001', 'C001'], optional: true },
+      })
+      api.effectAction('E08', { cardId: 'M001' })
+      expect(gameStore.pendingEffect).toBeNull()
+      expect(mockSocket.emit.mock.calls.filter(([name]) => name === 'effect_action')).toHaveLength(
+        0,
+      )
+    })
+
+    it('clears old request timers on authoritative snapshot and reset', () => {
+      vi.useFakeTimers()
+      const api = prepareEffect()
+      api.effectAction('E01', { targetId: 'p2' })
+      fireEvent('full_state', { phase: 'waiting', round: 1, players: [], boards: [] })
+      vi.advanceTimersByTime(10000)
+      expect(gameStore.effectSubmitting).toBe(false)
+      expect(gameStore.effectError).toBeNull()
+      expect(gameStore.pendingEffect).toBeNull()
     })
   })
 })

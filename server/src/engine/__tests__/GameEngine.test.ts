@@ -1050,11 +1050,13 @@ describe('GameEngine', () => {
     })
 
     // E04 - Key Clue (requiresWitnessAction)
-    it('should return requiresWitnessAction for E04 effect', () => {
+    it('should explicitly report unsupported E04 effect', () => {
       const card: EffectCardRef = { id: 'E04', name: '关键线索', effect: '' }
       const result = engine.testApplyEffectCard(card)
       expect(result.applied).toBe(false)
-      expect(result.requiresWitnessAction).toBe(true)
+      expect(result.requiresWitnessAction).toBeUndefined()
+      expect(result.unsupported).toBe(true)
+      expect(result.message).toContain('暂未实现')
     })
 
     // E05 - Evidence Lost (via handleEffectAction)
@@ -1089,11 +1091,13 @@ describe('GameEngine', () => {
     })
 
     // E06 - Witness Notes (requiresWitnessAction)
-    it('should return requiresWitnessAction for E06 effect', () => {
+    it('should explicitly report unsupported E06 effect', () => {
       const card: EffectCardRef = { id: 'E06', name: '目击者笔录', effect: '' }
       const result = engine.testApplyEffectCard(card)
       expect(result.applied).toBe(false)
-      expect(result.requiresWitnessAction).toBe(true)
+      expect(result.requiresWitnessAction).toBeUndefined()
+      expect(result.unsupported).toBe(true)
+      expect(result.message).toContain('暂未实现')
     })
 
     // E07 - Blackout (via testApplyEffectCard)
@@ -1147,11 +1151,13 @@ describe('GameEngine', () => {
     })
 
     // E10 - Case within Case (requiresWitnessAction)
-    it('should return requiresWitnessAction for E10 effect', () => {
+    it('should explicitly report unsupported E10 effect', () => {
       const card: EffectCardRef = { id: 'E10', name: '案中案', effect: '' }
       const result = engine.testApplyEffectCard(card)
       expect(result.applied).toBe(false)
-      expect(result.requiresWitnessAction).toBe(true)
+      expect(result.requiresWitnessAction).toBeUndefined()
+      expect(result.unsupported).toBe(true)
+      expect(result.message).toContain('暂未实现')
     })
 
     it('should reject effect action from non-witness player', () => {

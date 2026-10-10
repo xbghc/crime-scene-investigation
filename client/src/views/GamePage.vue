@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { useGameStore } from '../stores/game'
 import { useSocket } from '../composables/useSocket'
 import RoleBadge from '../components/game/RoleBadge.vue'
+import EffectCardPanel from '../components/game/EffectCardPanel.vue'
+import type { EffectActionData } from '../types'
 import BaseModal from '../components/ui/BaseModal.vue'
 import BaseToast from '../components/ui/BaseToast.vue'
 
@@ -35,6 +37,7 @@ const {
   witnessReplaceBoard,
   witnessFinishAdvance,
   endDiscussion,
+  effectAction,
   accompliceChoose,
   attemptSolve,
   resetGame,
@@ -55,9 +58,16 @@ onMounted(() => {
 
 // Watch for effect card events
 watch(
+  () => game.effectAnnouncement,
+  (announcement, previous) => {
+    if (announcement > previous && game.effectCard) showEffectCard.value = true
+  },
+)
+
+watch(
   () => game.effectCard,
   (card) => {
-    if (card) showEffectCard.value = true
+    if (!card) showEffectCard.value = false
   },
 )
 
@@ -182,12 +192,17 @@ function handleAccompliceChoose(payload: { replaceClue: boolean; newClueCardId?:
   accompliceChoose(payload.replaceClue, payload.newClueCardId)
 }
 
+function handleEffectAction(payload: { effectId: string; data: EffectActionData }) {
+  effectAction(payload.effectId, payload.data)
+}
+
 function handleWitnessReplace(payload: {
   oldBoardId: string
   newBoardId: string
   optionIndex: number
   markerNumber: number
 }) {
+  if (!game.isWitness || game.pendingEffect) return
   witnessReplaceBoard(
     payload.oldBoardId,
     payload.newBoardId,
@@ -213,7 +228,13 @@ function handleWitnessConfirmMurder() {
 
 // Witness finishes advance phase replacements
 function handleWitnessFinishAdvance() {
-  if (!game.isWitness || !game.isAdvancePhase || !game.advanceReady || game.newBoards.length > 0) {
+  if (
+    !game.isWitness ||
+    !game.isAdvancePhase ||
+    !game.advanceReady ||
+    game.newBoards.length > 0 ||
+    game.pendingEffect
+  ) {
     return
   }
   witnessFinishAdvance()
@@ -222,7 +243,6 @@ function handleWitnessFinishAdvance() {
 // Effect card dismiss
 function handleEffectDismiss() {
   showEffectCard.value = false
-  game.setEffectCard(undefined)
 }
 
 // Solve result dismiss
@@ -306,6 +326,14 @@ function handleToastDismiss() {
 
         <!-- Main content area (scrollable) -->
         <main class="game-layout__body">
+          <EffectCardPanel
+            v-if="game.effectCard && !game.isAdvancePhase"
+            class="game-layout__effect"
+            :card="game.effectCard"
+            :result="game.effectResult"
+            :players="game.players"
+            :boards="game.boards"
+          />
           <!-- Waiting / post-reveal -->
           <template v-if="game.phase === 'role-reveal' && roleRevealed">
             <div class="game-layout__center">
@@ -358,6 +386,14 @@ function handleToastDismiss() {
               :advance-ready="game.advanceReady"
               :accomplice-prompted="game.accomplicePrompted"
               :murderer-player="murdererPlayer"
+              :players="game.players"
+              :effect-card="game.effectCard"
+              :effect-result="game.effectResult"
+              :pending-effect="game.pendingEffect"
+              :murderer-selection="game.isWitness ? game.murdererSelection : undefined"
+              :effect-submitting="game.effectSubmitting"
+              :effect-error="game.effectError"
+              @effect-action="handleEffectAction"
               @accomplice-choose="handleAccompliceChoose"
               @witness-replace="handleWitnessReplace"
               @witness-finish-advance="handleWitnessFinishAdvance"
@@ -411,6 +447,9 @@ function handleToastDismiss() {
         </div>
         <h3 class="effect-card-display__name">{{ game.effectCard.name }}</h3>
         <p class="effect-card-display__effect">{{ game.effectCard.effect }}</p>
+        <p v-if="game.isWitness && game.pendingEffect" class="effect-card-display__effect">
+          关闭提示后，请在推进页面选择效果目标。
+        </p>
       </div>
       <template #footer>
         <button class="effect-card-display__btn" @click="handleEffectDismiss">知道了</button>
@@ -595,6 +634,10 @@ function handleToastDismiss() {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+}
+
+.game-layout__effect {
+  margin-bottom: 16px;
 }
 
 /* Center content (waiting states) */
