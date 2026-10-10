@@ -123,10 +123,70 @@ let socket: Socket | null = null
 
 const connected = ref(false)
 const connectionError = ref<string | null>(null)
+export const ROOM_CODE_KEY = 'csi_room_code'
+const ROOM_REQUEST_TIMEOUT = 8000
+
+type RoomAction = 'create' | 'join' | 'leave' | 'resume'
+export interface RoomActionResult {
+  ok: boolean
+  error?: string
+  code?: string
+}
+
+const roomPending = ref<RoomAction | null>(null)
+const roomError = ref<string | null>(null)
+const sessionReplaced = ref(false)
+let finishRoomRequest: ((result: RoomActionResult, authoritative?: boolean) => void) | null = null
+
+function clearMembership() {
+  useGameStore().clearRoom()
+  localStorage.removeItem(ROOM_CODE_KEY)
+}
+
+function requestRoomAction(
+  action: RoomAction,
+  payload?: { nickname?: string; code?: string },
+): Promise<RoomActionResult> {
+  if (!socket || !connected.value || sessionReplaced.value) {
+    roomError.value = '尚未连接服务器，请稍后重试'
+    return Promise.resolve({ ok: false, error: roomError.value })
+  }
+  if (roomPending.value) return Promise.resolve({ ok: false, error: '正在处理，请稍候' })
+
+  const sock = socket
+  roomPending.value = action
+  roomError.value = null
+  return new Promise((resolve) => {
+    const finish = (result: RoomActionResult, authoritative = true) => {
+      if (finishRoomRequest !== finish) return
+      clearTimeout(timer)
+      finishRoomRequest = null
+      roomPending.value = null
+      if (result.ok) {
+        if (action === 'leave' || (action === 'resume' && !result.code)) clearMembership()
+        else if (result.code) localStorage.setItem(ROOM_CODE_KEY, result.code)
+      } else {
+        // A timeout/disconnection is inconclusive: retain the saved identity so
+        // the next successful connection can recover a server-accepted request.
+        if (action === 'resume' && authoritative) clearMembership()
+        roomError.value = result.error || '操作失败，请重试'
+      }
+      resolve(result)
+    }
+    const timer = setTimeout(
+      () => finish({ ok: false, error: '服务器响应超时，请重试' }, false),
+      ROOM_REQUEST_TIMEOUT,
+    )
+    finishRoomRequest = finish
+    const acknowledge = (result: RoomActionResult) => finish(result)
+    if (payload) sock.emit(`${action}_room`, payload, acknowledge)
+    else sock.emit(`${action}_room`, acknowledge)
+  })
+}
 
 export function useSocket() {
   function connect() {
-    if (socket?.connected) return
+    if (socket || sessionReplaced.value) return
 
     const authStore = useAuthStore()
     socket = io({
@@ -148,10 +208,27 @@ export function useSocket() {
     socket?.disconnect()
     socket = null
     connected.value = false
+    finishRoomRequest?.({ ok: false, error: '连接已断开，请重试' }, false)
+    roomError.value = null
+    connectionError.value = null
+    sessionReplaced.value = false
   }
 
-  function joinRoom(nickname: string) {
-    socket?.emit('join_room', { nickname })
+  function createRoom(nickname: string) {
+    return requestRoomAction('create', { nickname: nickname.trim() })
+  }
+
+  function joinRoom(nickname: string, code: string) {
+    return requestRoomAction('join', { nickname: nickname.trim(), code: code.trim().toUpperCase() })
+  }
+
+  function leaveRoom() {
+    return requestRoomAction('leave')
+  }
+
+  function resumeRoom() {
+    const code = localStorage.getItem(ROOM_CODE_KEY)
+    return requestRoomAction('resume', code ? { code } : {})
   }
 
   function updateNickname(nickname: string) {
@@ -219,9 +296,15 @@ export function useSocket() {
   return {
     connected,
     connectionError,
+    roomPending,
+    roomError,
+    sessionReplaced,
     connect,
     disconnect,
+    createRoom,
     joinRoom,
+    leaveRoom,
+    resumeRoom,
     updateNickname,
     getSocket,
     startGame,
@@ -243,49 +326,85 @@ export function useSocket() {
 
 function setupConnectionHandlers(sock: Socket) {
   sock.on('connect', () => {
+    if (sessionReplaced.value) return
     connected.value = true
     connectionError.value = null
+    const code = localStorage.getItem(ROOM_CODE_KEY)
+    if (!sessionReplaced.value) void requestRoomAction('resume', code ? { code } : {})
   })
 
   sock.on('disconnect', () => {
     connected.value = false
+    finishRoomRequest?.({ ok: false, error: '连接已断开，恢复后将自动重试' }, false)
   })
 
   sock.on('connect_error', (err: Error) => {
     connectionError.value = err.message
   })
-
-  sock.on('reconnect', () => {
-    socket?.emit('request_state')
-  })
 }
 
 function setupGameEventHandlers(sock: Socket) {
+  // A replaced tab must not rehydrate secrets from any already-queued event.
+  function on<Args extends unknown[]>(event: string, handler: (...args: Args) => void) {
+    sock.on(event, (...args: Args) => {
+      if (!sessionReplaced.value) handler(...args)
+    })
+  }
+
   const authStore = useAuthStore()
   const gameStore = useGameStore()
 
   // === Room management events ===
 
-  sock.on('room_state', (data: RoomStatePayload) => {
+  on('room_state', (data: RoomStatePayload) => {
+    if (sessionReplaced.value) return
     gameStore.setRoomState(data)
+    localStorage.setItem(ROOM_CODE_KEY, data.code)
+    roomError.value = null
+    if (roomPending.value && roomPending.value !== 'leave') {
+      finishRoomRequest?.({ ok: true, code: data.code })
+    }
   })
 
-  sock.on('player_joined', (data: PlayerJoinedPayload) => {
+  on('room_left', () => {
+    clearMembership()
+    finishRoomRequest?.({ ok: true })
+  })
+
+  on('room_closed', (data?: { message?: string }) => {
+    clearMembership()
+    const error = data?.message || '房间已关闭，请创建或加入新的房间'
+    finishRoomRequest?.({ ok: false, error })
+    roomError.value = error
+  })
+
+  on('session_replaced', (data?: { message?: string }) => {
+    sessionReplaced.value = true
+    gameStore.clearRoom()
+    const error = data?.message || '已在其他窗口连接，请在该窗口继续游戏'
+    finishRoomRequest?.({ ok: false, error }, false)
+    roomError.value = error
+    // Do not delete the shared saved code: the new tab still needs it.
+    connected.value = false
+    sock.disconnect()
+  })
+
+  on('player_joined', (data: PlayerJoinedPayload) => {
     gameStore.addRoomPlayer(data.player)
   })
 
-  sock.on('player_left', (data: PlayerLeftPayload) => {
+  on('player_left', (data: PlayerLeftPayload) => {
     gameStore.removeRoomPlayer(data.playerId)
   })
 
   // === Advance phase events ===
 
-  sock.on('accomplice_prompt', (_data: AccomplicePromptPayload) => {
+  on('accomplice_prompt', (_data: AccomplicePromptPayload) => {
     gameStore.setAccomplicePrompted(true)
   })
 
   // Accomplice sees murderer's card selection in real-time
-  sock.on('murderer_selection_update', (data: MurdererSelectionUpdatePayload) => {
+  on('murderer_selection_update', (data: MurdererSelectionUpdatePayload) => {
     gameStore.setMurdererSelection({
       meansCard: data.meansCard,
       clueCard: data.clueCard,
@@ -294,7 +413,8 @@ function setupGameEventHandlers(sock: Socket) {
 
   // === Game lifecycle events ===
 
-  sock.on('game_started', (data: GameStartedPayload) => {
+  on('game_started', (data: GameStartedPayload) => {
+    gameStore.reset()
     const myId = authStore.userId
     if (myId) {
       gameStore.setMyInfo(myId, data.role)
@@ -309,6 +429,7 @@ function setupGameEventHandlers(sock: Socket) {
         nickname: rp.nickname,
         color: rp.color,
         isHost: rp.isHost,
+        connected: rp.connected,
         status: 'alive' as const,
         hasSolveRight: true,
         meansCards: cards?.meansCards ?? [],
@@ -319,33 +440,33 @@ function setupGameEventHandlers(sock: Socket) {
     gameStore.setPhase('role-reveal')
   })
 
-  sock.on('night_phase', (_data: NightPhasePayload) => {
+  on('night_phase', (_data: NightPhasePayload) => {
     gameStore.setPhase('night-murder')
     // murdererId in payload is for accomplice; the view reads murderer from player list
   })
 
-  sock.on('murderer_selected', (data: MurdererSelectedPayload) => {
+  on('murderer_selected', (data: MurdererSelectedPayload) => {
     gameStore.setMurdererSelection({
       meansCard: data.meansCard,
       clueCard: data.clueCard,
     })
   })
 
-  sock.on('phase_change', (data: PhaseChangePayload) => {
+  on('phase_change', (data: PhaseChangePayload) => {
     gameStore.setPhase(data.phase)
     if (data.players) gameStore.updatePlayers(data.players)
     if (data.boards) gameStore.updateBoards(data.boards)
   })
 
-  sock.on('boards_revealed', (data: BoardsRevealedPayload) => {
+  on('boards_revealed', (data: BoardsRevealedPayload) => {
     gameStore.updateBoards(data.boards)
   })
 
-  sock.on('marker_placed', (data: MarkerPlacedPayload) => {
+  on('marker_placed', (data: MarkerPlacedPayload) => {
     gameStore.updateMarker(data.boardId, data.optionIndex, data.markerNumber)
   })
 
-  sock.on('board_replaced', (data: BoardReplacedPayload) => {
+  on('board_replaced', (data: BoardReplacedPayload) => {
     gameStore.replaceBoard(data.oldBoardId, {
       ...data.newBoard,
       marker:
@@ -357,7 +478,7 @@ function setupGameEventHandlers(sock: Socket) {
     gameStore.setNewBoards(gameStore.newBoards.filter((b) => b.id !== data.newBoard.id))
   })
 
-  sock.on('effect_card', (data: EffectCardPayload) => {
+  on('effect_card', (data: EffectCardPayload) => {
     gameStore.setEffectCard(data.card)
     if (data.result?.message) {
       gameStore.setSystemMessage(data.result.message, 'info')
@@ -370,7 +491,7 @@ function setupGameEventHandlers(sock: Socket) {
     }
   })
 
-  sock.on('clue_replaced', (data: ClueReplacedPayload) => {
+  on('clue_replaced', (data: ClueReplacedPayload) => {
     const current = gameStore.murdererSelection
     if (!current) return
     gameStore.setMurdererSelection({
@@ -379,7 +500,7 @@ function setupGameEventHandlers(sock: Socket) {
     })
   })
 
-  sock.on('solve_result', (data: SolveResultPayload) => {
+  on('solve_result', (data: SolveResultPayload) => {
     gameStore.setSolveResult(data)
     if (data.success) {
       gameStore.setSystemMessage('破案成功！', 'success')
@@ -390,11 +511,11 @@ function setupGameEventHandlers(sock: Socket) {
     }
   })
 
-  sock.on('force_solve_turn', (data: ForceSolveTurnPayload) => {
+  on('force_solve_turn', (data: ForceSolveTurnPayload) => {
     gameStore.setForceSolveTurn(data.playerId)
   })
 
-  sock.on('game_over', (data: GameOverPayload) => {
+  on('game_over', (data: GameOverPayload) => {
     if (data.roles) {
       for (const player of gameStore.players) {
         if (data.roles[player.id]) {
@@ -406,25 +527,22 @@ function setupGameEventHandlers(sock: Socket) {
     gameStore.setGameOver(data.winner, data.scores)
   })
 
-  sock.on('system_message', (data: SystemMessagePayload) => {
+  on('system_message', (data: SystemMessagePayload) => {
     gameStore.setSystemMessage(data.content, data.type || 'info')
   })
 
-  sock.on('new_boards', (data: NewBoardsPayload) => {
+  on('new_boards', (data: NewBoardsPayload) => {
     gameStore.setNewBoards(data.boards)
   })
 
-  sock.on('blackout_end', () => {
+  on('blackout_end', () => {
     gameStore.setBlackout(false)
   })
 
-  sock.on(
-    'full_state',
-    (data: Partial<GameState> & Pick<GameState, 'phase' | 'players' | 'boards'>) => {
-      gameStore.syncFullState({
-        ...data,
-        round: data.round ?? 1,
-      })
-    },
-  )
+  on('full_state', (data: Partial<GameState> & Pick<GameState, 'phase' | 'players' | 'boards'>) => {
+    gameStore.syncFullState({
+      ...data,
+      round: data.round ?? 1,
+    })
+  })
 }

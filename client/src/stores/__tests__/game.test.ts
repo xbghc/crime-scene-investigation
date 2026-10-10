@@ -247,7 +247,7 @@ describe('GameStore', () => {
       expect(store.blackout).toBe(true)
     })
 
-    it('缺少可选字段时不应覆盖已有状态', () => {
+    it('完整快照缺少私有字段时清除已有状态', () => {
       store.setMyInfo('p1', 'detective')
 
       store.syncFullState({
@@ -257,8 +257,85 @@ describe('GameStore', () => {
         boards: [],
       })
 
-      expect(store.myRole).toBe('detective')
+      expect(store.myRole).toBeUndefined()
     })
+  })
+
+  it('完整快照恢复强制破案顺序与目击者待选场景板', () => {
+    store.syncFullState({
+      phase: 'force-solve',
+      round: 3,
+      players: [],
+      boards: [],
+      currentSolverId: 'p2',
+      newBoards: [makeBoard()],
+      accomplicePrompted: true,
+    })
+    expect(store.forceSolveTurnPlayerId).toBe('p2')
+    expect(store.newBoards).toHaveLength(1)
+    expect(store.accomplicePrompted).toBe(true)
+  })
+
+  it('房主变更同步到游戏玩家，避免重置权限停留在旧房主', () => {
+    store.setRoomState({
+      code: 'ABC123',
+      minPlayers: 4,
+      maxPlayers: 10,
+      status: 'playing',
+      hostId: 'p1',
+      players: [],
+    })
+    store.updatePlayers([makePlayer({ id: 'p1', isHost: true }), makePlayer({ id: 'p2' })])
+    store.setRoomState({
+      code: 'ABC123',
+      minPlayers: 4,
+      maxPlayers: 10,
+      status: 'playing',
+      hostId: 'p2',
+      players: [],
+    })
+    expect(store.players[0]!.isHost).toBe(false)
+    expect(store.players[1]!.isHost).toBe(true)
+  })
+
+  it('房间在线状态同步到游戏玩家，断线重连不会复活已死亡玩家', () => {
+    const room = {
+      code: 'ABC123',
+      minPlayers: 4,
+      maxPlayers: 10,
+      status: 'playing' as const,
+      hostId: 'p1',
+      players: [
+        { id: 'p1', nickname: 'Alice', color: '#f00', isHost: true, connected: true },
+        { id: 'p2', nickname: 'Bob', color: '#0f0', isHost: false, connected: true },
+      ],
+    }
+    store.setRoomState(room)
+    store.updatePlayers([
+      makePlayer({ id: 'p1', status: 'alive', connected: true }),
+      makePlayer({ id: 'p2', status: 'dead', connected: true }),
+    ])
+    store.setRoomState({ ...room, players: room.players.map((p) => ({ ...p, connected: false })) })
+    expect(store.players[0]!.connected).toBe(false)
+    expect(store.players[0]!.status).toBe('disconnected')
+    expect(store.players[1]!.connected).toBe(false)
+    expect(store.players[1]!.status).toBe('dead')
+    store.setRoomState(room)
+    expect(store.players[0]!.connected).toBe(true)
+    expect(store.players[0]!.status).toBe('alive')
+    expect(store.players[1]!.connected).toBe(true)
+    expect(store.players[1]!.status).toBe('dead')
+  })
+
+  it('结束快照恢复所有角色公开结果', () => {
+    store.syncFullState({
+      phase: 'game-over',
+      round: 3,
+      players: [makePlayer()],
+      boards: [],
+      roles: { p1: 'murderer' },
+    })
+    expect(store.players[0]!.role).toBe('murderer')
   })
 
   // ===== updateMarker =====
@@ -344,6 +421,9 @@ describe('GameStore', () => {
   describe('房间状态管理', () => {
     it('setRoomState 应设置房间玩家列表、状态和房主', () => {
       store.setRoomState({
+        code: 'ABC123',
+        minPlayers: 4,
+        maxPlayers: 10,
         players: [{ id: 'p1', nickname: 'Alice', color: '#ff0000', isHost: true }],
         status: 'waiting',
         hostId: 'p1',

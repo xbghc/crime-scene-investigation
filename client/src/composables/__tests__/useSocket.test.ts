@@ -17,7 +17,11 @@ function createMockSocket(): MockSocket {
   return {
     connected: false,
     on: vi.fn(),
-    emit: vi.fn(),
+    emit: vi.fn((event: string, data?: unknown, ack?: (result: unknown) => void) => {
+      // A brand-new identity has no membership to resume; the server still
+      // acknowledges the discovery request so entry actions can proceed.
+      if (event === 'resume_room' && JSON.stringify(data) === '{}') ack?.({ ok: true })
+    }),
     disconnect: vi.fn(),
   }
 }
@@ -76,7 +80,7 @@ function makeBoard(overrides: Partial<SceneBoard> = {}): SceneBoard {
 // We import them once since vi.mock is hoisted before imports
 import { useGameStore } from '../../stores/game'
 import { useAuthStore } from '../../stores/auth'
-import { useSocket } from '../useSocket'
+import { ROOM_CODE_KEY, useSocket } from '../useSocket'
 
 describe('useSocket', () => {
   let gameStore: ReturnType<typeof useGameStore>
@@ -98,6 +102,8 @@ describe('useSocket', () => {
   })
 
   afterEach(() => {
+    useSocket().disconnect()
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -171,23 +177,251 @@ describe('useSocket', () => {
       expect(connectionError.value).toBe('连接失败')
     })
 
-    it('reconnect 事件应 emit request_state', () => {
+    it('重连使用 connect 事件恢复已保存房间，不依赖 Socket 上不存在的 reconnect 事件', () => {
+      localStorage.setItem(ROOM_CODE_KEY, 'ABC123')
       connectSocket()
+      fireEvent('connect')
+      expect(mockSocket.emit).toHaveBeenCalledWith(
+        'resume_room',
+        { code: 'ABC123' },
+        expect.any(Function),
+      )
+      fireEvent('disconnect')
+      fireEvent('connect')
+      expect(mockSocket.emit.mock.calls.filter((call) => call[0] === 'resume_room')).toHaveLength(2)
+    })
 
-      fireEvent('reconnect')
+    it('连接中或断线重试时也不应重复创建 socket', () => {
+      connectSocket()
+      const count = mockSocket.on.mock.calls.length
+      useSocket().connect()
+      expect(mockSocket.on.mock.calls.length).toBe(count)
+    })
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('request_state')
+    it('只有昵称缓存时仅按身份查询，不应自动加入房间', () => {
+      localStorage.setItem('csi_nickname', 'Alice')
+      connectSocket()
+      fireEvent('connect')
+      expect(mockSocket.emit).toHaveBeenCalledWith('resume_room', {}, expect.any(Function))
+      expect(mockSocket.emit.mock.calls.some((call) => call[0] === 'join_room')).toBe(false)
+    })
+  })
+
+  describe('房间操作与恢复', () => {
+    function acknowledge(event: string, result: unknown) {
+      const call = [...mockSocket.emit.mock.calls]
+        .reverse()
+        .find((args: unknown[]) => args[0] === event)
+      expect(call).toBeDefined()
+      const callback = call![call!.length - 1] as (result: unknown) => void
+      callback(result)
+    }
+
+    function roomState(code = 'ABC123', status: 'waiting' | 'playing' = 'waiting') {
+      return {
+        code,
+        minPlayers: 4,
+        maxPlayers: 10,
+        status,
+        hostId: 'p1',
+        players: [{ id: 'p1', nickname: 'Alice', color: '#f00', isHost: true, connected: true }],
+      }
+    }
+
+    function populatePrivateState() {
+      gameStore.setMyInfo('p1', 'murderer')
+      gameStore.setPhase('discussion-2')
+      gameStore.setMurdererSelection({
+        meansCard: { id: 'M001', name: '刀' },
+        clueCard: { id: 'C001', name: '脚印' },
+      })
+      gameStore.setNewBoards([makeBoard()])
+      gameStore.setEffectCard({ id: 'E01', name: '效果', effect: '测试' })
+      gameStore.setForceSolveTurn('p1')
+      gameStore.setBlackout(true)
+      gameStore.setSolveResult({ playerId: 'p1', success: false })
+      gameStore.setAccomplicePrompted(true)
+    }
+
+    function expectCleared() {
+      expect(gameStore.roomCode).toBeNull()
+      expect(gameStore.roomPlayers).toEqual([])
+      expect(gameStore.hostId).toBeNull()
+      expect(gameStore.phase).toBe('waiting')
+      expect(gameStore.myRole).toBeUndefined()
+      expect(gameStore.myPlayerId).toBeUndefined()
+      expect(gameStore.murdererSelection).toBeUndefined()
+      expect(gameStore.players).toEqual([])
+      expect(gameStore.boards).toEqual([])
+      expect(gameStore.effectCard).toBeUndefined()
+      expect(gameStore.newBoards).toEqual([])
+      expect(gameStore.forceSolveTurnPlayerId).toBeUndefined()
+      expect(gameStore.blackout).toBe(false)
+      expect(gameStore.lastSolveResult).toBeNull()
+      expect(gameStore.accomplicePrompted).toBe(false)
+    }
+
+    it('等待服务端确认时保持入口，失败不会写入房间', async () => {
+      const api = connectSocket()
+      fireEvent('connect')
+      const result = api.joinRoom('Alice', 'ABC123')
+      expect(api.roomPending.value).toBe('join')
+      expect(gameStore.roomCode).toBeNull()
+      expect(localStorage.getItem(ROOM_CODE_KEY)).toBeNull()
+      acknowledge('join_room', { ok: false, error: '房间已满' })
+      expect(await result).toEqual({ ok: false, error: '房间已满' })
+      expect(api.roomPending.value).toBeNull()
+      expect(api.roomError.value).toBe('房间已满')
+      expect(gameStore.roomCode).toBeNull()
+    })
+
+    it('创建成功状态在 ack 前也可确认会员并保存房间码', async () => {
+      const api = connectSocket()
+      fireEvent('connect')
+      const result = api.createRoom(' Alice ')
+      expect(mockSocket.emit).toHaveBeenCalledWith(
+        'create_room',
+        { nickname: 'Alice' },
+        expect.any(Function),
+      )
+      fireEvent('room_state', roomState())
+      expect(await result).toEqual({ ok: true, code: 'ABC123' })
+      expect(gameStore.roomCode).toBe('ABC123')
+      expect(localStorage.getItem(ROOM_CODE_KEY)).toBe('ABC123')
+      expect(api.roomPending.value).toBeNull()
+    })
+
+    it('成功 ack 可保存代码但不会伪造房间状态', async () => {
+      const api = connectSocket()
+      fireEvent('connect')
+      const result = api.createRoom('Alice')
+      acknowledge('create_room', { ok: true, code: 'ABC123' })
+      await result
+      expect(localStorage.getItem(ROOM_CODE_KEY)).toBe('ABC123')
+      expect(gameStore.roomCode).toBeNull()
+    })
+
+    it('离线请求与重复请求不排队发送', async () => {
+      const api = connectSocket()
+      expect((await api.createRoom('Alice')).ok).toBe(false)
+      expect(mockSocket.emit).not.toHaveBeenCalled()
+      fireEvent('connect')
+      void api.createRoom('Alice')
+      expect((await api.joinRoom('Alice', 'ABC123')).ok).toBe(false)
+      expect(mockSocket.emit.mock.calls.filter((call) => call[0] !== 'resume_room')).toHaveLength(1)
+    })
+
+    it('已过期或不属于当前身份的恢复请求清除旧状态', () => {
+      localStorage.setItem(ROOM_CODE_KEY, 'ABC123')
+      const api = connectSocket()
+      gameStore.setRoomState(roomState())
+      populatePrivateState()
+      fireEvent('connect')
+      acknowledge('resume_room', { ok: false, error: '房间不存在或已过期' })
+      expectCleared()
+      expect(localStorage.getItem(ROOM_CODE_KEY)).toBeNull()
+      expect(api.roomError.value).toBe('房间不存在或已过期')
+    })
+
+    it('恢复超时保留缓存并结束 busy，允许重试', async () => {
+      vi.useFakeTimers()
+      localStorage.setItem(ROOM_CODE_KEY, 'ABC123')
+      const api = connectSocket()
+      fireEvent('connect')
+      await vi.advanceTimersByTimeAsync(8000)
+      expect(api.roomPending.value).toBeNull()
+      expect(api.roomError.value).toContain('超时')
+      expect(localStorage.getItem(ROOM_CODE_KEY)).toBe('ABC123')
+      void api.resumeRoom()
+      expect(api.roomPending.value).toBe('resume')
+    })
+
+    it('失败的退出保持原房间及私有状态', async () => {
+      const api = connectSocket()
+      fireEvent('connect')
+      fireEvent('room_state', roomState())
+      populatePrivateState()
+      const result = api.leaveRoom()
+      expect(gameStore.roomCode).toBe('ABC123')
+      acknowledge('leave_room', { ok: false, error: '游戏进行中' })
+      expect((await result).ok).toBe(false)
+      expect(gameStore.roomCode).toBe('ABC123')
+      expect(gameStore.myRole).toBe('murderer')
+    })
+
+    it.each(['room_left', 'room_closed'])('%s 清除房间、缓存和全部私有状态', (event) => {
+      connectSocket()
+      fireEvent('room_state', roomState())
+      populatePrivateState()
+      fireEvent(event)
+      expectCleared()
+      expect(localStorage.getItem(ROOM_CODE_KEY)).toBeNull()
+    })
+
+    it('退出成功 ack 即使没有 room_left 也会清理状态', async () => {
+      const api = connectSocket()
+      fireEvent('connect')
+      fireEvent('room_state', roomState())
+      populatePrivateState()
+      const result = api.leaveRoom()
+      acknowledge('leave_room', { ok: true })
+      expect((await result).ok).toBe(true)
+      expectCleared()
+    })
+
+    it('session_replaced 清除当前窗口、保留共享缓存且阻止自动抢回连接', () => {
+      const api = connectSocket()
+      fireEvent('connect')
+      fireEvent('room_state', roomState())
+      populatePrivateState()
+      fireEvent('session_replaced')
+      expectCleared()
+      expect(api.sessionReplaced.value).toBe(true)
+      expect(localStorage.getItem(ROOM_CODE_KEY)).toBe('ABC123')
+      expect(mockSocket.disconnect).toHaveBeenCalled()
+      const calls = mockSocket.on.mock.calls.length
+      api.connect()
+      expect(mockSocket.on.mock.calls.length).toBe(calls)
+      fireEvent('room_state', roomState())
+      fireEvent('full_state', {
+        phase: 'night-murder',
+        players: [],
+        boards: [],
+        myRole: 'murderer',
+      })
+      expect(gameStore.roomCode).toBeNull()
+      expect(gameStore.myRole).toBeUndefined()
+      expect(gameStore.phase).toBe('waiting')
+    })
+
+    it('游戏重置保留房间并清空上一局身份与线索', () => {
+      connectSocket()
+      fireEvent('room_state', roomState())
+      populatePrivateState()
+      fireEvent('room_state', roomState())
+      expect(gameStore.roomCode).toBe('ABC123')
+      expect(gameStore.roomPlayers).toHaveLength(1)
+      expect(gameStore.phase).toBe('waiting')
+      expect(gameStore.myRole).toBeUndefined()
+      expect(gameStore.murdererSelection).toBeUndefined()
+      expect(gameStore.effectCard).toBeUndefined()
+      expect(gameStore.newBoards).toEqual([])
     })
   })
 
   // ===== 出站事件 =====
   describe('出站事件（emit 方法）', () => {
-    it('joinRoom 应 emit join_room 事件并携带 nickname', () => {
+    it('joinRoom 应 emit join_room 事件并携带 nickname 和房间码', () => {
       const { joinRoom } = connectSocket()
 
-      joinRoom('Alice')
+      fireEvent('connect')
+      void joinRoom(' Alice ', 'abc123')
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('join_room', { nickname: 'Alice' })
+      expect(mockSocket.emit).toHaveBeenCalledWith(
+        'join_room',
+        { nickname: 'Alice', code: 'ABC123' },
+        expect.any(Function),
+      )
     })
 
     it('startGame 应 emit start_game 事件', () => {
@@ -325,6 +559,9 @@ describe('useSocket', () => {
     it('room_state 事件应调用 gameStore.setRoomState', () => {
       connectSocket()
       const roomData = {
+        code: 'ABC123',
+        minPlayers: 4,
+        maxPlayers: 10,
         players: [{ id: 'p1', nickname: 'Alice', color: '#ff0000', isHost: true }],
         status: 'waiting' as const,
         hostId: 'p1',
@@ -426,6 +663,9 @@ describe('useSocket', () => {
 
       // Pre-populate room players
       gameStore.setRoomState({
+        code: 'ABC123',
+        minPlayers: 4,
+        maxPlayers: 10,
         players: [
           { id: 'p1', nickname: 'Alice', color: '#ff0000', isHost: true },
           { id: 'p2', nickname: 'Bob', color: '#00ff00', isHost: false },

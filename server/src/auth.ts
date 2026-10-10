@@ -28,6 +28,7 @@ export function socketAuthMiddleware(socket: Socket, next: (err?: Error) => void
   }
   try {
     const decoded = verifyToken(token)
+    if (typeof decoded.id !== 'string' || !decoded.id) return next(new Error('Invalid identity'))
     socket.data.userId = decoded.id
     next()
   } catch {

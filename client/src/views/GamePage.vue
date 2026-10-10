@@ -20,10 +20,13 @@ import AdvancePhaseView from '../components/phases/AdvancePhaseView.vue'
 import ForceSolveView from '../components/phases/ForceSolveView.vue'
 import GameOverView from '../components/phases/GameOverView.vue'
 
+import RoomControls from '../components/room/RoomControls.vue'
+
 const router = useRouter()
 const game = useGameStore()
 const {
   connected,
+  roomPending,
   connect,
   murdererSelect,
   witnessSetMarker,
@@ -71,6 +74,12 @@ watch(
   () => game.phase,
   (phase, oldPhase) => {
     if (phase === 'waiting') {
+      roleRevealed.value = false
+      showSolveModal.value = false
+      showEffectCard.value = false
+      showSolveResult.value = false
+      showResetConfirm.value = false
+      showPhaseChange.value = false
       router.replace('/lobby')
       return
     }
@@ -169,6 +178,7 @@ function handleSolveCancel() {
 
 // Advance phase actions
 function handleAccompliceChoose(payload: { replaceClue: boolean; newClueCardId?: string }) {
+  game.setAccomplicePrompted(false)
   accompliceChoose(payload.replaceClue, payload.newClueCardId)
 }
 
@@ -188,6 +198,11 @@ function handleWitnessReplace(payload: {
 
 // Play again (host resets, others wait)
 function handlePlayAgain() {
+  resetGame()
+}
+
+function handleResetGame() {
+  showResetConfirm.value = false
   resetGame()
 }
 
@@ -224,7 +239,8 @@ function handleToastDismiss() {
 </script>
 
 <template>
-  <div class="game-page">
+  <div class="game-page" :inert="!connected || roomPending === 'resume'">
+    <div class="game-page__room"><RoomControls /></div>
     <!-- Role Reveal (full screen overlay, before game starts) -->
     <template v-if="game.phase === 'role-reveal' && !roleRevealed">
       <RoleRevealView v-if="game.myRole" :role="game.myRole" @confirm="handleRoleConfirm" />
@@ -336,6 +352,7 @@ function handleToastDismiss() {
               :is-witness="game.isWitness"
               :is-accomplice="game.isAccomplice"
               :is-advance1="game.phase === 'advance-1'"
+              :accomplice-prompted="game.accomplicePrompted"
               :murderer-player="murdererPlayer"
               @accomplice-choose="handleAccompliceChoose"
               @witness-replace="handleWitnessReplace"
@@ -461,15 +478,7 @@ function handleToastDismiss() {
       <template #footer>
         <div class="reset-confirm__actions">
           <button class="reset-confirm__cancel" @click="showResetConfirm = false">取消</button>
-          <button
-            class="reset-confirm__confirm"
-            @click="
-              showResetConfirm = false
-              resetGame()
-            "
-          >
-            确定重置
-          </button>
+          <button class="reset-confirm__confirm" @click="handleResetGame">确定重置</button>
         </div>
       </template>
     </BaseModal>
@@ -494,6 +503,12 @@ function handleToastDismiss() {
 <style scoped>
 .game-page {
   min-height: 100dvh;
+  background: var(--bg-primary);
+}
+
+.game-page__room {
+  padding: 8px 12px;
+  padding-top: calc(8px + var(--safe-area-top));
   background: var(--bg-primary);
 }
 

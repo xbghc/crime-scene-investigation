@@ -106,7 +106,7 @@ function removeLastPlayer(state: { players: Player[] }) {
 <template>
   <Story title="游戏大厅页" group="pages" :layout="{ type: 'single', iframe: true }">
     <!-- Variant 1: Not joined -->
-    <Variant title="未加入 — 昵称输入">
+    <Variant title="未加入 — 创建或加入房间">
       <LobbyPage />
     </Variant>
 
@@ -153,9 +153,7 @@ function removeLastPlayer(state: { players: Player[] }) {
           >
             <div class="flex items-center gap-2">
               <span class="pulse-dot" />
-              <span class="text-text-primary text-sm font-semibold tracking-wide"
-                >Lobby Active</span
-              >
+              <span class="text-text-primary text-sm font-semibold tracking-wide">调查准备室</span>
             </div>
             <div class="flex items-center gap-1.5 text-text-muted text-sm">
               <span class="material-symbols-outlined text-lg">groups</span>
@@ -166,6 +164,17 @@ function removeLastPlayer(state: { players: Player[] }) {
           <!-- Scrollable player list -->
           <main class="flex-1 overflow-y-auto px-4 py-4 pb-36">
             <div class="max-w-md mx-auto flex flex-col gap-3">
+              <section class="room-preview" aria-label="房间信息">
+                <div class="room-preview__row">
+                  <span class="text-text-muted text-xs">房间码</span>
+                  <strong class="text-text-primary tracking-widest">AB3K9X</strong>
+                  <button class="room-preview__invite">复制邀请</button>
+                  <button class="text-text-muted text-xs">退出</button>
+                </div>
+                <p class="text-text-muted text-xs mt-2">
+                  分享房间码或邀请链接，朋友加入后即可开始。
+                </p>
+              </section>
               <div
                 v-for="(player, index) in state.players"
                 :key="player.id"
@@ -189,7 +198,7 @@ function removeLastPlayer(state: { players: Player[] }) {
                   <p class="text-text-primary text-sm font-semibold truncate">
                     {{ player.nickname }}
                   </p>
-                  <p v-if="player.isHost" class="text-amber-accent text-xs">Lead Investigator</p>
+                  <p v-if="player.isHost" class="text-amber-accent text-xs">房主</p>
                 </div>
 
                 <div class="flex items-center gap-2 shrink-0">
@@ -217,8 +226,6 @@ function removeLastPlayer(state: { players: Player[] }) {
                   </span>
                 </div>
               </div>
-
-              <IconButton icon="share" variant="ghost" block> 邀请 </IconButton>
             </div>
           </main>
 
@@ -297,6 +304,27 @@ function removeLastPlayer(state: { players: Player[] }) {
 </template>
 
 <style scoped>
+.room-preview {
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+}
+
+.room-preview__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.room-preview__invite {
+  margin-left: auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: var(--color-text);
+}
+
 .pulse-dot {
   width: 8px;
   height: 8px;

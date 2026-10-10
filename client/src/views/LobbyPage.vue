@@ -1,20 +1,53 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSocket } from '../composables/useSocket'
 import { useGameStore } from '../stores/game'
 import { useAuthStore } from '../stores/auth'
 import IconButton from '../components/ui/IconButton.vue'
+import RoomControls from '../components/room/RoomControls.vue'
+import BaseToast from '../components/ui/BaseToast.vue'
 
 const router = useRouter()
+const route = useRoute()
 const game = useGameStore()
 const auth = useAuthStore()
-const { connected, connectionError, connect, joinRoom, updateNickname, startGame } = useSocket()
+const {
+  connected,
+  connectionError,
+  roomPending,
+  roomError,
+  sessionReplaced,
+  connect,
+  createRoom,
+  joinRoom,
+  resumeRoom,
+  updateNickname,
+  startGame,
+} = useSocket()
 
 const NICKNAME_KEY = 'csi_nickname'
 const PWA_DISMISS_KEY = 'csi_pwa_dismissed'
 const nickname = ref(localStorage.getItem(NICKNAME_KEY) || '')
-const joined = ref(false)
+const joined = computed(() => !!game.roomCode)
+const inviteCode = typeof route.query.room === 'string' ? route.query.room.toUpperCase() : ''
+const roomCode = ref(inviteCode)
+const entryMode = ref<'create' | 'join'>(inviteCode ? 'join' : 'create')
+const canSubmit = computed(
+  () =>
+    connected.value &&
+    !roomPending.value &&
+    !!nickname.value.trim() &&
+    (entryMode.value === 'create' || /^[A-Z0-9]{6}$/.test(roomCode.value.trim().toUpperCase())),
+)
+const canRetryResume = computed(() => !joined.value && connected.value)
+
+function updateRoomCode(event: Event) {
+  roomCode.value = (event.target as HTMLInputElement).value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 6)
+}
 const editingNickname = ref(false)
 const newNickname = ref('')
 
@@ -59,27 +92,35 @@ function dismissPwaPrompt() {
   localStorage.setItem(PWA_DISMISS_KEY, '1')
 }
 
-const minPlayers = 4
-const maxPlayers = 10
+const minPlayers = computed(() => game.minPlayers)
+const maxPlayers = computed(() => game.maxPlayers)
 
 const players = computed(() => game.roomPlayers)
 const isHost = computed(() => game.hostId === auth.userId)
-const canStart = computed(() => players.value.length >= minPlayers && isHost.value)
+const allConnected = computed(() => players.value.every((player) => player.connected !== false))
+const canStart = computed(
+  () =>
+    connected.value &&
+    !roomPending.value &&
+    players.value.length >= minPlayers.value &&
+    isHost.value &&
+    allConnected.value,
+)
 
 function getInitial(name: string) {
   return name.charAt(0).toUpperCase()
 }
 
-function handleJoin() {
+async function handleEnterRoom() {
+  if (!canSubmit.value) return
   const name = nickname.value.trim()
-  if (!name) return
-  localStorage.setItem(NICKNAME_KEY, name)
-  joinRoom(name)
-  joined.value = true
+  const result =
+    entryMode.value === 'create' ? await createRoom(name) : await joinRoom(name, roomCode.value)
+  if (result.ok) localStorage.setItem(NICKNAME_KEY, name)
 }
 
 function handleStartGame() {
-  startGame()
+  if (canStart.value) startGame()
 }
 
 function startEditNickname(currentNickname: string) {
@@ -93,6 +134,7 @@ function cancelEditNickname() {
 }
 
 function confirmEditNickname() {
+  if (!connected.value || roomPending.value) return
   const trimmed = newNickname.value.trim()
   if (!trimmed || trimmed === nickname.value) {
     editingNickname.value = false
@@ -105,56 +147,18 @@ function confirmEditNickname() {
   editingNickname.value = false
 }
 
-// Navigate to /game when game is active (start or reconnect)
-const GAME_ACTIVE_PHASES = new Set([
-  'role-reveal',
-  'night-murder',
-  'witness-accuse',
-  'discussion-1',
-  'advance-1',
-  'discussion-2',
-  'advance-2',
-  'discussion-3',
-  'force-solve',
-  'game-over',
-])
+// Enter the game only after the server restores both membership and game state.
 watch(
-  () => game.phase,
-  (p) => {
-    if (GAME_ACTIVE_PHASES.has(p)) {
-      router.push('/game')
-    }
-  },
-)
-
-// Also redirect if room status is 'playing' (handles reconnection case)
-watch(
-  () => game.roomStatus,
-  (status) => {
-    if (status === 'playing') {
-      router.push('/game')
-    }
+  () => [game.roomCode, game.phase],
+  () => {
+    if (game.roomCode && game.phase !== 'waiting') router.replace('/game')
+    if (!game.roomCode) editingNickname.value = false
   },
   { immediate: true },
 )
 
 onMounted(() => {
   connect()
-  // Auto-join if nickname was saved
-  const saved = nickname.value
-  if (saved) {
-    const stop = watch(
-      connected,
-      (isConnected) => {
-        if (isConnected) {
-          joinRoom(saved)
-          joined.value = true
-          stop()
-        }
-      },
-      { immediate: true },
-    )
-  }
 
   // PWA install prompt — show for all non-standalone mobile browsers
   if (!isStandalone && !localStorage.getItem(PWA_DISMISS_KEY)) {
@@ -169,37 +173,104 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- State 1: Not joined — nickname input -->
+  <!-- Create or join a private investigation. -->
   <div
     v-if="!joined"
     class="vignette min-h-dvh flex flex-col items-center justify-center px-6 bg-bg-primary"
   >
-    <div class="relative z-10 w-full max-w-xs flex flex-col items-center">
-      <!-- Icon + Title -->
-      <span class="material-symbols-outlined text-amber-accent text-4xl mb-4">shield</span>
-      <h1 class="text-xl font-bold tracking-[0.08em] text-text-primary mb-1">Join Investigation</h1>
-      <p class="text-text-muted text-sm mb-8">输入你的代号</p>
+    <div class="relative z-10 w-full max-w-xs flex flex-col items-center py-8">
+      <span class="material-symbols-outlined text-amber-accent text-4xl mb-4" aria-hidden="true"
+        >shield</span
+      >
+      <h1 class="text-xl font-bold tracking-[0.08em] text-text-primary mb-1">犯罪现场</h1>
+      <p class="text-text-muted text-sm mb-6">创建专属房间，邀请朋友一起推理</p>
 
-      <!-- Form -->
-      <form class="w-full flex flex-col gap-4" @submit.prevent="handleJoin">
-        <input
-          v-model="nickname"
-          type="text"
-          class="lobby-input"
-          placeholder="代号（最多10个字符）"
-          maxlength="10"
-          autocomplete="off"
-        />
-        <IconButton
-          type="submit"
-          icon="arrow_forward"
-          icon-position="right"
-          :disabled="!nickname.trim() || !connected"
-          block
+      <template v-if="sessionReplaced">
+        <p class="entry-message" role="alert">{{ roomError }}</p>
+        <p class="entry-hint">如需回到此窗口，请刷新页面重新连接。</p>
+      </template>
+      <template v-else>
+        <div class="entry-tabs" role="group" aria-label="加入方式">
+          <button
+            type="button"
+            :aria-pressed="entryMode === 'create'"
+            :disabled="!!roomPending"
+            @click="entryMode = 'create'"
+          >
+            创建房间
+          </button>
+          <button
+            type="button"
+            :aria-pressed="entryMode === 'join'"
+            :disabled="!!roomPending"
+            @click="entryMode = 'join'"
+          >
+            加入房间
+          </button>
+        </div>
+        <form
+          class="w-full flex flex-col gap-4"
+          :aria-busy="!!roomPending"
+          @submit.prevent="handleEnterRoom"
         >
-          加入调查
-        </IconButton>
-      </form>
+          <div>
+            <label class="entry-label" for="nickname">你的代号</label>
+            <input
+              id="nickname"
+              v-model="nickname"
+              type="text"
+              class="lobby-input"
+              placeholder="例如：神探小李"
+              maxlength="10"
+              autocomplete="nickname"
+              :disabled="!!roomPending"
+              required
+            />
+          </div>
+          <div v-if="entryMode === 'join'">
+            <label class="entry-label" for="room-code">房间码</label>
+            <input
+              id="room-code"
+              :value="roomCode"
+              @input="updateRoomCode"
+              type="text"
+              class="lobby-input room-code-input"
+              placeholder="例如：AB3K9X"
+              maxlength="6"
+              minlength="6"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              :disabled="!!roomPending"
+              required
+            />
+          </div>
+          <IconButton
+            type="submit"
+            :icon="entryMode === 'create' ? 'add' : 'arrow_forward'"
+            icon-position="right"
+            :disabled="!canSubmit"
+            :loading="roomPending === 'create' || roomPending === 'join'"
+            block
+          >
+            {{ entryMode === 'create' ? '创建房间' : '加入调查' }}
+          </IconButton>
+        </form>
+        <p v-if="roomPending === 'resume'" class="entry-hint" role="status">正在恢复上次的房间…</p>
+        <p v-else-if="!connected" class="entry-hint" role="status">
+          {{ connectionError || '正在连接服务器…' }}
+        </p>
+        <p v-if="roomError" class="entry-message" role="alert">{{ roomError }}</p>
+        <button
+          v-if="roomError && canRetryResume"
+          class="entry-retry"
+          :disabled="!connected || !!roomPending"
+          @click="resumeRoom"
+        >
+          重试恢复房间
+        </button>
+        <p class="entry-hint">{{ minPlayers }}–{{ maxPlayers }}人 · 房间相互独立</p>
+      </template>
     </div>
   </div>
 
@@ -212,7 +283,7 @@ onUnmounted(() => {
     >
       <div class="flex items-center gap-2">
         <span class="pulse-dot" />
-        <span class="text-text-primary text-sm font-semibold tracking-wide">Lobby Active</span>
+        <span class="text-text-primary text-sm font-semibold tracking-wide">调查准备室</span>
       </div>
       <div class="flex items-center gap-1.5 text-text-muted text-sm">
         <span class="material-symbols-outlined text-lg">groups</span>
@@ -223,6 +294,8 @@ onUnmounted(() => {
     <!-- Scrollable player list -->
     <main class="flex-1 overflow-y-auto px-4 py-4 pb-36">
       <div class="max-w-md mx-auto flex flex-col gap-3">
+        <RoomControls />
+        <p class="text-text-muted text-xs">分享房间码或邀请链接，朋友加入后即可开始。</p>
         <!-- Players -->
         <div
           v-for="player in players"
@@ -242,13 +315,14 @@ onUnmounted(() => {
           <!-- Info -->
           <div class="flex-1 min-w-0">
             <p class="text-text-primary text-sm font-semibold truncate">{{ player.nickname }}</p>
-            <p v-if="player.isHost" class="text-amber-accent text-xs">Lead Investigator</p>
+            <p v-if="player.isHost" class="text-amber-accent text-xs">房主</p>
           </div>
 
           <!-- Edit button (only for current user) -->
           <button
             v-if="player.id === auth.userId"
             class="edit-nickname-btn"
+            :disabled="!connected || !!roomPending"
             @click="startEditNickname(player.nickname)"
             title="修改昵称"
           >
@@ -257,11 +331,18 @@ onUnmounted(() => {
 
           <!-- Status badge -->
           <div class="flex items-center gap-2 shrink-0">
-            <span class="text-xs px-2 py-0.5 rounded-full bg-success/15 text-success"> Ready </span>
+            <span
+              class="text-xs px-2 py-0.5 rounded-full"
+              :class="
+                player.connected === false
+                  ? 'bg-text-dim/15 text-text-muted'
+                  : 'bg-success/15 text-success'
+              "
+            >
+              {{ player.connected === false ? '暂时离线' : '已就绪' }}
+            </span>
           </div>
         </div>
-
-        <IconButton icon="share" variant="ghost" block> 邀请 </IconButton>
       </div>
     </main>
 
@@ -278,7 +359,13 @@ onUnmounted(() => {
           block
           @click="handleStartGame"
         >
-          {{ canStart ? '开始调查' : `开始调查（至少${minPlayers}人）` }}
+          {{
+            !allConnected
+              ? '等待离线玩家重连…'
+              : players.length < minPlayers
+                ? `开始调查（至少${minPlayers}人）`
+                : '开始调查'
+          }}
         </IconButton>
         <p v-else class="text-text-muted text-sm text-center py-3">等待房主开始游戏…</p>
       </div>
@@ -286,12 +373,20 @@ onUnmounted(() => {
 
     <!-- Connection error toast -->
     <div
-      v-if="connectionError"
+      v-if="!connected"
       class="fixed bottom-24 left-4 right-4 z-30 bg-crimson/90 text-text-primary text-sm text-center px-4 py-3 rounded-lg backdrop-blur-sm"
     >
-      {{ connectionError }}
+      {{ connectionError || '连接已断开，正在重连…' }}
     </div>
   </div>
+
+  <BaseToast
+    v-if="game.systemMessage"
+    :message="game.systemMessage.content"
+    :type="game.systemMessage.type"
+    :duration="4000"
+    @dismiss="game.clearSystemMessage"
+  />
 
   <!-- Edit nickname dialog -->
   <Teleport to="body">
@@ -320,7 +415,7 @@ onUnmounted(() => {
             <button
               class="pwa-dialog__install flex-1"
               @click="confirmEditNickname"
-              :disabled="!newNickname.trim()"
+              :disabled="!newNickname.trim() || !connected || !!roomPending"
             >
               确认
             </button>
@@ -390,6 +485,69 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.entry-tabs {
+  display: flex;
+  width: 100%;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--bg-secondary);
+}
+
+.entry-tabs button {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.entry-tabs button[aria-pressed='true'] {
+  background: var(--bg-card);
+  color: var(--color-text);
+}
+
+.entry-tabs button:focus-visible,
+.entry-retry:focus-visible,
+.lobby-input:focus-visible {
+  outline: 3px solid var(--color-text-muted);
+  outline-offset: 3px;
+}
+
+.entry-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.entry-message,
+.entry-hint {
+  margin-top: 16px;
+  text-align: center;
+  line-height: 1.5;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.entry-message {
+  color: var(--color-crimson-light);
+}
+
+.entry-retry {
+  min-height: 44px;
+  color: var(--color-amber);
+  font-size: 0.85rem;
+}
+
+.room-code-input {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 .lobby-input {
   width: 100%;
   padding: 14px 16px;
