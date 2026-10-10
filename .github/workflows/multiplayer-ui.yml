@@ -1,0 +1,40 @@
+name: Multiplayer browser tests
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'client/**'
+      - 'server/**'
+      - 'e2e/**'
+      - 'playwright.classic.config.mjs'
+      - 'playwright.multiplayer.config.mjs'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/multiplayer-ui.yml'
+permissions:
+  contents: read
+jobs:
+  browser-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node node_modules/playwright/cli.js install --with-deps chromium
+      - name: Classic paths and interruption regressions
+        run: node node_modules/playwright/cli.js test --config=playwright.classic.config.mjs
+      - name: Room and replay paths
+        if: success() || failure()
+        run: node node_modules/playwright/cli.js test --config=playwright.multiplayer.config.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: multiplayer-browser-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
