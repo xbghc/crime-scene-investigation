@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from '../ui/AppIcon.vue'
 import { ref } from 'vue'
 import RoleBadge from '../game/RoleBadge.vue'
 
@@ -10,17 +11,23 @@ const revealed = ref(false)
     <!-- Status bar -->
     <header class="night-view__header">
       <div class="night-view__phase">
-        <span class="material-symbols-outlined text-amber-accent">bedtime</span>
-        <span>Night Phase</span>
+        <AppIcon name="bedtime" class="app-icon text-amber-accent" />
+        <span>夜晚阶段</span>
       </div>
       <div
         class="role-flip"
+        role="button"
+        tabindex="0"
+        :aria-label="revealed ? '侦探，隐藏身份' : '查看身份'"
+        :aria-pressed="revealed"
+        @keydown.enter="revealed = !revealed"
+        @keydown.space.prevent="revealed = !revealed"
         :class="{ 'role-flip--revealed': revealed }"
         @click="revealed = !revealed"
       >
         <div class="role-flip__inner">
           <div class="role-flip__front">
-            <span class="material-symbols-outlined text-base text-text-dim">visibility_off</span>
+            <AppIcon name="visibility_off" class="app-icon text-base text-text-dim" />
           </div>
           <div class="role-flip__back">
             <RoleBadge role="detective" show-label />
@@ -33,12 +40,12 @@ const revealed = ref(false)
     <main class="night-view__body">
       <!-- Atmospheric moon icon -->
       <div class="night-view__icon-wrap">
-        <span class="material-symbols-outlined night-view__moon">nights_stay</span>
+        <AppIcon name="nights_stay" class="app-icon night-view__moon" />
         <div class="night-view__glow" />
       </div>
 
-      <h1 class="night-view__title">The crime is being committed</h1>
-      <p class="night-view__subtitle">Silence... Wait for the night phase to conclude.</p>
+      <h1 class="night-view__title">夜晚降临，凶手正在作案</h1>
+      <p class="night-view__subtitle">请保持安静，等待夜晚结束。</p>
     </main>
 
     <!-- Loading bar -->
@@ -73,7 +80,7 @@ const revealed = ref(false)
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.875rem;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text);
   letter-spacing: 0.04em;
@@ -84,6 +91,12 @@ const revealed = ref(false)
   perspective: 400px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
 }
 
 .role-flip__inner {
@@ -158,19 +171,21 @@ const revealed = ref(false)
 }
 
 .night-view__title {
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 600;
   color: var(--color-text);
   text-align: center;
-  letter-spacing: 0.06em;
+  letter-spacing: normal;
   margin: 0 0 12px;
+  line-height: 32px;
 }
 
 .night-view__subtitle {
-  font-size: 0.875rem;
+  font-size: 14px;
   color: var(--color-text-muted);
   text-align: center;
   margin: 0;
+  line-height: 1.6;
 }
 
 /* Footer loader */
@@ -226,5 +241,9 @@ const revealed = ref(false)
   50% {
     opacity: 0.5;
   }
+}
+.role-flip:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
 }
 </style>

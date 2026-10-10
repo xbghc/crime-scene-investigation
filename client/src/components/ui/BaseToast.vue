@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from './AppIcon.vue'
 import { onMounted, onUnmounted, ref } from 'vue'
 
 interface Props {
@@ -44,10 +45,15 @@ onUnmounted(() => {
       <div
         v-show="visible"
         :class="['base-toast', `base-toast--${type}`]"
-        role="alert"
-        @click="dismiss"
+        :role="type === 'error' ? 'alert' : 'status'"
       >
+        <AppIcon
+          :name="type === 'error' ? 'error' : type === 'success' ? 'check_circle' : 'info'"
+        />
         <span class="base-toast__message">{{ message }}</span>
+        <button class="base-toast__close" aria-label="关闭提示" @click="dismiss">
+          <AppIcon name="close" />
+        </button>
       </div>
     </Transition>
   </Teleport>
@@ -55,17 +61,20 @@ onUnmounted(() => {
 
 <style scoped>
 .base-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   position: fixed;
-  top: 24px;
+  top: calc(var(--safe-area-top) + var(--space-6));
   left: 50%;
   transform: translateX(-50%);
   z-index: 2000;
-  padding: 10px 20px;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
   border-radius: var(--border-radius);
   font-size: 0.875rem;
   font-weight: 500;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+
+  box-shadow: var(--shadow-lg);
   max-width: 90vw;
   text-align: center;
 }
@@ -77,15 +86,21 @@ onUnmounted(() => {
 }
 
 .base-toast--success {
-  background-color: rgba(34, 197, 94, 0.15);
+  background-color: var(--popover);
   color: var(--color-detective);
   border: 1px solid var(--color-detective);
 }
 
 .base-toast--error {
-  background-color: rgba(166, 28, 28, 0.2);
-  color: var(--color-crimson-light);
+  background-color: var(--popover);
+  color: var(--destructive);
   border: 1px solid var(--color-crimson);
+}
+
+.base-toast__close {
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
 }
 
 /* Transitions */

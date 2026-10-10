@@ -19,6 +19,9 @@ function selectMarker(marker: number, available: boolean) {
     <button
       v-for="n in 6"
       :key="n"
+      type="button"
+      :aria-label="`选项物 ${n}`"
+      :aria-pressed="modelValue === n"
       class="marker-selector__btn"
       :class="{
         'marker-selector__btn--available': availableMarkers.includes(n),
@@ -38,27 +41,29 @@ function selectMarker(marker: number, available: boolean) {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .marker-selector__btn {
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
-  min-width: 36px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  min-width: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
+  font-size: 14px;
   font-weight: 700;
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   transition: all 0.15s ease;
   cursor: pointer;
+  font-family: var(--font-mono);
 }
 
 .marker-selector__btn--available {
   background: var(--color-amber);
-  color: #fff;
+  color: var(--bg-primary);
 }
 
 .marker-selector__btn--available:hover {

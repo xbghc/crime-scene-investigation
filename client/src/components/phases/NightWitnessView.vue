@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import CardArtwork from '../game/CardArtwork.vue'
+import AppIcon from '../ui/AppIcon.vue'
 import { computed } from 'vue'
 import type { MurdererSelection } from '../../types'
 import { getMeansCardImage, getClueCardImage } from '../../types/stitch-cards'
@@ -31,9 +33,7 @@ const selectedClueImage = computed(() =>
   <div class="vignette witness-night">
     <header class="witness-night__header">
       <div class="witness-night__phase">
-        <span class="material-symbols-outlined text-amber-accent witness-night__pulse"
-          >dark_mode</span
-        >
+        <AppIcon name="dark_mode" class="app-icon text-amber-accent witness-night__pulse" />
         <span>Night Phase</span>
       </div>
     </header>
@@ -42,7 +42,7 @@ const selectedClueImage = computed(() =>
       <!-- Waiting state -->
       <template v-if="!hasSelection">
         <div class="witness-night__icon-wrap">
-          <span class="material-symbols-outlined witness-night__eye">visibility</span>
+          <AppIcon name="visibility" class="app-icon witness-night__eye" />
           <div class="witness-night__glow" />
         </div>
         <h1 class="witness-night__title">夜晚降临，凶手正在作案…</h1>
@@ -52,9 +52,7 @@ const selectedClueImage = computed(() =>
       <!-- Selection revealed -->
       <template v-else>
         <div class="witness-night__icon-wrap">
-          <span class="material-symbols-outlined witness-night__eye witness-night__eye--alert"
-            >emergency</span
-          >
+          <AppIcon name="emergency" class="app-icon witness-night__eye witness-night__eye--alert" />
           <div class="witness-night__glow witness-night__glow--alert" />
         </div>
         <h1 class="witness-night__title">凶手已做出选择</h1>
@@ -62,20 +60,18 @@ const selectedClueImage = computed(() =>
 
         <div class="witness-night__cards">
           <div class="witness-night__card witness-night__card--means">
-            <img
+            <CardArtwork
               v-if="selectedMeansImage"
               :src="selectedMeansImage"
-              :alt="selectedMeansName"
               class="witness-night__card-img"
             />
             <span class="witness-night__card-label">手段</span>
             <span class="witness-night__card-name">{{ selectedMeansName }}</span>
           </div>
           <div class="witness-night__card witness-night__card--clue">
-            <img
+            <CardArtwork
               v-if="selectedClueImage"
               :src="selectedClueImage"
-              :alt="selectedClueName"
               class="witness-night__card-img"
             />
             <span class="witness-night__card-label">线索</span>
@@ -84,12 +80,12 @@ const selectedClueImage = computed(() =>
         </div>
 
         <p class="witness-night__private">
-          <span class="material-symbols-outlined" style="font-size: 14px">lock</span>
+          <AppIcon name="lock" class="app-icon" style="font-size: 14px" />
           仅你可见
         </p>
 
         <button class="witness-night__confirm-btn" @click="emit('confirm-murder')">
-          <span class="material-symbols-outlined" style="font-size: 18px">check</span>
+          <AppIcon name="check" class="app-icon" style="font-size: 18px" />
           我记住了，继续
         </button>
       </template>
@@ -123,7 +119,7 @@ const selectedClueImage = computed(() =>
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.875rem;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text);
   letter-spacing: 0.04em;
@@ -155,7 +151,7 @@ const selectedClueImage = computed(() =>
 }
 
 .witness-night__eye--alert {
-  color: var(--color-crimson-light);
+  color: var(--destructive);
 }
 
 .witness-night__glow {
@@ -172,15 +168,17 @@ const selectedClueImage = computed(() =>
 }
 
 .witness-night__title {
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 600;
   color: var(--color-text);
   text-align: center;
   margin: 0 0 12px;
+  line-height: 32px;
+  letter-spacing: normal;
 }
 
 .witness-night__subtitle {
-  font-size: 0.875rem;
+  font-size: 14px;
   color: var(--color-text-muted);
   text-align: center;
   margin: 0 0 24px;
@@ -188,7 +186,7 @@ const selectedClueImage = computed(() =>
 
 .witness-night__cards {
   display: flex;
-  gap: 16px;
+  gap: var(--space-4);
   margin-bottom: 16px;
 }
 
@@ -198,7 +196,7 @@ const selectedClueImage = computed(() =>
   align-items: center;
   gap: 8px;
   padding: 16px 24px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   min-width: 120px;
 }
 
@@ -218,7 +216,7 @@ const selectedClueImage = computed(() =>
 }
 
 .witness-night__card-label {
-  font-size: 0.7rem;
+  font-size: 12px;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -234,7 +232,7 @@ const selectedClueImage = computed(() =>
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.7rem;
+  font-size: 12px;
   color: var(--color-text-dim);
   margin: 0;
 }
@@ -242,16 +240,17 @@ const selectedClueImage = computed(() =>
 .witness-night__confirm-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   margin-top: 20px;
-  padding: 10px 24px;
-  border-radius: 8px;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
   background: var(--color-amber);
   color: var(--bg-primary);
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 500;
+  font-size: 14px;
   cursor: pointer;
   transition: opacity 0.15s;
+  min-height: 44px;
 }
 
 .witness-night__confirm-btn:hover {

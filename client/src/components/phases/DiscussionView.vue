@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from '../ui/AppIcon.vue'
 import { ref } from 'vue'
 import type { SceneBoard, Player } from '../../types'
 import SceneBoardPanel from '../game/SceneBoardPanel.vue'
@@ -27,27 +28,31 @@ const activeTab = ref<'boards' | 'cards'>('boards')
   <div class="discussion">
     <!-- Round indicator -->
     <div class="discussion__round">
-      <span class="material-symbols-outlined" style="font-size: 18px">forum</span>
+      <AppIcon name="forum" class="app-icon" style="font-size: 18px" />
       <span>第 {{ roundNumber }} 轮发言</span>
     </div>
 
     <!-- Tab switcher -->
-    <div class="discussion__tabs">
+    <div class="discussion__tabs" role="group" aria-label="查看线索">
       <button
+        type="button"
+        :aria-pressed="activeTab === 'boards'"
         class="discussion__tab"
         :class="{ 'discussion__tab--active': activeTab === 'boards' }"
         @click="activeTab = 'boards'"
       >
-        <span class="material-symbols-outlined" style="font-size: 18px">dashboard</span>
-        场景板
+        <AppIcon name="dashboard" class="app-icon" style="font-size: 18px" />
+        场景板 <span class="discussion__count">{{ boards.length }}</span>
       </button>
       <button
+        type="button"
+        :aria-pressed="activeTab === 'cards'"
         class="discussion__tab"
         :class="{ 'discussion__tab--active': activeTab === 'cards' }"
         @click="activeTab = 'cards'"
       >
-        <span class="material-symbols-outlined" style="font-size: 18px">style</span>
-        玩家卡牌
+        <AppIcon name="style" class="app-icon" style="font-size: 18px" />
+        玩家卡牌 <span class="discussion__count">{{ players.length }}</span>
       </button>
     </div>
 
@@ -80,7 +85,7 @@ const activeTab = ref<'boards' | 'cards'>('boards')
           class="discussion__btn discussion__btn--solve"
           @click="emit('solve')"
         >
-          <span class="material-symbols-outlined" style="font-size: 20px">gavel</span>
+          <AppIcon name="gavel" class="app-icon" style="font-size: 20px" />
           破案
         </button>
         <button
@@ -95,7 +100,7 @@ const activeTab = ref<'boards' | 'cards'>('boards')
           class="discussion__btn discussion__btn--end"
           @click="emit('end-discussion')"
         >
-          <span class="material-symbols-outlined" style="font-size: 20px">skip_next</span>
+          <AppIcon name="skip_next" class="app-icon" style="font-size: 20px" />
           结束本轮发言
         </button>
       </div>
@@ -107,27 +112,28 @@ const activeTab = ref<'boards' | 'cards'>('boards')
 .discussion {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-4);
 }
 
 .discussion__round {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  background: var(--bg-card);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-amber);
+  padding: var(--space-2) 0;
+  background: transparent;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-muted);
 }
 
 .discussion__tabs {
   display: flex;
   gap: 4px;
   background: var(--bg-secondary);
-  border-radius: 8px;
-  padding: 4px;
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  border: 1px solid var(--border);
 }
 
 .discussion__tab {
@@ -135,19 +141,25 @@ const activeTab = ref<'boards' | 'cards'>('boards')
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 0.85rem;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: 14px;
   font-weight: 500;
   color: var(--color-text-muted);
-  transition: all 0.2s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+  min-height: 44px;
+  border: 1px solid transparent;
 }
 
 .discussion__tab--active {
   background: var(--bg-card);
   color: var(--color-text);
   font-weight: 600;
+  border-color: var(--border);
 }
 
 .discussion__content {
@@ -155,15 +167,16 @@ const activeTab = ref<'boards' | 'cards'>('boards')
 }
 
 .discussion__boards {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
 }
 
 .discussion__cards {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  align-items: start;
 }
 
 .discussion__footer {
@@ -171,15 +184,16 @@ const activeTab = ref<'boards' | 'cards'>('boards')
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 16px;
+  padding: var(--space-4) max(var(--space-4), calc((100% - 1056px) / 2));
   padding-bottom: calc(16px + var(--safe-area-bottom));
-  background: linear-gradient(to top, var(--bg-primary), rgba(13, 17, 23, 0.95), transparent);
+  background: var(--bg-primary);
   z-index: 50;
+  border-top: 1px solid var(--border);
 }
 
 .discussion__actions {
   display: flex;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .discussion__btn {
@@ -188,11 +202,14 @@ const activeTab = ref<'boards' | 'cards'>('boards')
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 52px;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  transition: all 0.2s;
+  height: 44px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .discussion__btn--solve {
@@ -206,7 +223,7 @@ const activeTab = ref<'boards' | 'cards'>('boards')
 
 .discussion__btn--end {
   background: var(--color-amber);
-  color: #fff;
+  color: var(--bg-primary);
 }
 
 .discussion__btn--end:active {
@@ -217,5 +234,11 @@ const activeTab = ref<'boards' | 'cards'>('boards')
   background: var(--bg-secondary);
   color: var(--color-text-dim);
   cursor: not-allowed;
+}
+.discussion__count {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
 }
 </style>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BaseButton from './BaseButton.vue'
+import AppIcon from './AppIcon.vue'
 
 interface Props {
   icon: string
@@ -22,13 +23,9 @@ withDefaults(defineProps<Props>(), {
 <template>
   <BaseButton :variant="variant" :disabled="disabled" :loading="loading" :block="block">
     <span class="icon-button__inner">
-      <span v-if="iconPosition === 'left'" class="material-symbols-outlined icon-button__icon">{{
-        icon
-      }}</span>
+      <AppIcon v-if="iconPosition === 'left'" :name="icon" class="icon-button__icon" />
       <span class="icon-button__label"><slot /></span>
-      <span v-if="iconPosition === 'right'" class="material-symbols-outlined icon-button__icon">{{
-        icon
-      }}</span>
+      <AppIcon v-if="iconPosition === 'right'" :name="icon" class="icon-button__icon" />
     </span>
   </BaseButton>
 </template>
@@ -37,7 +34,7 @@ withDefaults(defineProps<Props>(), {
 .icon-button__inner {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .icon-button__icon {

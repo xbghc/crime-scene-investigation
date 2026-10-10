@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from '../components/ui/AppIcon.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../stores/game'
@@ -300,16 +301,17 @@ function handleToastDismiss() {
         <!-- Status bar -->
         <header class="game-layout__header">
           <div class="game-layout__phase">
-            <span class="material-symbols-outlined game-layout__phase-icon">{{
-              game.phaseIcon
-            }}</span>
-            <span>{{ game.phaseLabel }}</span>
+            <AppIcon :name="game.phaseIcon" class="app-icon game-layout__phase-icon" />
+            <div class="game-layout__phase-copy">
+              <span class="game-layout__eyebrow">犯罪现场</span>
+              <h1>{{ game.phaseLabel }}</h1>
+            </div>
           </div>
           <div class="game-layout__header-right">
             <div v-if="game.myRole" class="game-layout__role">
               <RoleBadge :role="game.myRole" show-label />
               <span v-if="game.isWitness" class="game-layout__mute-tag">
-                <span class="material-symbols-outlined" style="font-size: 14px">volume_off</span>
+                <AppIcon name="volume_off" class="app-icon" style="font-size: 14px" />
                 禁言
               </span>
             </div>
@@ -317,9 +319,11 @@ function handleToastDismiss() {
               v-if="isHost && game.phase !== 'game-over'"
               class="game-layout__reset-btn"
               title="重置游戏"
+              aria-label="重置游戏"
+              type="button"
               @click="showResetConfirm = true"
             >
-              <span class="material-symbols-outlined" style="font-size: 18px">restart_alt</span>
+              <AppIcon name="restart_alt" class="app-icon" style="font-size: 18px" />
             </button>
           </div>
         </header>
@@ -426,7 +430,7 @@ function handleToastDismiss() {
     </template>
 
     <!-- Solve modal (overlay) -->
-    <BaseModal v-model="showSolveModal" fullscreen>
+    <BaseModal v-model="showSolveModal" fullscreen aria-label="破案">
       <SolveAttemptView
         :players="game.nonWitnessPlayers"
         :forced="game.phase === 'force-solve'"
@@ -439,11 +443,11 @@ function handleToastDismiss() {
     <BaseModal v-model="showEffectCard" title="效果牌">
       <div v-if="game.effectCard" class="effect-card-display">
         <div class="effect-card-display__icon">
-          <span
-            class="material-symbols-outlined"
+          <AppIcon
+            name="auto_awesome"
+            class="app-icon"
             style="font-size: 2.5rem; color: var(--color-purple)"
-            >auto_awesome</span
-          >
+          />
         </div>
         <h3 class="effect-card-display__name">{{ game.effectCard.name }}</h3>
         <p class="effect-card-display__effect">{{ game.effectCard.effect }}</p>
@@ -470,9 +474,11 @@ function handleToastDismiss() {
               : 'solve-result-display__icon--fail'
           "
         >
-          <span class="material-symbols-outlined" style="font-size: 2.5rem">
-            {{ game.lastSolveResult.success ? 'check_circle' : 'cancel' }}
-          </span>
+          <AppIcon
+            :name="game.lastSolveResult.success ? 'check_circle' : 'cancel'"
+            class="app-icon"
+            style="font-size: 2.5rem"
+          />
         </div>
         <p class="solve-result-display__text">
           {{
@@ -491,11 +497,11 @@ function handleToastDismiss() {
     <BaseModal v-model="showPhaseChange" title="阶段变更">
       <div class="phase-change-display">
         <div class="phase-change-display__icon">
-          <span
-            class="material-symbols-outlined"
+          <AppIcon
+            :name="game.phaseIcon"
+            class="app-icon"
             style="font-size: 2.5rem; color: var(--color-amber)"
-            >{{ game.phaseIcon }}</span
-          >
+          />
         </div>
         <p class="phase-change-display__text">{{ phaseChangeMessage }}</p>
       </div>
@@ -508,11 +514,11 @@ function handleToastDismiss() {
     <BaseModal v-model="showResetConfirm" title="重置游戏">
       <div class="reset-confirm">
         <div class="reset-confirm__icon">
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 2.5rem; color: var(--color-crimson-light)"
-            >warning</span
-          >
+          <AppIcon
+            name="warning"
+            class="app-icon"
+            style="font-size: 2.5rem; color: var(--destructive)"
+          />
         </div>
         <p class="reset-confirm__text">
           确定要结束当前游戏并返回大厅吗？所有玩家的游戏进度将丢失。
@@ -537,7 +543,7 @@ function handleToastDismiss() {
 
     <!-- Connection lost indicator -->
     <div v-if="!connected" class="game-page__offline">
-      <span class="material-symbols-outlined" style="font-size: 16px">wifi_off</span>
+      <AppIcon name="wifi_off" class="app-icon" style="font-size: 16px" />
       连接已断开，正在重连…
     </div>
   </div>
@@ -547,12 +553,17 @@ function handleToastDismiss() {
 .game-page {
   min-height: 100dvh;
   background: var(--bg-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .game-page__room {
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-4);
   padding-top: calc(8px + var(--safe-area-top));
   background: var(--bg-primary);
+  max-width: 1104px;
+  margin: 0 auto;
 }
 
 /* Standard game layout */
@@ -566,52 +577,57 @@ function handleToastDismiss() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  padding-top: calc(12px + var(--safe-area-top));
-  background: var(--bg-secondary);
+  padding: var(--space-3) max(var(--space-4), calc((100% - 1056px) / 2));
+  padding-top: var(--space-3);
+  background: var(--card);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
   z-index: 20;
+  gap: var(--space-3);
+  min-height: 72px;
 }
 
 .game-layout__phase {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-3);
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--color-text);
-  letter-spacing: 0.04em;
+  letter-spacing: normal;
+  min-width: 0;
 }
 
 .game-layout__phase-icon {
-  font-size: 1.25rem;
+  font-size: 20px;
   color: var(--color-amber);
+  flex-shrink: 0;
 }
 
 .game-layout__header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2);
 }
 
 .game-layout__role {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .game-layout__reset-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  background: rgba(211, 47, 47, 0.1);
-  color: var(--color-crimson-light);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
   transition: background 0.15s;
+  border: 1px solid var(--border);
 }
 
 .game-layout__reset-btn:active {
@@ -621,19 +637,22 @@ function handleToastDismiss() {
 .game-layout__mute-tag {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px 6px;
-  border-radius: 999px;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
   background: rgba(211, 47, 47, 0.15);
-  color: var(--color-crimson-light);
-  font-size: 0.65rem;
-  font-weight: 600;
+  color: var(--destructive);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .game-layout__body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: var(--space-6);
+  width: 100%;
+  max-width: 1104px;
+  margin: 0 auto;
 }
 
 .game-layout__effect {
@@ -646,7 +665,7 @@ function handleToastDismiss() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 0;
+  padding: var(--space-16) 0;
   gap: 16px;
 }
 
@@ -693,18 +712,20 @@ function handleToastDismiss() {
 }
 
 .effect-card-display__effect {
-  font-size: 0.9rem;
+  font-size: 14px;
   color: var(--color-text-muted);
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
 }
 
 .effect-card-display__btn {
-  padding: 8px 24px;
-  border-radius: 8px;
-  background: var(--color-purple);
-  color: #fff;
-  font-weight: 600;
+  padding: var(--space-2) var(--space-6);
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 500;
+  min-height: 44px;
+  font-size: 14px;
 }
 
 /* Solve result display */
@@ -733,14 +754,14 @@ function handleToastDismiss() {
 
 .solve-result-display__icon--fail {
   background: rgba(211, 47, 47, 0.15);
-  color: var(--color-crimson-light);
+  color: var(--destructive);
 }
 
 .solve-result-display__text {
-  font-size: 0.95rem;
+  font-size: 14px;
   color: var(--color-text-muted);
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 /* Phase change display */
@@ -782,10 +803,12 @@ function handleToastDismiss() {
   padding: 8px 16px;
   background: rgba(166, 28, 28, 0.9);
   color: var(--color-text);
-  font-size: 0.8rem;
-  border-radius: 999px;
+  font-size: 12px;
+  border-radius: var(--radius-md);
   z-index: 100;
   backdrop-filter: blur(8px);
+  max-width: calc(100% - 32px);
+  width: max-content;
 }
 
 /* Reset confirm */
@@ -809,9 +832,9 @@ function handleToastDismiss() {
 }
 
 .reset-confirm__text {
-  font-size: 0.9rem;
+  font-size: 14px;
   color: var(--color-text-muted);
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
 }
 
@@ -823,26 +846,59 @@ function handleToastDismiss() {
 
 .reset-confirm__cancel {
   flex: 1;
-  padding: 10px;
-  border-radius: 8px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   color: var(--color-text-muted);
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 14px;
+  min-height: 44px;
 }
 
 .reset-confirm__confirm {
   flex: 1;
-  padding: 10px;
-  border-radius: 8px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
   background: var(--color-crimson-light);
   color: #fff;
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 14px;
+  min-height: 44px;
 }
 
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+.game-layout__phase-copy {
+  display: grid;
+  gap: var(--space-1);
+}
+.game-layout__phase-copy h1 {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.game-layout__eyebrow {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+}
+@media (max-width: 600px) {
+  .game-layout__body {
+    padding: var(--space-4);
+  }
+  .game-layout__header {
+    flex-wrap: wrap;
+  }
+  .game-layout__role {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 }
 </style>

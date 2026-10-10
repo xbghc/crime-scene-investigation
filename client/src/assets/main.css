@@ -1,6 +1,7 @@
-/* Google Fonts — index.html 有 <link> 用于 preconnect，这里重复 @import 是为了让 Histoire 也能加载字体 */
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap");
+/* Upstream tokens/components are pinned in design-system/. Game palette overrides
+   are intentional: the project keeps its noir atmosphere and semantic role colors. */
+@import "./design-system/bundle.css";
+@import "./design-system/tokens.css";
 @import "tailwindcss";
 
 @theme {
@@ -19,8 +20,8 @@
 
   /* Text */
   --color-text-primary: #e6edf3;
-  --color-text-muted: #8b949e;
-  --color-text-dim: #484f58;
+  --color-text-muted: #a0a9b5;
+  --color-text-dim: #7b8694;
 
   /* Roles */
   --color-role-witness: #3b82f6;
@@ -51,8 +52,8 @@
 
   /* Text */
   --color-text: #e6edf3;
-  --color-text-muted: #8b949e;
-  --color-text-dim: #484f58;
+  --color-text-muted: #a0a9b5;
+  --color-text-dim: #7b8694;
 
   /* Roles */
   --color-witness: #3b82f6;
@@ -83,14 +84,14 @@ html {
 }
 
 body {
-  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
+  font-size: 14px;
   background: var(--bg-primary);
   color: var(--color-text);
   line-height: 1.5;
   overflow-x: hidden;
   overscroll-behavior: none;
-  -webkit-user-select: none;
-  user-select: none;
+
 }
 
 input, textarea {
@@ -123,13 +124,6 @@ button {
   border-radius: 2px;
 }
 
-/* Material Symbols */
-.material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-  vertical-align: middle;
-  user-select: none;
-}
-
 /* Shared vignette overlay */
 .vignette {
   position: relative;
@@ -142,4 +136,56 @@ button {
   background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.6) 100%);
   pointer-events: none;
   z-index: 0;
+}
+
+/* Shared shell tokens map the user's component language onto this game's palette. */
+:root,
+[data-theme="dark"] {
+  --background: var(--bg-primary);
+  --foreground: var(--color-text);
+  --card: var(--bg-secondary);
+  --card-foreground: var(--color-text);
+  --popover: var(--bg-card);
+  --popover-foreground: var(--color-text);
+  --primary: var(--color-crimson);
+  --primary-foreground: #ffffff;
+  --secondary: var(--bg-card);
+  --secondary-foreground: var(--color-text);
+  --muted: var(--bg-card);
+  --muted-foreground: var(--color-text-muted);
+  --accent: var(--bg-card);
+  --accent-foreground: var(--color-text);
+  --destructive: #ff9292;
+  --border: var(--border-color);
+  --input: #526071;
+  --ring: var(--color-amber-light);
+  color-scheme: dark;
+}
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
+
+input, textarea, select {
+  font: inherit;
+  min-height: 44px;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--muted-foreground);
+  opacity: 1;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from '../ui/AppIcon.vue'
 import type { Player, MurdererSelection } from '../../types'
 import RoleBadge from '../game/RoleBadge.vue'
 import PlayerAvatar from '../game/PlayerAvatar.vue'
@@ -22,10 +23,10 @@ const emit = defineEmits<{
   <div class="game-over">
     <!-- Winner banner -->
     <div class="game-over__banner" :class="`game-over__banner--${winner}`">
-      <span class="material-symbols-outlined game-over__trophy">emoji_events</span>
-      <h1 class="game-over__winner-text">
+      <AppIcon name="emoji_events" class="app-icon game-over__trophy" />
+      <h2 class="game-over__winner-text">
         {{ winner === 'detective' ? '侦探方获胜' : '凶手方获胜' }}
-      </h1>
+      </h2>
     </div>
 
     <!-- Solution reveal -->
@@ -67,7 +68,7 @@ const emit = defineEmits<{
     <!-- Play again -->
     <div class="game-over__footer">
       <button v-if="isHost" class="game-over__btn" @click="emit('play-again')">
-        <span class="material-symbols-outlined" style="font-size: 20px">replay</span>
+        <AppIcon name="replay" class="app-icon" style="font-size: 20px" />
         再来一局
       </button>
       <p v-else class="game-over__wait">等待房主开始新一局…</p>
@@ -87,54 +88,56 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 32px 24px;
-  border-radius: 12px;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
   text-align: center;
+  background: var(--card);
 }
 
 .game-over__banner--detective {
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: var(--card);
+  border: 1px solid var(--border);
 }
 
 .game-over__banner--murderer {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: var(--card);
+  border: 1px solid var(--border);
 }
 
 .game-over__trophy {
-  font-size: 3rem;
+  font-size: 40px;
   color: var(--color-amber);
-  animation: float 3s ease-in-out infinite;
+  animation: none;
 }
 
 .game-over__winner-text {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 600;
   color: var(--color-text);
   margin: 0;
-  letter-spacing: 0.04em;
+  letter-spacing: normal;
+  line-height: 32px;
 }
 
 .game-over__solution {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-4);
 }
 
 .game-over__section-title {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: normal;
   margin: 0;
 }
 
 .game-over__solution-cards {
   display: flex;
-  gap: 12px;
+  gap: var(--space-4);
 }
 
 .game-over__solution-card {
@@ -144,7 +147,7 @@ const emit = defineEmits<{
   align-items: center;
   gap: 8px;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .game-over__solution-card--means {
@@ -158,37 +161,41 @@ const emit = defineEmits<{
 }
 
 .game-over__card-label {
-  font-size: 0.7rem;
+  font-size: 12px;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
 .game-over__card-name {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--color-text);
+  text-align: center;
 }
 
 .game-over__identities {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-4);
 }
 
 .game-over__player-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
 }
 
 .game-over__player {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: var(--space-4);
+  padding: var(--space-4);
   background: var(--bg-card);
-  border-radius: 8px;
+  border-radius: 0;
 }
 
 .game-over__player-info {
@@ -199,7 +206,7 @@ const emit = defineEmits<{
 }
 
 .game-over__player-name {
-  font-size: 0.85rem;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text);
 }
@@ -220,12 +227,12 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 52px;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
+  height: 44px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
   background: var(--color-amber);
-  color: #fff;
+  color: var(--bg-primary);
   transition: opacity 0.2s;
 }
 
@@ -235,7 +242,7 @@ const emit = defineEmits<{
 
 .game-over__wait {
   text-align: center;
-  font-size: 0.9rem;
+  font-size: 14px;
   color: var(--color-text-muted);
   margin: 0;
 }
@@ -248,5 +255,17 @@ const emit = defineEmits<{
   50% {
     transform: translateY(-6px);
   }
+}
+.game-over__player + .game-over__player {
+  border-top: 1px solid var(--border);
+}
+.game-over__score {
+  font-family: var(--font-mono);
+}
+.game-over__banner--detective .game-over__winner-text {
+  color: var(--color-detective);
+}
+.game-over__banner--murderer .game-over__winner-text {
+  color: var(--color-murderer);
 }
 </style>

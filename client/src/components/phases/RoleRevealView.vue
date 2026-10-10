@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import AppIcon from '../ui/AppIcon.vue'
 import type { Role } from '../../types'
-import RoleBadge from '../game/RoleBadge.vue'
 
 interface Props {
   role: Role
@@ -40,25 +40,24 @@ const roleInfo: Record<Role, { title: string; description: string; icon: string 
   <div class="vignette role-reveal">
     <main class="role-reveal__body">
       <div class="role-reveal__icon-wrap">
-        <span
-          class="material-symbols-outlined role-reveal__icon"
+        <AppIcon
+          :name="roleInfo[role].icon"
+          class="app-icon role-reveal__icon"
           :class="`role-reveal__icon--${role}`"
-        >
-          {{ roleInfo[role].icon }}
-        </span>
+        />
         <div class="role-reveal__glow" :class="`role-reveal__glow--${role}`" />
       </div>
 
       <p class="role-reveal__label">你的身份是</p>
       <h1 class="role-reveal__title">
-        <RoleBadge :role="role" show-label />
+        {{ roleInfo[role].title }}
       </h1>
       <p class="role-reveal__desc">{{ roleInfo[role].description }}</p>
     </main>
 
     <footer class="role-reveal__footer">
       <button class="role-reveal__btn" @click="emit('confirm')">
-        <span class="material-symbols-outlined" style="font-size: 20px">check</span>
+        <AppIcon name="check" class="app-icon" style="font-size: 20px" />
         我知道了
       </button>
     </footer>
@@ -128,20 +127,23 @@ const roleInfo: Record<Role, { title: string; description: string; icon: string 
 }
 
 .role-reveal__label {
-  font-size: 0.75rem;
+  font-size: 12px;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.15em;
-  margin: 0 0 16px;
+  letter-spacing: normal;
+  margin: 0 0 var(--space-2);
 }
 
 .role-reveal__title {
   margin: 0 0 16px;
-  font-size: 1.5rem;
+  font-size: 36px;
+  line-height: 40px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 .role-reveal__desc {
-  font-size: 0.9rem;
+  font-size: 14px;
   color: var(--color-text-muted);
   text-align: center;
   line-height: 1.6;
@@ -153,6 +155,9 @@ const roleInfo: Record<Role, { title: string; description: string; icon: string 
   padding: 24px 16px;
   padding-bottom: calc(24px + var(--safe-area-bottom));
   z-index: 10;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
 }
 
 .role-reveal__btn {
@@ -161,13 +166,13 @@ const roleInfo: Record<Role, { title: string; description: string; icon: string 
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 52px;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  background: var(--color-amber);
-  color: #fff;
-  letter-spacing: 0.06em;
+  height: 44px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  letter-spacing: normal;
   transition: opacity 0.2s;
 }
 

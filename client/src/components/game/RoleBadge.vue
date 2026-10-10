@@ -22,8 +22,7 @@ const config = computed(() => roleConfig[props.role])
     v-if="showLabel !== false"
     class="role-badge"
     :style="{
-      backgroundColor: config.cssVar,
-      color: '#fff',
+      '--role-color': config.cssVar,
     }"
   >
     {{ config.label }}
@@ -35,13 +34,16 @@ const config = computed(() => roleConfig[props.role])
 .role-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.4;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
   white-space: nowrap;
   user-select: none;
+  color: color-mix(in srgb, var(--role-color) 70%, white);
+  border: 1px solid color-mix(in srgb, var(--role-color) 35%, transparent);
+  background: color-mix(in srgb, var(--role-color) 12%, var(--bg-card));
 }
 
 .role-dot {

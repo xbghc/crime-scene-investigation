@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CardArtwork from './CardArtwork.vue'
 import { computed } from 'vue'
 import { getCardImage } from '../../types/stitch-cards'
 
@@ -14,16 +15,20 @@ const imageUrl = computed(() => (props.id ? getCardImage(props.type, props.id) :
 </script>
 
 <template>
-  <div
+  <component
+    :is="$attrs.onClick ? 'button' : 'div'"
+    :type="$attrs.onClick ? 'button' : undefined"
+    :disabled="$attrs.onClick ? disabled : undefined"
+    :aria-pressed="$attrs.onClick ? !!selected : undefined"
     class="game-card"
     :class="[
       `game-card--${type}`,
       { 'game-card--selected': selected, 'game-card--disabled': disabled },
     ]"
   >
-    <img v-if="imageUrl" :src="imageUrl" :alt="name" class="game-card__img" loading="lazy" />
+    <CardArtwork v-if="imageUrl" :src="imageUrl" class="game-card__img" loading="lazy" />
     <span class="game-card__name">{{ name }}</span>
-  </div>
+  </component>
 </template>
 
 <style scoped>
@@ -31,29 +36,35 @@ const imageUrl = computed(() => (props.id ? getCardImage(props.type, props.id) :
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 6px;
-  border-radius: var(--border-radius);
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
   background: var(--bg-card);
   color: var(--color-text);
-  border: 1.5px solid var(--border-color);
+  border: 1px solid var(--border-color);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
   user-select: none;
-  width: 80px;
+  width: 88px;
+  min-width: 0;
+  vertical-align: top;
 }
 
 .game-card__img {
   width: 100%;
-  border-radius: calc(var(--border-radius) - 2px);
+  border-radius: var(--radius-md);
   display: block;
 }
 
 .game-card__name {
-  font-size: 0.7rem;
+  font-size: 12px;
   text-align: center;
-  line-height: 1.2;
+  line-height: 16px;
   word-break: keep-all;
+  font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 .game-card--means {
@@ -61,7 +72,7 @@ const imageUrl = computed(() => (props.id ? getCardImage(props.type, props.id) :
 }
 
 .game-card--means .game-card__name {
-  color: var(--color-crimson-light);
+  color: var(--destructive);
 }
 
 .game-card--clue {
@@ -74,10 +85,8 @@ const imageUrl = computed(() => (props.id ? getCardImage(props.type, props.id) :
 
 .game-card--selected {
   border-color: var(--color-amber);
-  box-shadow:
-    0 0 8px rgba(212, 168, 71, 0.4),
-    0 2px 8px rgba(0, 0, 0, 0.3);
-  transform: translateY(-2px);
+  box-shadow: 0 0 0 1px var(--color-amber);
+  transform: none;
 }
 
 .game-card--selected .game-card__name {
@@ -92,5 +101,10 @@ const imageUrl = computed(() => (props.id ? getCardImage(props.type, props.id) :
 .game-card:not(.game-card--disabled):not(.game-card--selected):hover {
   border-color: var(--color-text-muted);
   background: rgba(33, 38, 45, 0.8);
+}
+
+.game-card:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
 }
 </style>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import CardArtwork from '../game/CardArtwork.vue'
+import AppIcon from '../ui/AppIcon.vue'
 import { computed } from 'vue'
 import type { MeansCard, ClueCard } from '../../types'
 import RoleBadge from '../game/RoleBadge.vue'
@@ -42,13 +44,11 @@ function isAccomplice(id: string) {
     <!-- Header -->
     <header class="accomplice-view__header">
       <div class="accomplice-view__phase">
-        <span class="material-symbols-outlined text-amber-accent accomplice-view__pulse"
-          >dark_mode</span
-        >
-        <span>Night Phase</span>
+        <AppIcon name="dark_mode" class="app-icon text-amber-accent accomplice-view__pulse" />
+        <span>夜晚阶段</span>
       </div>
       <div class="accomplice-view__timer">
-        <span class="material-symbols-outlined" style="font-size: 16px">timer</span>
+        <AppIcon name="timer" class="app-icon" style="font-size: 16px" />
         <span>{{ timerDisplay }}</span>
       </div>
     </header>
@@ -56,9 +56,9 @@ function isAccomplice(id: string) {
     <!-- Title area -->
     <div class="accomplice-view__title-area">
       <RoleBadge role="accomplice" show-label />
-      <h1 class="accomplice-view__title">OBSERVING THE MURDERER</h1>
+      <h1 class="accomplice-view__title">观察凶手的选择</h1>
       <p class="accomplice-view__murderer">
-        <span class="material-symbols-outlined" style="font-size: 16px">domino_mask</span>
+        <AppIcon name="domino_mask" class="app-icon" style="font-size: 16px" />
         {{ murdererNickname }}
       </p>
     </div>
@@ -67,11 +67,11 @@ function isAccomplice(id: string) {
     <section class="accomplice-view__section">
       <div class="accomplice-view__section-header">
         <div class="accomplice-view__section-icon accomplice-view__section-icon--means">
-          <span class="material-symbols-outlined" style="font-size: 20px">domino_mask</span>
+          <AppIcon name="domino_mask" class="app-icon" style="font-size: 20px" />
         </div>
         <div>
-          <h3 class="accomplice-view__section-title">Means</h3>
-          <p class="accomplice-view__section-sub">Weapon of choice</p>
+          <h3 class="accomplice-view__section-title">作案手段</h3>
+          <p class="accomplice-view__section-sub">凶手的作案手段</p>
         </div>
         <span class="accomplice-view__counter accomplice-view__counter--means">{{
           meansStatus
@@ -93,18 +93,17 @@ function isAccomplice(id: string) {
             v-if="selectedMeansId === card.id"
             class="observe-card__check observe-card__check--means"
           >
-            <span class="material-symbols-outlined" style="font-size: 16px">check</span>
+            <AppIcon name="check" class="app-icon" style="font-size: 16px" />
           </div>
           <!-- Accomplice badge -->
           <div v-if="isAccomplice(card.id)" class="observe-card__mine-badge">
-            <span class="material-symbols-outlined" style="font-size: 12px">person</span>
-            <span>Mine</span>
+            <AppIcon name="person" class="app-icon" style="font-size: 12px" />
+            <span>我的卡牌</span>
           </div>
           <!-- Card body -->
           <div class="observe-card__body">
-            <img
+            <CardArtwork
               :src="getMeansCardImage(card.id)"
-              :alt="card.name"
               class="observe-card__card-img"
               loading="lazy"
             />
@@ -115,7 +114,7 @@ function isAccomplice(id: string) {
             v-if="selectedMeansId === card.id"
             class="observe-card__tag observe-card__tag--means"
           >
-            Murderer's Choice
+            凶手已选
           </div>
         </div>
       </div>
@@ -123,18 +122,18 @@ function isAccomplice(id: string) {
 
     <!-- Divider -->
     <div class="accomplice-view__divider">
-      <span class="accomplice-view__divider-text">and</span>
+      <span class="accomplice-view__divider-text">与</span>
     </div>
 
     <!-- Clue section -->
     <section class="accomplice-view__section">
       <div class="accomplice-view__section-header">
         <div class="accomplice-view__section-icon accomplice-view__section-icon--clue">
-          <span class="material-symbols-outlined" style="font-size: 20px">fingerprint</span>
+          <AppIcon name="fingerprint" class="app-icon" style="font-size: 20px" />
         </div>
         <div>
-          <h3 class="accomplice-view__section-title">Clue</h3>
-          <p class="accomplice-view__section-sub">Evidence left behind</p>
+          <h3 class="accomplice-view__section-title">留下的线索</h3>
+          <p class="accomplice-view__section-sub">凶手留下的线索</p>
         </div>
         <span class="accomplice-view__counter accomplice-view__counter--clue">{{
           clueStatus
@@ -155,23 +154,22 @@ function isAccomplice(id: string) {
             v-if="selectedClueId === card.id"
             class="observe-card__check observe-card__check--clue"
           >
-            <span class="material-symbols-outlined" style="font-size: 16px">check</span>
+            <AppIcon name="check" class="app-icon" style="font-size: 16px" />
           </div>
           <div v-if="isAccomplice(card.id)" class="observe-card__mine-badge">
-            <span class="material-symbols-outlined" style="font-size: 12px">person</span>
-            <span>Mine</span>
+            <AppIcon name="person" class="app-icon" style="font-size: 12px" />
+            <span>我的卡牌</span>
           </div>
           <div class="observe-card__body">
-            <img
+            <CardArtwork
               :src="getClueCardImage(card.id)"
-              :alt="card.name"
               class="observe-card__card-img"
               loading="lazy"
             />
             <p class="observe-card__name">{{ card.name }}</p>
           </div>
           <div v-if="selectedClueId === card.id" class="observe-card__tag observe-card__tag--clue">
-            Murderer's Choice
+            凶手已选
           </div>
         </div>
       </div>
@@ -180,18 +178,18 @@ function isAccomplice(id: string) {
     <!-- Bottom waiting indicator -->
     <div class="accomplice-view__waiting">
       <template v-if="confirmed">
-        <span
-          class="material-symbols-outlined"
+        <AppIcon
+          name="check_circle"
+          class="app-icon"
           style="font-size: 20px; color: var(--color-role-accomplice)"
-          >check_circle</span
-        >
-        <span>Murderer has made their choice</span>
+        />
+        <span>凶手已确认作案组合</span>
       </template>
       <template v-else>
         <div class="accomplice-view__loader">
           <div class="accomplice-view__loader-bar" />
         </div>
-        <span>Waiting for murderer to decide...</span>
+        <span>等待凶手做出选择…</span>
       </template>
     </div>
   </div>
@@ -212,24 +210,24 @@ function isAccomplice(id: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  padding-top: calc(24px + var(--safe-area-top));
+  padding: var(--space-4) var(--space-6);
+  padding-top: calc(var(--space-4) + var(--safe-area-top));
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgba(18, 18, 18, 0.95);
+  background: var(--card);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border);
 }
 
 .accomplice-view__phase {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
-  letter-spacing: 0.1em;
+  gap: var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: normal;
   text-transform: uppercase;
 }
 
@@ -240,13 +238,13 @@ function isAccomplice(id: string) {
 .accomplice-view__timer {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   padding: 4px 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 0.75rem;
-  font-family: 'Space Grotesk', monospace;
+  font-size: 12px;
+  font-family: var(--font-mono);
   font-weight: 500;
   color: rgba(255, 255, 255, 0.8);
 }
@@ -262,11 +260,11 @@ function isAccomplice(id: string) {
 }
 
 .accomplice-view__title {
-  font-size: 1.25rem;
+  font-size: 24px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.95);
-  letter-spacing: 0.02em;
-  line-height: 1.3;
+  color: var(--color-text);
+  letter-spacing: -0.025em;
+  line-height: 32px;
   margin: 4px 0 0;
   text-align: center;
 }
@@ -274,24 +272,28 @@ function isAccomplice(id: string) {
 .accomplice-view__murderer {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.875rem;
+  gap: var(--space-2);
+  font-size: 14px;
   font-weight: 600;
-  color: var(--color-crimson-light);
+  color: var(--destructive);
   margin: 0;
 }
 
 /* Section */
 .accomplice-view__section {
-  padding: 0 16px;
+  padding: 0 var(--space-6);
   margin-top: 16px;
   z-index: 10;
+  width: 100%;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .accomplice-view__section-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-4);
   margin-bottom: 16px;
   padding: 0 4px;
 }
@@ -319,26 +321,27 @@ function isAccomplice(id: string) {
 }
 
 .accomplice-view__section-title {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   color: #fff;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  line-height: 1;
+  letter-spacing: normal;
+  line-height: 28px;
   margin: 0;
 }
 
 .accomplice-view__section-sub {
-  font-size: 0.625rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+  color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: normal;
   margin: 4px 0 0;
+  line-height: 16px;
 }
 
 .accomplice-view__counter {
   margin-left: auto;
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
@@ -359,16 +362,16 @@ function isAccomplice(id: string) {
 /* Card grid */
 .accomplice-view__grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
 }
 
 /* Observe card (read-only) */
 .observe-card {
   position: relative;
-  border-radius: 8px;
-  background: #1e1e1e;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  border: 1px solid var(--border);
   overflow: hidden;
   transition: all 0.3s ease;
 }
@@ -377,16 +380,18 @@ function isAccomplice(id: string) {
   border-color: transparent;
   outline: 2px solid var(--color-role-accomplice);
   outline-offset: -1px;
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+  box-shadow: none;
   background: rgba(245, 158, 11, 0.05);
+  transform: none;
 }
 
 .observe-card--selected-clue {
   border-color: transparent;
   outline: 2px solid #fff;
   outline-offset: -1px;
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
+  box-shadow: none;
   background: var(--bg-primary);
+  transform: none;
 }
 
 .observe-card--mine {
@@ -435,7 +440,7 @@ function isAccomplice(id: string) {
   color: var(--color-role-accomplice);
   border: 1px solid rgba(245, 158, 11, 0.4);
   border-radius: 4px;
-  font-size: 0.5625rem;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -447,8 +452,8 @@ function isAccomplice(id: string) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 8px 12px;
-  gap: 6px;
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  gap: var(--space-2);
 }
 
 .observe-card__card-img {
@@ -465,11 +470,11 @@ function isAccomplice(id: string) {
 }
 
 .observe-card__name {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: normal;
   text-align: center;
   margin: 0;
   transition: color 0.2s;
@@ -482,10 +487,10 @@ function isAccomplice(id: string) {
 
 /* Selected tag */
 .observe-card__tag {
-  padding: 6px;
-  font-size: 0.625rem;
+  padding: var(--space-2);
+  font-size: 12px;
   text-align: center;
-  letter-spacing: 0.04em;
+  letter-spacing: normal;
 }
 
 .observe-card__tag--means {
@@ -512,8 +517,8 @@ function isAccomplice(id: string) {
   transform: translateX(-50%);
   background: var(--bg-primary);
   padding: 0 8px;
-  color: rgba(255, 255, 255, 0.2);
-  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 12px;
   font-style: italic;
 }
 
@@ -522,10 +527,10 @@ function isAccomplice(id: string) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-4);
   padding: 32px 24px;
   padding-bottom: calc(32px + var(--safe-area-bottom));
-  font-size: 0.8125rem;
+  font-size: 14px;
   color: var(--color-text-muted);
   z-index: 10;
 }
@@ -578,6 +583,17 @@ function isAccomplice(id: string) {
   }
   100% {
     transform: scale(1);
+  }
+}
+
+@media (min-width: 640px) {
+  .accomplice-view__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .accomplice-view__section {
+    padding: 0 var(--space-4);
   }
 }
 </style>

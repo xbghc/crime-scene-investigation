@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from '../ui/AppIcon.vue'
 import { computed } from 'vue'
 import type { SceneBoard, MurdererSelection } from '../../types'
 import SceneBoardPanel from '../game/SceneBoardPanel.vue'
@@ -61,7 +62,7 @@ function moveBoard(index: number, direction: 'up' | 'down') {
   <div class="witness-accuse">
     <!-- Header hint -->
     <div class="witness-accuse__hint">
-      <span class="material-symbols-outlined" style="font-size: 16px">lock</span>
+      <AppIcon name="lock" class="app-icon" style="font-size: 16px" />
       <span>凶手选择：</span>
       <span class="witness-accuse__hint-means">{{ selectedMeansName || '?' }}</span>
       <span>+</span>
@@ -71,7 +72,7 @@ function moveBoard(index: number, direction: 'up' | 'down') {
     <!-- Instruction -->
     <div class="witness-accuse__instruction">
       <p class="witness-accuse__instruction-text">
-        点击选项标记线索，上下拖动调整选项物优先级（上方 = 高优先）
+        点击选项标记线索，用箭头调整优先级（越靠上越重要）
       </p>
       <span class="witness-accuse__progress">{{ markedCount }}/{{ boards.length }}</span>
     </div>
@@ -88,19 +89,21 @@ function moveBoard(index: number, direction: 'up' | 'down') {
           <span class="witness-accuse__position">{{ index + 1 }}</span>
           <button
             class="witness-accuse__arrow"
+            type="button"
+            :aria-label="`上移${board.title}`"
             :disabled="index === 0"
             @click="moveBoard(index, 'up')"
           >
-            <span class="material-symbols-outlined" style="font-size: 18px">keyboard_arrow_up</span>
+            <AppIcon name="keyboard_arrow_up" class="app-icon" style="font-size: 18px" />
           </button>
           <button
             class="witness-accuse__arrow"
+            type="button"
+            :aria-label="`下移${board.title}`"
             :disabled="index === displayBoards.length - 1"
             @click="moveBoard(index, 'down')"
           >
-            <span class="material-symbols-outlined" style="font-size: 18px"
-              >keyboard_arrow_down</span
-            >
+            <AppIcon name="keyboard_arrow_down" class="app-icon" style="font-size: 18px" />
           </button>
         </div>
 
@@ -123,7 +126,7 @@ function moveBoard(index: number, direction: 'up' | 'down') {
         :disabled="!allMarkersPlaced"
         @click="emit('confirm')"
       >
-        <span class="material-symbols-outlined" style="font-size: 20px">check_circle</span>
+        <AppIcon name="check_circle" class="app-icon" style="font-size: 20px" />
         确认布置
       </button>
     </div>
@@ -134,24 +137,25 @@ function moveBoard(index: number, direction: 'up' | 'down') {
 .witness-accuse {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   padding-bottom: 100px;
 }
 
 .witness-accuse__hint {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 0.8rem;
+  border-radius: var(--radius-md);
+  font-size: 14px;
   color: var(--color-text-muted);
+  flex-wrap: wrap;
 }
 
 .witness-accuse__hint-means {
-  color: var(--color-crimson-light);
+  color: var(--destructive);
   font-weight: 600;
 }
 
@@ -164,20 +168,21 @@ function moveBoard(index: number, direction: 'up' | 'down') {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: var(--space-4);
   background: var(--bg-secondary);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
+  gap: var(--space-3);
 }
 
 .witness-accuse__instruction-text {
-  font-size: 0.75rem;
+  font-size: 12px;
   color: var(--color-text-muted);
   margin: 0;
   flex: 1;
 }
 
 .witness-accuse__progress {
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 700;
   color: var(--color-amber);
   padding: 2px 8px;
@@ -186,12 +191,13 @@ function moveBoard(index: number, direction: 'up' | 'down') {
   border-radius: 4px;
   flex-shrink: 0;
   margin-left: 12px;
+  font-family: var(--font-mono);
 }
 
 .witness-accuse__boards {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-4);
 }
 
 .witness-accuse__board-row {
@@ -204,9 +210,9 @@ function moveBoard(index: number, direction: 'up' | 'down') {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-2);
   flex-shrink: 0;
-  width: 32px;
+  width: 44px;
 }
 
 .witness-accuse__position {
@@ -214,8 +220,8 @@ function moveBoard(index: number, direction: 'up' | 'down') {
   height: 24px;
   border-radius: 50%;
   background: var(--color-amber);
-  color: #fff;
-  font-size: 0.7rem;
+  color: var(--bg-primary);
+  font-size: 12px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -227,9 +233,9 @@ function moveBoard(index: number, direction: 'up' | 'down') {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   color: var(--color-text-muted);
@@ -262,10 +268,11 @@ function moveBoard(index: number, direction: 'up' | 'down') {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 40px 16px 24px;
-  padding-bottom: calc(24px + var(--safe-area-bottom));
-  background: linear-gradient(to top, var(--bg-primary), rgba(13, 17, 23, 0.95), transparent);
+  padding: var(--space-4) max(var(--space-4), calc((100% - 1056px) / 2));
+  padding-bottom: calc(var(--space-4) + var(--safe-area-bottom));
+  background: var(--bg-primary);
   z-index: 50;
+  border-top: 1px solid var(--border);
 }
 
 .witness-accuse__confirm {
@@ -274,10 +281,10 @@ function moveBoard(index: number, direction: 'up' | 'down') {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 52px;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
+  height: 44px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.25);
   transition: all 0.3s ease;
@@ -285,8 +292,8 @@ function moveBoard(index: number, direction: 'up' | 'down') {
 
 .witness-accuse__confirm--active {
   background: var(--color-amber);
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(212, 168, 71, 0.4);
+  color: var(--bg-primary);
+  box-shadow: none;
 }
 
 .witness-accuse__confirm--active:active {
