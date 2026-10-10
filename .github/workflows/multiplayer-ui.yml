@@ -7,6 +7,7 @@ on:
       - 'server/**'
       - 'e2e/**'
       - 'playwright.classic.config.mjs'
+      - 'playwright.edges.config.mjs'
       - 'playwright.multiplayer.config.mjs'
       - 'pnpm-lock.yaml'
       - '.github/workflows/multiplayer-ui.yml'
@@ -15,7 +16,7 @@ permissions:
 jobs:
   browser-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,6 +33,9 @@ jobs:
       - name: Room and replay paths
         if: success() || failure()
         run: node node_modules/playwright/cli.js test --config=playwright.multiplayer.config.mjs
+      - name: Room capacity, identity and gameplay edges
+        if: success() || failure()
+        run: node node_modules/playwright/cli.js test --config=playwright.edges.config.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
