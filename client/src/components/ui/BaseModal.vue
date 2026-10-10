@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
+import { useVisualViewport } from '../../composables/useVisualViewport'
 import AppIcon from './AppIcon.vue'
 
 interface Props {
@@ -20,8 +21,33 @@ const emit = defineEmits<{
 }>()
 
 const dialog = ref<HTMLElement | null>(null)
+const body = ref<HTMLElement | null>(null)
+const { viewport, viewportStyle } = useVisualViewport(() => props.modelValue)
 const titleId = useId()
 let previousFocus: HTMLElement | null = null
+
+watch(viewport, async () => {
+  await nextTick()
+  // The keyboard can cover the focused field after focus has already settled.
+  // Scroll just this dialog's body, never the page or another stacked dialog.
+  const active = document.activeElement
+  if (
+    !props.modelValue ||
+    topDialog() !== dialog.value ||
+    !(active instanceof HTMLElement) ||
+    !body.value?.contains(active)
+  ) {
+    return
+  }
+  const fieldBounds = active.getBoundingClientRect()
+  const bodyBounds = body.value.getBoundingClientRect()
+  const cssZoom = viewport.value?.cssZoom ?? 1
+  if (fieldBounds.bottom > bodyBounds.bottom) {
+    body.value.scrollTop += (fieldBounds.bottom - bodyBounds.bottom) / cssZoom + 12
+  } else if (fieldBounds.top < bodyBounds.top) {
+    body.value.scrollTop -= (bodyBounds.top - fieldBounds.top) / cssZoom + 12
+  }
+})
 
 function focusableElements() {
   return Array.from(
@@ -135,7 +161,14 @@ function onBackdropClick() {
     <Transition name="modal" @before-leave="onBeforeLeave">
       <div
         v-if="modelValue"
-        :class="['modal-overlay', { 'modal-overlay--fullscreen': fullscreen }]"
+        :class="[
+          'modal-overlay',
+          {
+            'modal-overlay--fullscreen': fullscreen,
+            'modal-overlay--compact': viewport && viewport.height <= 500,
+          },
+        ]"
+        :style="viewportStyle"
         @click.self="onBackdropClick"
       >
         <div
@@ -150,12 +183,12 @@ function onBackdropClick() {
         >
           <header v-if="title || !fullscreen" class="modal-header">
             <h2 v-if="title" :id="titleId" class="modal-title">{{ title }}</h2>
-            <button class="modal-close" aria-label="关闭" @click="close">
+            <button type="button" class="modal-close" aria-label="关闭" @click="close">
               <AppIcon name="close" />
             </button>
           </header>
 
-          <div class="modal-body">
+          <div ref="body" class="modal-body">
             <slot />
           </div>
 
@@ -170,14 +203,23 @@ function onBackdropClick() {
 
 <style scoped>
 .modal-overlay {
+  --modal-gutter: var(--space-4);
   position: fixed;
-  inset: 0;
+  top: var(--visual-viewport-top, 0px);
+  left: var(--visual-viewport-left, 0px);
+  width: var(--visual-viewport-width, 100%);
+  height: 100vh;
+  height: var(--visual-viewport-height, 100dvh);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--bg-overlay);
-  padding: var(--space-4);
+  padding: max(var(--modal-gutter), var(--safe-area-top))
+    max(var(--modal-gutter), var(--safe-area-right))
+    max(var(--modal-gutter), var(--safe-area-bottom))
+    max(var(--modal-gutter), var(--safe-area-left));
+  overscroll-behavior: contain;
 }
 
 .modal-card {
@@ -185,8 +227,10 @@ function onBackdropClick() {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   width: 100%;
+  min-width: 0;
+  min-height: 0;
   max-width: 480px;
-  max-height: calc(100dvh - 48px);
+  max-height: 100%;
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
@@ -195,7 +239,6 @@ function onBackdropClick() {
 
 .modal-card--fullscreen {
   max-width: none;
-  max-height: none;
   width: 100%;
   height: 100%;
   border-radius: 0;
@@ -206,11 +249,15 @@ function onBackdropClick() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex: 0 0 auto;
+  gap: var(--space-2);
   padding: var(--space-4) var(--space-6);
   border-bottom: 1px solid var(--border-color);
 }
 
 .modal-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 20px;
   line-height: 28px;
   font-weight: 600;
@@ -221,6 +268,7 @@ function onBackdropClick() {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   width: 44px;
   height: 44px;
   min-height: 44px;
@@ -240,15 +288,20 @@ function onBackdropClick() {
 .modal-body {
   padding: var(--space-6);
   overflow-y: auto;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
   overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+  scroll-padding-block: var(--space-4);
 }
 
 .modal-footer {
   padding: var(--space-4) var(--space-6);
   border-top: 1px solid var(--border-color);
   display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-2);
@@ -256,28 +309,34 @@ function onBackdropClick() {
 
 @media (max-width: 480px) {
   .modal-overlay {
-    padding: var(--space-3);
-  }
-  .modal-card {
-    max-height: calc(100dvh - 24px);
+    --modal-gutter: var(--space-3);
   }
   .modal-header,
   .modal-body,
   .modal-footer {
     padding: var(--space-4);
   }
-  .modal-footer {
-    flex-wrap: wrap;
-  }
 }
 
 .modal-overlay--fullscreen {
-  padding: 0;
-}
-.modal-card--fullscreen {
-  max-height: 100dvh;
+  --modal-gutter: 0px;
 }
 .modal-card--fullscreen .modal-body {
+  padding: 0;
+}
+
+/* Landscape and open keyboards need more room for the scrollable form body. */
+.modal-overlay--compact:not(.modal-overlay--fullscreen) {
+  --modal-gutter: var(--space-2);
+}
+.modal-overlay--compact .modal-header,
+.modal-overlay--compact .modal-footer {
+  padding-block: var(--space-2);
+}
+.modal-overlay--compact .modal-body {
+  padding-block: var(--space-3);
+}
+.modal-overlay--compact .modal-card--fullscreen .modal-body {
   padding: 0;
 }
 
@@ -303,5 +362,12 @@ function onBackdropClick() {
 .modal-leave-to .modal-card {
   transform: scale(0.92);
   opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-enter-from .modal-card,
+  .modal-leave-to .modal-card {
+    transform: none;
+  }
 }
 </style>

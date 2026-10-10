@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppIcon from '../ui/AppIcon.vue'
-import { ref } from 'vue'
+import { ref, useId } from 'vue'
 import type { SceneBoard, Player } from '../../types'
 import SceneBoardPanel from '../game/SceneBoardPanel.vue'
 import PlayerCardRow from '../game/PlayerCardRow.vue'
@@ -22,6 +22,18 @@ const emit = defineEmits<{
 }>()
 
 const activeTab = ref<'boards' | 'cards'>('boards')
+const navigationId = useId()
+const playerList = ref<HTMLElement | null>(null)
+function jumpToPlayer(event: Event) {
+  const id = (event.target as HTMLSelectElement).value
+  const row = Array.from(playerList.value?.children ?? []).find(
+    (element) => (element as HTMLElement).dataset.playerId === id,
+  )
+  if (row instanceof HTMLElement) {
+    row.scrollIntoView({ block: 'start' })
+    row.focus({ preventScroll: true })
+  }
+}
 </script>
 
 <template>
@@ -69,13 +81,31 @@ const activeTab = ref<'boards' | 'cards'>('boards')
       </div>
 
       <!-- Cards tab -->
-      <div v-if="activeTab === 'cards'" class="discussion__cards">
-        <PlayerCardRow v-for="player in players" :key="player.id" :player="player" />
-      </div>
+      <template v-if="activeTab === 'cards'">
+        <div class="discussion__player-navigation">
+          <label :for="navigationId">快速查找玩家</label>
+          <select :id="navigationId" @change="jumpToPlayer">
+            <option value="">选择玩家 · {{ players.length }} 人</option>
+            <option v-for="player in players" :key="player.id" :value="player.id">
+              {{ player.nickname }}
+            </option>
+          </select>
+          <p>轻点卡牌，放大查看</p>
+        </div>
+        <div ref="playerList" class="discussion__cards">
+          <PlayerCardRow
+            v-for="player in players"
+            :key="player.id"
+            :player="player"
+            :data-player-id="player.id"
+            tabindex="-1"
+          />
+        </div>
+      </template>
     </div>
 
     <!-- Spacer for fixed footer -->
-    <div style="height: 80px" />
+    <div class="discussion__footer-space" aria-hidden="true" />
 
     <!-- Footer actions -->
     <div class="discussion__footer">
@@ -240,5 +270,44 @@ const activeTab = ref<'boards' | 'cards'>('boards')
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 400;
+}
+.discussion__footer-space {
+  height: calc(80px + var(--safe-area-bottom));
+  flex-shrink: 0;
+}
+.discussion__player-navigation {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.discussion__player-navigation label {
+  font-weight: 600;
+}
+.discussion__player-navigation select {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--color-text);
+}
+.discussion__player-navigation p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.discussion__cards :deep(.player-card-row) {
+  scroll-margin-top: calc(104px + var(--safe-area-top));
+}
+@media (max-height: 500px) {
+  .discussion__cards :deep(.player-card-row) {
+    scroll-margin-top: 12px;
+  }
+}
+.discussion__footer {
+  padding-left: max(var(--space-4), var(--safe-area-left), calc((100% - 1056px) / 2));
+  padding-right: max(var(--space-4), var(--safe-area-right), calc((100% - 1056px) / 2));
 }
 </style>

@@ -246,4 +246,17 @@ const revealed = ref(false)
   outline: 3px solid var(--ring);
   outline-offset: 3px;
 }
+.night-view__header,
+.night-view__body,
+.night-view__section,
+.night-view__title-area,
+.night-view__footer {
+  padding-left: max(var(--space-4), var(--safe-area-left));
+  padding-right: max(var(--space-4), var(--safe-area-right));
+}
+@media (max-height: 500px) {
+  .night-view__header {
+    position: static;
+  }
+}
 </style>

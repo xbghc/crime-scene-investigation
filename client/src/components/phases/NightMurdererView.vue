@@ -197,10 +197,17 @@ function isAccomplice(id: string) {
     </section>
 
     <!-- Spacer for bottom button -->
-    <div style="height: 100px" />
+    <div class="murder-view__footer-space" aria-hidden="true" />
 
     <!-- Confirm button -->
     <div class="murder-view__footer">
+      <p class="murder-view__selection" aria-live="polite">
+        <span>{{
+          meansCards.find((card) => card.id === selectedMeansId)?.name ?? '待选手段'
+        }}</span>
+        <span aria-hidden="true">＋</span>
+        <span>{{ clueCards.find((card) => card.id === selectedClueId)?.name ?? '待选线索' }}</span>
+      </p>
       <button
         class="murder-view__confirm"
         :class="{ 'murder-view__confirm--active': canConfirm }"
@@ -220,7 +227,6 @@ function isAccomplice(id: string) {
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
-  overflow-x: hidden;
   padding-bottom: 0;
 }
 
@@ -609,5 +615,44 @@ function isAccomplice(id: string) {
 .murder-card:focus-visible {
   outline: 3px solid var(--ring);
   outline-offset: 3px;
+}
+.murder-view__footer-space {
+  height: calc(132px + var(--safe-area-bottom));
+  flex-shrink: 0;
+}
+.murder-view__selection {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 8px;
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+@media (max-height: 500px) {
+  .murder-view__header {
+    position: static;
+  }
+  .murder-view__title-area {
+    padding-top: 16px;
+  }
+  .murder-view__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .murder-view__footer {
+    padding-top: 8px;
+    padding-bottom: calc(8px + var(--safe-area-bottom));
+  }
+}
+.murder-view__footer {
+  padding-left: max(var(--space-4), var(--safe-area-left), calc((100% - 752px) / 2));
+  padding-right: max(var(--space-4), var(--safe-area-right), calc((100% - 752px) / 2));
+}
+.murder-view__header,
+.murder-view__section,
+.murder-view__title-area {
+  padding-left: max(var(--space-4), var(--safe-area-left));
+  padding-right: max(var(--space-4), var(--safe-area-right));
 }
 </style>

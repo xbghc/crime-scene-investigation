@@ -596,4 +596,17 @@ function isAccomplice(id: string) {
     padding: 0 var(--space-4);
   }
 }
+.accomplice-view__header,
+.accomplice-view__body,
+.accomplice-view__section,
+.accomplice-view__title-area,
+.accomplice-view__footer {
+  padding-left: max(var(--space-4), var(--safe-area-left));
+  padding-right: max(var(--space-4), var(--safe-area-right));
+}
+@media (max-height: 500px) {
+  .accomplice-view__header {
+    position: static;
+  }
+}
 </style>
