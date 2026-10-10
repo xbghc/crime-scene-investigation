@@ -75,7 +75,13 @@ onUnmounted(() => {
   font-weight: 500;
 
   box-shadow: var(--shadow-lg);
-  max-width: 90vw;
+  /* Server phase announcements use their own type. Keep a readable surface
+     even when a message does not have a dedicated semantic variant. */
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--color-text);
+  width: max-content;
+  max-width: calc(100% - 2 * max(16px, var(--safe-area-left), var(--safe-area-right)));
   text-align: center;
 }
 
@@ -97,7 +103,13 @@ onUnmounted(() => {
   border: 1px solid var(--color-crimson);
 }
 
+.base-toast__message {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .base-toast__close {
+  flex-shrink: 0;
   display: grid;
   place-items: center;
   border-radius: var(--radius-md);

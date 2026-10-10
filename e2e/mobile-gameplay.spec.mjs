@@ -125,10 +125,11 @@ async function mobileLayout(page) {
         '.murder-view__grid', '.witness-night__cards', '.accomplice-view__grid', '.role-flip', '.scene-board', '.discussion__tabs',
         '.player-card-row', '.player-card-row__row', '.effect-panel', '.advance__actions',
         '.solve__header', '.solve__body', '.solve__grid', '.solve__card-grid',
-        '.game-over__player', '.game-over__solution-cards', '.modal-card',
+        '.game-over__player', '.game-over__solution-cards', '.modal-card', '.base-toast',
       ].join(','))].filter(visible).flatMap((element) => {
         const rect = element.getBoundingClientRect()
-        return rect.left < -1 || rect.right > innerWidth + 1 ? [describe(element)] : []
+        return rect.left < -1 || rect.right > document.documentElement.clientWidth + 1
+          ? [{ ...describe(element), left: rect.left, right: rect.right }] : []
       })
       const smallTargets = [...document.querySelectorAll(
         'button:enabled, input:not([type="hidden"]):enabled, select:enabled, [role="button"]:not([aria-disabled="true"])',
@@ -142,7 +143,11 @@ async function mobileLayout(page) {
           const fontSize = parseFloat(getComputedStyle(element).fontSize)
           return fontSize < 16 ? [{ ...describe(element), fontSize }] : []
         })
+      const transparentToasts = [...document.querySelectorAll('.base-toast')].filter(visible)
+        .filter((element) => getComputedStyle(element).backgroundColor === 'rgba(0, 0, 0, 0)')
+        .map(describe)
       return {
+        transparentToasts,
         viewport: document.documentElement.clientWidth,
         width: document.documentElement.scrollWidth,
         clipped, smallTargets, smallInputs,
@@ -150,6 +155,7 @@ async function mobileLayout(page) {
     })
     expect(result.width, JSON.stringify(result)).toBeLessThanOrEqual(result.viewport + 1)
     expect(result.clipped, 'Content must fit without being clipped').toEqual([])
+    expect(result.transparentToasts, 'Every message type needs an opaque readable toast surface').toEqual([])
     expect(result.smallTargets, 'Actionable controls must be at least 44×44 CSS pixels').toEqual([])
     expect(result.smallInputs, 'Editable text must be at least 16px on phones').toEqual([])
   }).toPass({ timeout: 5_000, intervals: [100, 250, 500] })
