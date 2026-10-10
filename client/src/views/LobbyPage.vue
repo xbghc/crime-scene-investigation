@@ -391,7 +391,7 @@ onUnmounted(() => {
             !allConnected
               ? '等待玩家重连…'
               : missingPlayers > 0
-                ? `开始调查（至少 ${minPlayers} 人）`
+                ? `开始调查（至少${minPlayers}人）`
                 : '开始调查'
           }}
         </IconButton>

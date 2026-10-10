@@ -14,7 +14,8 @@ export default defineConfig({
   use: {
     ...base.use,
     viewport: { width: 390, height: 844 },
-    trace: 'retain-on-failure',
+    // The isolated-player fixture owns tracing for each browser context.
+    trace: 'off',
     screenshot: 'only-on-failure',
   },
 })
