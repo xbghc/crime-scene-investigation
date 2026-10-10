@@ -41,10 +41,11 @@ watch(viewport, async () => {
   }
   const fieldBounds = active.getBoundingClientRect()
   const bodyBounds = body.value.getBoundingClientRect()
+  const cssZoom = viewport.value?.cssZoom ?? 1
   if (fieldBounds.bottom > bodyBounds.bottom) {
-    body.value.scrollTop += fieldBounds.bottom - bodyBounds.bottom + 12
+    body.value.scrollTop += (fieldBounds.bottom - bodyBounds.bottom) / cssZoom + 12
   } else if (fieldBounds.top < bodyBounds.top) {
-    body.value.scrollTop -= bodyBounds.top - fieldBounds.top + 12
+    body.value.scrollTop -= (bodyBounds.top - fieldBounds.top) / cssZoom + 12
   }
 })
 
@@ -361,5 +362,12 @@ function onBackdropClick() {
 .modal-leave-to .modal-card {
   transform: scale(0.92);
   opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-enter-from .modal-card,
+  .modal-leave-to .modal-card {
+    transform: none;
+  }
 }
 </style>

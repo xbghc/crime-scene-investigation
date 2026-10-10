@@ -104,49 +104,55 @@ async function joinRoom(player, code) {
 }
 
 async function mobileLayout(page) {
-  const result = await page.evaluate(() => {
-    const visible = (element) => {
-      const rect = element.getBoundingClientRect()
-      return rect.width > 0 && rect.height > 0 && getComputedStyle(element).visibility !== 'hidden'
-    }
-    const describe = (element) => ({
-      className: element.className,
-      label: element.getAttribute('aria-label') || element.textContent?.trim().slice(0, 60),
-    })
-    // Check the boxes themselves too: overflow-x:hidden must not conceal a defect.
-    // Card rows may deliberately scroll internally, but their viewport must fit.
-    const clipped = [...document.querySelectorAll([
-      'form', 'main', '.room-controls', '.room-controls__actions', '.game-layout__header',
-      '.murder-view__grid', '.witness-night__cards', '.accomplice-view__grid', '.role-flip', '.scene-board', '.discussion__tabs',
-      '.player-card-row', '.player-card-row__row', '.effect-panel', '.advance__actions',
-      '.solve__header', '.solve__body', '.solve__grid', '.solve__card-grid',
-      '.game-over__player', '.game-over__solution-cards', '.modal-card',
-    ].join(','))].filter(visible).flatMap((element) => {
-      const rect = element.getBoundingClientRect()
-      return rect.left < -1 || rect.right > innerWidth + 1 ? [describe(element)] : []
-    })
-    const smallTargets = [...document.querySelectorAll(
-      'button:enabled, input:not([type="hidden"]):enabled, select:enabled, [role="button"]:not([aria-disabled="true"])',
-    )].filter(visible).flatMap((element) => {
-      const rect = element.getBoundingClientRect()
-      return rect.width < 43.5 || rect.height < 43.5
-        ? [{ ...describe(element), width: rect.width, height: rect.height }] : []
-    })
-    const smallInputs = [...document.querySelectorAll('input:not([type="hidden"]), textarea, select')]
-      .filter(visible).flatMap((element) => {
-        const fontSize = parseFloat(getComputedStyle(element).fontSize)
-        return fontSize < 16 ? [{ ...describe(element), fontSize }] : []
+  // Vue's enter-from scale exists for two animation frames even with reduced
+  // motion. Viewport listeners also apply their new bounds on the next tick.
+  // Retry the complete strict measurement until settled; never shrink target
+  // requirements or discard an overflowing element to make a snapshot pass.
+  await expect(async () => {
+    const result = await page.evaluate(() => {
+      const visible = (element) => {
+        const rect = element.getBoundingClientRect()
+        return rect.width > 0 && rect.height > 0 && getComputedStyle(element).visibility !== 'hidden'
+      }
+      const describe = (element) => ({
+        className: element.className,
+        label: element.getAttribute('aria-label') || element.textContent?.trim().slice(0, 60),
       })
-    return {
-      viewport: document.documentElement.clientWidth,
-      width: document.documentElement.scrollWidth,
-      clipped, smallTargets, smallInputs,
-    }
-  })
-  expect(result.width, JSON.stringify(result)).toBeLessThanOrEqual(result.viewport + 1)
-  expect(result.clipped, 'Content must fit without being clipped').toEqual([])
-  expect(result.smallTargets, 'Actionable controls must be at least 44×44 CSS pixels').toEqual([])
-  expect(result.smallInputs, 'Editable text must be at least 16px on phones').toEqual([])
+      // Check the boxes themselves too: overflow-x:hidden must not conceal a defect.
+      // Card rows may deliberately scroll internally, but their viewport must fit.
+      const clipped = [...document.querySelectorAll([
+        'form', 'main', '.room-controls', '.room-controls__actions', '.game-layout__header',
+        '.murder-view__grid', '.witness-night__cards', '.accomplice-view__grid', '.role-flip', '.scene-board', '.discussion__tabs',
+        '.player-card-row', '.player-card-row__row', '.effect-panel', '.advance__actions',
+        '.solve__header', '.solve__body', '.solve__grid', '.solve__card-grid',
+        '.game-over__player', '.game-over__solution-cards', '.modal-card',
+      ].join(','))].filter(visible).flatMap((element) => {
+        const rect = element.getBoundingClientRect()
+        return rect.left < -1 || rect.right > innerWidth + 1 ? [describe(element)] : []
+      })
+      const smallTargets = [...document.querySelectorAll(
+        'button:enabled, input:not([type="hidden"]):enabled, select:enabled, [role="button"]:not([aria-disabled="true"])',
+      )].filter(visible).flatMap((element) => {
+        const rect = element.getBoundingClientRect()
+        return rect.width < 43.5 || rect.height < 43.5
+          ? [{ ...describe(element), width: rect.width, height: rect.height }] : []
+      })
+      const smallInputs = [...document.querySelectorAll('input:not([type="hidden"]), textarea, select')]
+        .filter(visible).flatMap((element) => {
+          const fontSize = parseFloat(getComputedStyle(element).fontSize)
+          return fontSize < 16 ? [{ ...describe(element), fontSize }] : []
+        })
+      return {
+        viewport: document.documentElement.clientWidth,
+        width: document.documentElement.scrollWidth,
+        clipped, smallTargets, smallInputs,
+      }
+    })
+    expect(result.width, JSON.stringify(result)).toBeLessThanOrEqual(result.viewport + 1)
+    expect(result.clipped, 'Content must fit without being clipped').toEqual([])
+    expect(result.smallTargets, 'Actionable controls must be at least 44×44 CSS pixels').toEqual([])
+    expect(result.smallInputs, 'Editable text must be at least 16px on phones').toEqual([])
+  }).toPass({ timeout: 5_000, intervals: [100, 250, 500] })
 }
 
 async function evidence(page, name) {
