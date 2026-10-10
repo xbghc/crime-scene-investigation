@@ -465,6 +465,13 @@ describe('effect authorization over real authenticated Socket.IO connections', (
   it('reconnecting a witness does not replenish consumed authorization', async () => {
     const round = await setup('E01')
     await succeed(round, 'E01', { targetId: round.detectives[0]!.id })
+    const serverSocket = io.sockets.sockets.get(round.witnessSocket.id!)!
+    const disconnected = new Promise<void>((resolve) =>
+      serverSocket.once('disconnect', () => resolve()),
+    )
+    round.witnessSocket.disconnect()
+    await disconnected
+    expect(round.witness.socketId).toBeNull()
     const replacement = await client(round.witness.id)
     expect(await command(replacement, 'resume_room', { code: round.code })).toMatchObject({
       ok: true,
