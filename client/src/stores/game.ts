@@ -9,6 +9,8 @@ import type {
   SceneBoard,
   MurdererSelection,
   EffectCard,
+  EffectResult,
+  PendingEffect,
   SolveResult,
   RoomState,
 } from '../types'
@@ -74,6 +76,12 @@ export const useGameStore = defineStore('game', () => {
   const murdererSelection = ref<MurdererSelection | undefined>()
   const currentSolverId = ref<string | undefined>()
   const effectCard = ref<EffectCard | undefined>()
+  const effectResult = ref<EffectResult | undefined>()
+  const pendingEffect = ref<PendingEffect | null>(null)
+  const effectSubmitting = ref(false)
+  const effectError = ref<string | null>(null)
+  // Live draws announce once. Snapshot recovery and completion never replay the modal.
+  const effectAnnouncement = ref(0)
   const winner = ref<Winner | undefined>()
   const scores = ref<Record<string, number> | undefined>()
   const blackout = ref(false)
@@ -147,7 +155,10 @@ export const useGameStore = defineStore('game', () => {
     murdererSelection.value = state.murdererSelection
     currentSolverId.value = state.currentSolverId
     forceSolveTurnPlayerId.value = state.currentSolverId
-    effectCard.value = state.effectCard
+    effectCard.value = state.effectCard ?? undefined
+    effectResult.value = state.effectResult ?? undefined
+    setPendingEffect(state.pendingEffect ?? null)
+    finishEffectAction()
     winner.value = state.winner
     scores.value = state.scores
     blackout.value = state.blackout ?? false
@@ -161,13 +172,19 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function setPhase(newPhase: GamePhase) {
+    if (newPhase === 'game-over' || (ADVANCE_PHASES.has(newPhase) && newPhase !== phase.value)) {
+      effectCard.value = undefined
+      effectResult.value = undefined
+    }
     phase.value = newPhase
     advanceReady.value = false
+    setPendingEffect(null)
   }
 
   function setMyInfo(playerId: string, role: Role) {
     myPlayerId.value = playerId
     myRole.value = role
+    if (role !== 'witness') setPendingEffect(null)
   }
 
   function updatePlayers(newPlayers: Player[]) {
@@ -182,8 +199,34 @@ export const useGameStore = defineStore('game', () => {
     murdererSelection.value = selection
   }
 
-  function setEffectCard(card: EffectCard | undefined) {
+  function setEffectCard(card: EffectCard | undefined, result?: EffectResult) {
+    if (card && card.id !== effectCard.value?.id) effectAnnouncement.value += 1
     effectCard.value = card
+    effectResult.value = result
+  }
+
+  function setPendingEffect(pending: PendingEffect | null) {
+    // Eligible targets can reveal the solution. Never keep them outside the witness view.
+    pendingEffect.value = isWitness.value && isAdvancePhase.value ? pending : null
+    finishEffectAction()
+  }
+
+  function beginEffectAction(effectId: string) {
+    if (
+      !isWitness.value ||
+      !isAdvancePhase.value ||
+      pendingEffect.value?.effectId !== effectId ||
+      effectSubmitting.value
+    )
+      return false
+    effectSubmitting.value = true
+    effectError.value = null
+    return true
+  }
+
+  function finishEffectAction(error?: string) {
+    effectSubmitting.value = false
+    effectError.value = pendingEffect.value ? (error ?? null) : null
   }
 
   function setSolveResult(result: SolveResult) {
@@ -294,6 +337,11 @@ export const useGameStore = defineStore('game', () => {
     murdererSelection.value = undefined
     currentSolverId.value = undefined
     effectCard.value = undefined
+    effectResult.value = undefined
+    pendingEffect.value = null
+    effectSubmitting.value = false
+    effectError.value = null
+    effectAnnouncement.value = 0
     winner.value = undefined
     scores.value = undefined
     blackout.value = false
@@ -326,6 +374,11 @@ export const useGameStore = defineStore('game', () => {
     murdererSelection,
     currentSolverId,
     effectCard,
+    effectResult,
+    pendingEffect,
+    effectSubmitting,
+    effectError,
+    effectAnnouncement,
     winner,
     scores,
     blackout,
@@ -369,6 +422,9 @@ export const useGameStore = defineStore('game', () => {
     updateBoards,
     setMurdererSelection,
     setEffectCard,
+    setPendingEffect,
+    beginEffectAction,
+    finishEffectAction,
     setSolveResult,
     setForceSolveTurn,
     setGameOver,

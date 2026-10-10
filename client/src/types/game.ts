@@ -95,7 +95,9 @@ export interface GameState {
   myRole?: Role
   murdererSelection?: MurdererSelection
   currentSolverId?: string
-  effectCard?: EffectCard
+  effectCard?: EffectCard | null
+  effectResult?: EffectResult | null
+  pendingEffect?: PendingEffect | null // 仅目击者：服务器提供的合法选项
   winner?: 'detective' | 'murderer'
   scores?: Record<string, number>
   blackout?: boolean // 停电效果
@@ -107,7 +109,35 @@ export interface GameState {
 
 // === 效果牌操作 ===
 
+export interface EffectResult {
+  requiresWitnessAction?: boolean
+  effectId?: string
+  unsupported?: boolean
+  victimId?: string
+  victimName?: string
+  shuffledMeans?: boolean
+  applied?: boolean
+  skipped?: boolean
+  message?: string
+  targetId?: string
+  boardId?: string
+  pointedCardId?: string
+  pointedCardName?: string
+  pointedCardType?: 'means' | 'clue'
+  players?: Player[]
+  blackout?: boolean
+}
+
+export interface PendingEffect {
+  effectId: string
+  targetIds?: string[]
+  boardIds?: string[]
+  cardIds?: string[]
+  optional: boolean
+}
+
 export interface EffectActionData {
+  skip?: boolean
   targetId?: string
   boardId?: string
   cardId?: string

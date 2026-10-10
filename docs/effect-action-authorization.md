@@ -11,6 +11,8 @@ The server authorizes a witness action against the card drawn in the current adv
 
 ## Scope and compatibility
 
-This is a server authorization fix, not completion of the effect-card feature. The client does not currently expose controls for the four interactive actions. Existing advance completion remains unchanged: an unused action does not block board replacement or Continue, and expires when the advance ends. Making effects mandatory would require a separate, complete UI and reconnect-state implementation and would otherwise deadlock existing clients.
+PR #4 originally introduced only server authorization. The subsequent interactive-effect iteration adds client controls and reconnect-safe state for E01/E03/E05/E08. E01/E03/E05 now block replacement and completion until executed; the server automatically resolves a mandatory card with an explanation if no legal targets exist. E08 requires either a valid selected answer card or explicit `{ skip: true }` before completing the advance. Invalid and repeated requests retain the authorization protections above.
 
-Tests cover legitimate interactive actions through authenticated Socket.IO connections, forged card IDs, replay, invalid retry, role ownership, and authorization lifecycle. Existing browser scenarios exercise the automatic E07 effect and ordinary progression; they do not claim interactive-effect UI coverage.
+Witness-only `pendingEffect` is restored from snapshots and never sent to other players. Public `effectCard` / `effectResult` survives refresh, including E08's intentionally revealed card name. Closing the announcement or cancelling a selection does not consume an action. See [interactive effect controls and verification](interactive-effect-cards.md).
+
+Authenticated Socket.IO tests cover forged card IDs, replay, invalid retry, role ownership and authorization lifecycle. Browser suites now include six interactive-effect scenarios in addition to the existing automatic E07 and ordinary progression coverage. E04/E06/E10 remain outside the completed gameplay scope.

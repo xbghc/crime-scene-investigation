@@ -43,6 +43,32 @@ export interface EffectCardRef extends CardRef {
   effect: string
 }
 
+// The drawn card and its public outcome survive refresh and the following discussion.
+export interface EffectResult {
+  applied?: boolean
+  skipped?: boolean
+  message?: string
+  targetId?: string
+  pointedCardId?: string
+  boardId?: string
+  requiresWitnessAction?: boolean
+  effectId?: string
+  unsupported?: boolean
+  victimId?: string
+  victimName?: string
+  blackout?: boolean
+  shuffledMeans?: boolean
+}
+
+// Eligible choices contain private information and are sent only to the witness.
+export interface PendingEffect {
+  effectId: string
+  targetIds?: string[]
+  boardIds?: string[]
+  cardIds?: string[]
+  optional: boolean
+}
+
 export interface MarkerPlacement {
   optionIndex: number
   markerNumber: number // 1-6
@@ -100,6 +126,8 @@ export interface GameInternalState {
   solution: MurdererSelection | null
 
   // Phase tracking
+  effectCard: EffectCardRef | null
+  effectResult: EffectResult | null
   accompliceHasChosen: boolean // for advance-1
   blackout: boolean // E07 effect
   blackoutClearsAfterPhase: GamePhase | null
@@ -138,6 +166,7 @@ export interface SolveOpResult extends OpResult {
 
 // Effect action data from witness
 export interface EffectActionData {
+  skip?: boolean
   targetId?: string
   boardId?: string
   cardId?: string

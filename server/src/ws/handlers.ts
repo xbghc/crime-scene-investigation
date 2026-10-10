@@ -154,6 +154,7 @@ export function registerHandlers(io: Server, socket: Socket, rooms = getRoomMana
       d.data !== null &&
       typeof d.data === 'object' &&
       !Array.isArray(d.data) &&
+      (object(d.data).skip === undefined || typeof object(d.data).skip === 'boolean') &&
       ['targetId', 'boardId', 'cardId'].every(
         (key) => object(d.data)[key] === undefined || strings(object(d.data), key),
       ),

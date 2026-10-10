@@ -35,6 +35,27 @@ const newBoards: SceneBoard[] = [
         @witness-replace="(p) => console.log('witness-replace:', p)"
       />
     </Variant>
+    <Variant title="目击者先处理效果，再换板">
+      <AdvancePhaseView
+        :boards="mockBoards"
+        :new-boards="newBoards"
+        :players="mockPlayers"
+        :is-witness="true"
+        :is-accomplice="false"
+        :is-advance1="true"
+        :effect-card="{
+          id: 'E05',
+          name: '证据遗失',
+          effect: '目击者必须移除一张当前场景板上的选项物',
+        }"
+        :pending-effect="{
+          effectId: 'E05',
+          boardIds: mockBoards.filter((board) => board.marker).map((board) => board.id),
+          optional: false,
+        }"
+        @effect-action="(action) => console.log('effect-action:', action)"
+      />
+    </Variant>
     <Variant title="目击者等待推进准备">
       <AdvancePhaseView
         :boards="mockBoards"

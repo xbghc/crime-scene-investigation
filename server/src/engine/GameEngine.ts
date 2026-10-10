@@ -12,6 +12,8 @@ import {
   type PlayerState,
   type CardRef,
   type EffectCardRef,
+  type EffectResult,
+  type PendingEffect,
   type SceneBoardState,
   type SolveAttempt,
   type MurdererSelection,
@@ -58,7 +60,7 @@ export class GameEngine {
   private completedRoles: Record<string, Role> | null = null
   private pendingBoards: SceneBoardState[] = []
   private advanceEffectsStarted = false
-  private pendingEffectId: string | null = null
+  private pendingEffect: PendingEffect | null = null
   private disconnectTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
 
   constructor(io: Server, roomCode = 'test-room') {
@@ -79,6 +81,8 @@ export class GameEngine {
       sceneBoardPool: [],
       activeBoards: [],
       solution: null,
+      effectCard: null,
+      effectResult: null,
       accompliceHasChosen: false,
       blackout: false,
       blackoutClearsAfterPhase: null,
@@ -93,11 +97,12 @@ export class GameEngine {
   // Reset state completely (for server restart or initial setup)
   resetToInitial(): void {
     this.dispose()
+    this.setPendingEffect(null)
     this.state = this.createInitialState()
     this.completedRoles = null
     this.pendingBoards = []
     this.advanceEffectsStarted = false
-    this.pendingEffectId = null
+    this.setPendingEffect(null)
   }
 
   // RoomManager owns room expiry. Release only timers owned by this engine.
@@ -530,7 +535,9 @@ export class GameEngine {
     optionIndex: number,
     markerNumber: number,
   ): OpResult {
-    if (this.state.phase !== 'witness-accuse' && !this.isAdvancePhase()) {
+    // Advance markers are set only by a board replacement. Letting this generic
+    // action run here would undo E05 and silently implement unsupported E06.
+    if (this.state.phase !== 'witness-accuse') {
       return { ok: false, error: '当前阶段不允许放置选项物' }
     }
 
@@ -634,10 +641,12 @@ export class GameEngine {
 
   private transitionToAdvance(phase: AdvancePhase): void {
     this.state.phase = phase
+    this.state.effectCard = null
+    this.state.effectResult = null
     this.state.accompliceHasChosen = false
     this.pendingBoards = []
     this.advanceEffectsStarted = false
-    this.pendingEffectId = null
+    this.setPendingEffect(null)
 
     this.io.to(this.roomCode).emit('phase_change', { phase })
     this.io.to(this.roomCode).emit('system_message', { content: '推进阶段开始...', type: 'phase' })
@@ -647,6 +656,7 @@ export class GameEngine {
 
     if (phase === 'advance-1' && accomplice) {
       this.emitToPlayer(accomplice, 'accomplice_prompt', {})
+      this.broadcastGameState()
     } else {
       this.executeAdvanceEffects(false)
     }
@@ -688,13 +698,13 @@ export class GameEngine {
   private executeAdvanceEffects(accompliceReplaced: boolean): void {
     this.advanceEffectsStarted = true
     const effectCard = this.drawEffectCard()
-    // Only implemented witness actions create a one-use authorization. Automatic
-    // and currently unsupported effects must not authorize a client-selected card.
-    this.pendingEffectId =
-      effectCard && ['E01', 'E03', 'E05', 'E08'].includes(effectCard.id) ? effectCard.id : null
+    this.state.effectCard = effectCard
+    this.state.effectResult = effectCard ? this.applyEffectCard(effectCard) : null
     if (effectCard) {
-      const result = this.applyEffectCard(effectCard)
-      this.io.to(this.roomCode).emit('effect_card', { card: effectCard, result })
+      this.io.to(this.roomCode).emit('effect_card', {
+        card: effectCard,
+        result: this.state.effectResult,
+      })
     }
 
     const boardCount = accompliceReplaced ? 2 : 1
@@ -712,9 +722,10 @@ export class GameEngine {
       this.emitToPlayer(witness, 'new_boards', {
         boards: newBoards.map((b) => this.boardToPublic(b)),
       })
-    } else {
+    } else if (!this.pendingEffect) {
       this.finishAdvancePhase()
     }
+    this.broadcastGameState()
   }
 
   handleWitnessReplaceBoard(
@@ -731,6 +742,10 @@ export class GameEngine {
     const player = this.findPlayer(userId)
     if (!player || player.role !== 'witness')
       return { ok: false, error: '只有目击者可以替换场景板' }
+
+    if (this.isAdvancePhase() && this.pendingEffect && !this.pendingEffect.optional) {
+      return { ok: false, error: '请先执行本轮效果牌' }
+    }
 
     const oldBoard = this.state.activeBoards.find((b) => b.id === oldBoardId)
     if (!oldBoard) return { ok: false, error: '无效的旧场景板' }
@@ -789,9 +804,12 @@ export class GameEngine {
   }
 
   private isAdvanceReady(): boolean {
-    // Preserve the existing optional interaction/progression contract: the UI
-    // does not yet implement effect actions. Unused authorization expires on exit.
-    return this.isAdvancePhase() && this.advanceEffectsStarted && this.pendingBoards.length === 0
+    return (
+      this.isAdvancePhase() &&
+      this.advanceEffectsStarted &&
+      this.pendingBoards.length === 0 &&
+      this.pendingEffect === null
+    )
   }
 
   private emitBoardUpdate(event: string, payload: Record<string, unknown>): void {
@@ -807,15 +825,17 @@ export class GameEngine {
     if (this.findPlayer(userId)?.role !== 'witness')
       return { ok: false, error: '只有目击者可以执行此操作' }
     if (!this.isAdvancePhase()) return { ok: false, error: '当前不在推进阶段' }
+    if (this.pendingEffect) return { ok: false, error: '请先执行效果牌，信息泄露也可以选择跳过' }
     if (!this.isAdvanceReady()) return { ok: false, error: '请等待帮凶决定并完成场景板替换' }
     this.finishAdvancePhase()
     return { ok: true }
   }
 
   finishAdvancePhase(): void {
+    if (this.pendingEffect) return
     this.pendingBoards = []
     this.advanceEffectsStarted = false
-    this.pendingEffectId = null
+    this.setPendingEffect(null)
     if (this.state.phase === 'advance-1') {
       this.transitionToDiscussion('discussion-2')
     } else if (this.state.phase === 'advance-2') {
@@ -925,7 +945,11 @@ export class GameEngine {
 
   private endGame(winner: 'detective' | 'murderer'): void {
     this.clearPhaseTimer()
-    this.pendingEffectId = null
+    this.setPendingEffect(null)
+    this.pendingBoards = []
+    this.advanceEffectsStarted = false
+    this.state.effectCard = null
+    this.state.effectResult = null
     logger.game('GAME', `=== GAME OVER ===`, {
       winner,
       solution: this.state.solution,
@@ -1002,7 +1026,7 @@ export class GameEngine {
     this.completedRoles = null
     this.pendingBoards = []
     this.advanceEffectsStarted = false
-    this.pendingEffectId = null
+    this.setPendingEffect(null)
     const previousHostId = this.state.hostId
     const players = this.state.players.map((p) => ({
       ...p,
@@ -1035,7 +1059,7 @@ export class GameEngine {
     return this.state.effectDeck.shift()!
   }
 
-  private applyEffectCard(card: EffectCardRef): Record<string, unknown> {
+  private applyEffectCard(card: EffectCardRef): EffectResult {
     switch (card.id) {
       case 'E02':
         return this.applyRandomKill()
@@ -1043,13 +1067,21 @@ export class GameEngine {
         return this.applyBlackout()
       case 'E09':
         return this.applyShuffleMeans()
-      // E01, E03, E04, E05, E06, E08, E10 require witness interaction
+      case 'E01':
+      case 'E03':
+      case 'E05':
+      case 'E08':
+        return this.prepareWitnessEffect(card.id)
       default:
-        return { applied: false, requiresWitnessAction: true, effectId: card.id }
+        return {
+          applied: false,
+          unsupported: true,
+          message: '此效果牌暂未实现，本轮正常替换场景板',
+        }
     }
   }
 
-  private applyRandomKill(): Record<string, unknown> {
+  private applyRandomKill(): EffectResult {
     const candidates = this.state.players.filter(
       (p) => p.role !== 'witness' && p.status === 'alive' && p.hasSolveRight,
     )
@@ -1061,14 +1093,14 @@ export class GameEngine {
     return { applied: true, victimId: victim.id, victimName: victim.nickname }
   }
 
-  private applyBlackout(): Record<string, unknown> {
+  private applyBlackout(): EffectResult {
     this.state.blackout = true
     this.state.blackoutClearsAfterPhase =
       this.state.phase === 'advance-1' ? 'discussion-2' : 'discussion-3'
     return { applied: true, blackout: true }
   }
 
-  private applyShuffleMeans(): Record<string, unknown> {
+  private applyShuffleMeans(): EffectResult {
     const participatingPlayers = this.state.players.filter((p) => p.role !== 'witness')
     const flatMeans = shuffle(participatingPlayers.flatMap((p) => p.meansCards))
     let idx = 0
@@ -1081,6 +1113,48 @@ export class GameEngine {
 
   // === Effect Card - Witness Actions ===
 
+  private setPendingEffect(pendingEffect: PendingEffect | null): void {
+    if (this.pendingEffect === pendingEffect) return
+    this.pendingEffect = pendingEffect
+    const witness = this.findPlayerByRole('witness')
+    if (witness) this.emitToPlayer(witness, 'effect_pending', { pendingEffect })
+  }
+
+  private prepareWitnessEffect(effectId: string): EffectResult {
+    const pending: PendingEffect = { effectId, optional: effectId === 'E08' }
+    switch (effectId) {
+      case 'E01':
+        pending.targetIds = this.state.players
+          .filter((p) => p.role !== 'witness' && p.status === 'alive')
+          .map((p) => p.id)
+        break
+      case 'E03':
+        pending.targetIds = this.state.players
+          .filter((p) => p.role !== 'witness' && p.role !== 'murderer')
+          .map((p) => p.id)
+        break
+      case 'E05':
+        pending.boardIds = this.state.activeBoards.filter((b) => b.marker).map((b) => b.id)
+        break
+      case 'E08':
+        pending.cardIds = this.state.solution
+          ? [this.state.solution.meansCard.id, this.state.solution.clueCard.id]
+          : []
+        break
+    }
+    if (!pending.optional && !(pending.targetIds ?? pending.boardIds)?.length) {
+      return {
+        applied: false,
+        message:
+          effectId === 'E05'
+            ? '没有可移除的选项物，此效果已结束'
+            : '没有符合条件的玩家，此效果已结束',
+      }
+    }
+    this.setPendingEffect(pending)
+    return { applied: false, requiresWitnessAction: true, effectId }
+  }
+
   handleEffectAction(userId: string, effectId: string, data: EffectActionData): OpResult {
     const player = this.findPlayer(userId)
     if (!player || player.role !== 'witness')
@@ -1088,85 +1162,107 @@ export class GameEngine {
 
     if (!this.isAdvancePhase()) return { ok: false, error: '当前不在推进阶段' }
     if (!this.advanceEffectsStarted) return { ok: false, error: '请先等待帮凶决定' }
-    if (this.pendingEffectId === null || effectId !== this.pendingEffectId)
+    if (!this.pendingEffect || effectId !== this.pendingEffect.effectId)
       return { ok: false, error: '该效果牌未抽取或已执行' }
 
-    let result: OpResult
-    switch (effectId) {
-      case 'E01':
-        result = this.applyAssassination(data)
-        break
-      case 'E03':
-        result = this.applyClearSuspicion(data)
-        break
-      case 'E05':
-        result = this.applyEvidenceLost(data)
-        break
-      case 'E08':
-        result = this.applyInfoLeak(data)
-        break
-      default:
-        return { ok: false, error: '未知效果' }
+    let result: OpResult & { effectResult?: EffectResult }
+    if (data.skip === true) {
+      if (!this.pendingEffect.optional) return { ok: false, error: '此效果牌必须执行，不能跳过' }
+      result = {
+        ok: true,
+        effectResult: { applied: false, skipped: true, message: '目击者选择跳过信息泄露' },
+      }
+      this.io.to(this.roomCode).emit('system_message', {
+        content: result.effectResult!.message,
+        type: 'info',
+      })
+    } else {
+      switch (effectId) {
+        case 'E01':
+          result = this.applyAssassination(data)
+          break
+        case 'E03':
+          result = this.applyClearSuspicion(data)
+          break
+        case 'E05':
+          result = this.applyEvidenceLost(data)
+          break
+        case 'E08':
+          result = this.applyInfoLeak(data)
+          break
+        default:
+          return { ok: false, error: '未知效果' }
+      }
     }
-    // Validation failures preserve the drawn action so the witness can retry.
-    if (result.ok) this.pendingEffectId = null
-    return result
+    // Invalid requests leave the one-use authorization and public state intact.
+    if (!result.ok) return { ok: false, error: result.error }
+    this.state.effectResult = result.effectResult!
+    this.setPendingEffect(null)
+    this.io.to(this.roomCode).emit('effect_card', {
+      card: this.state.effectCard,
+      result: this.state.effectResult,
+    })
+    this.emitAdvanceReady()
+    // Death/solve rights and E09-style card state cannot be derived from text alone.
+    this.broadcastGameState()
+    return { ok: true }
   }
 
-  private applyAssassination(data: EffectActionData): OpResult {
+  private applyAssassination(data: EffectActionData): OpResult & { effectResult?: EffectResult } {
     const target = data.targetId ? this.findPlayer(data.targetId) : undefined
-    if (!target || target.role === 'witness' || target.status !== 'alive')
+    if (
+      !target ||
+      !this.pendingEffect?.targetIds?.includes(target.id) ||
+      target.role === 'witness' ||
+      target.status !== 'alive'
+    )
       return { ok: false, error: '无效的目标' }
     target.hasSolveRight = false
     target.status = 'dead'
-    this.io.to(this.roomCode).emit('system_message', {
-      content: `${target.nickname} 被暗杀，失去破案权`,
-      type: 'warning',
-    })
-    return { ok: true }
+    const message = `${target.nickname} 被暗杀，失去破案权`
+    this.io.to(this.roomCode).emit('system_message', { content: message, type: 'warning' })
+    return { ok: true, effectResult: { applied: true, targetId: target.id, message } }
   }
 
-  private applyClearSuspicion(data: EffectActionData): OpResult {
+  private applyClearSuspicion(data: EffectActionData): OpResult & { effectResult?: EffectResult } {
     const cleared = data.targetId ? this.findPlayer(data.targetId) : undefined
-    if (!cleared || cleared.role === 'witness' || cleared.role === 'murderer')
+    if (
+      !cleared ||
+      !this.pendingEffect?.targetIds?.includes(cleared.id) ||
+      cleared.role === 'witness' ||
+      cleared.role === 'murderer'
+    )
       return { ok: false, error: '无效的目标' }
-    this.io.to(this.roomCode).emit('system_message', {
-      content: `目击者宣布：${cleared.nickname} 不是凶手`,
-      type: 'info',
-    })
-    return { ok: true }
+    const message = `目击者宣布：${cleared.nickname} 不是凶手`
+    this.io.to(this.roomCode).emit('system_message', { content: message, type: 'info' })
+    return { ok: true, effectResult: { applied: true, targetId: cleared.id, message } }
   }
 
-  private applyEvidenceLost(data: EffectActionData): OpResult {
+  private applyEvidenceLost(data: EffectActionData): OpResult & { effectResult?: EffectResult } {
     const board = data.boardId
       ? this.state.activeBoards.find((b) => b.id === data.boardId)
       : undefined
-    if (!board || !board.marker) return { ok: false, error: '无效的场景板' }
+    if (!board || !board.marker || !this.pendingEffect?.boardIds?.includes(board.id))
+      return { ok: false, error: '无效的场景板' }
     board.marker = undefined
-    this.io
-      .to(this.roomCode)
-      .emit('system_message', { content: '一张场景板上的选项物被移除', type: 'warning' })
+    const message = `「${board.title}」上的选项物被移除`
+    this.io.to(this.roomCode).emit('system_message', { content: message, type: 'warning' })
     this.emitBoardUpdate('boards_revealed', { boards: this.getPublicBoards() })
-    return { ok: true }
+    return { ok: true, effectResult: { applied: true, boardId: board.id, message } }
   }
 
-  private applyInfoLeak(data: EffectActionData): OpResult {
+  private applyInfoLeak(data: EffectActionData): OpResult & { effectResult?: EffectResult } {
     const solution = this.state.solution
-    if (
-      !solution ||
-      !data.cardId ||
-      ![solution.meansCard.id, solution.clueCard.id].includes(data.cardId)
-    ) {
+    const card = solution
+      ? [solution.meansCard, solution.clueCard].find((candidate) => candidate.id === data.cardId)
+      : undefined
+    if (!card || !this.pendingEffect?.cardIds?.includes(card.id)) {
       return { ok: false, error: '请选择凶手所选的手段牌或线索牌' }
     }
-    this.io
-      .to(this.roomCode)
-      .emit('system_message', { content: '目击者指向了凶手的一张牌', type: 'info' })
-    this.io.to(this.roomCode).emit('effect_card', {
-      card: { id: 'E08', name: '信息泄露' },
-      result: { applied: true, pointedCardId: data.cardId },
-    })
-    return { ok: true }
+    const category = card.id === solution!.meansCard.id ? '手段牌' : '线索牌'
+    const message = `目击者指向了凶手所选的${category}「${card.name}」`
+    this.io.to(this.roomCode).emit('system_message', { content: message, type: 'info' })
+    return { ok: true, effectResult: { applied: true, pointedCardId: card.id, message } }
   }
 
   // === Public State Getters ===
@@ -1211,6 +1307,8 @@ export class GameEngine {
       players: this.buildPublicPlayerList(player),
       boards: this.state.blackout && player.role !== 'witness' ? [] : this.getPublicBoards(),
       blackout: this.state.blackout,
+      effectCard: this.state.effectCard,
+      effectResult: this.state.effectResult,
     }
 
     result.myRole = player.role
@@ -1247,6 +1345,7 @@ export class GameEngine {
       result.murdererSelection = this.state.solution
     }
     if (player.role === 'witness' && this.isAdvancePhase()) {
+      result.pendingEffect = this.pendingEffect
       result.advanceReady = this.isAdvanceReady()
       result.newBoards = this.pendingBoards.map((board) => this.boardToPublic(board))
     }
@@ -1340,7 +1439,7 @@ export class GameEngine {
   }
 
   /** @internal - 测试效果牌 */
-  testApplyEffectCard(card: EffectCardRef): Record<string, unknown> {
+  testApplyEffectCard(card: EffectCardRef): EffectResult {
     return this.applyEffectCard(card)
   }
 
