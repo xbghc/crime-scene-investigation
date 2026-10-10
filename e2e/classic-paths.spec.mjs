@@ -245,7 +245,9 @@ test('回归05：停电中目击者刷新，仍应能选择旧板继续推进', 
   await phase(detective, 'advance-1')
   expect((await state(detective)).boards).toEqual([])
   expect((await state(detective)).newBoards).toEqual([])
-  await game.witness.page.locator('.advance__board-wrap').first().click()
+  // Target the header: container-center clicks can land on a disabled old-board cell.
+  await game.witness.page.locator('.advance__board-wrap .scene-board__header').first().click()
+  await expect(game.witness.page.locator('.advance__board-wrap--selected')).toHaveCount(1)
   await game.witness.page.locator('.advance__boards').nth(1).locator('.scene-board__cell').first().click()
   await game.witness.page.getByRole('button', { name: /确认替换/ }).click()
   await expect.poll(async () => (await state(game.witness)).newBoards.length).toBe(0)
