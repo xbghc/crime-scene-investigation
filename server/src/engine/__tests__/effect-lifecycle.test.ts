@@ -334,6 +334,66 @@ describe('playable effect lifecycle', () => {
     expect(state(detectives[0].id).effectResult).toEqual({ applied: true, blackout: true })
   })
 
+  it('E07 preserves live board backs without broadcasting hidden replacement contents', () => {
+    const knownBoards = structuredClone(state(detectives[0].id).boards)
+    expect(knownBoards).toHaveLength(6)
+    draw('E07')
+    expect(io.roomEmit).toHaveBeenCalledWith('effect_card', {
+      card: expect.objectContaining({ id: 'E07' }),
+      result: { applied: true, blackout: true },
+    })
+    expect(io.sockets.sockets.get(witness.id).emit).toHaveBeenCalledWith(
+      'full_state',
+      expect.objectContaining({ boards: knownBoards, pendingEffect: null, blackout: true }),
+    )
+    for (const player of players.filter((p) => p.role !== 'witness')) {
+      expect(
+        io.sockets.sockets
+          .get(player.id)
+          .emit.mock.calls.some(([name]: [string]) => name === 'full_state'),
+      ).toBe(false)
+      expect(state(player.id).boards).toEqual([])
+    }
+    vi.clearAllMocks()
+    replaceBoards()
+    expect(io.sockets.sockets.get(witness.id).emit).toHaveBeenCalledWith(
+      'board_replaced',
+      expect.any(Object),
+    )
+    expect(
+      io.roomEmit.mock.calls.some(
+        ([name]) => name === 'board_replaced' || name === 'boards_revealed',
+      ),
+    ).toBe(false)
+    expect(state(detectives[0].id).boards).toEqual([])
+    expect(engine.handleWitnessFinishAdvance(witness.id)).toEqual({ ok: true })
+    expect(state(detectives[0].id).boards).toEqual([])
+  })
+
+  it('a second E07 reveals restored public boards before hiding them, without erasing the live cache', () => {
+    draw('E07')
+    replaceBoards()
+    expect(engine.handleWitnessFinishAdvance(witness.id)).toEqual({ ok: true })
+    const restoredBoards = structuredClone(state().boards)
+    vi.clearAllMocks()
+    draw('E07')
+    const restoreIndex = io.roomEmit.mock.calls.findIndex(([name]) => name === 'boards_revealed')
+    const blackoutIndex = io.roomEmit.mock.calls.findIndex(([name]) => name === 'effect_card')
+    expect(restoreIndex).toBeGreaterThanOrEqual(0)
+    expect(blackoutIndex).toBeGreaterThan(restoreIndex)
+    expect(io.roomEmit.mock.calls[restoreIndex][1]).toEqual({ boards: restoredBoards })
+    for (const player of players.filter((p) => p.role !== 'witness')) {
+      expect(
+        io.sockets.sockets
+          .get(player.id)
+          .emit.mock.calls.some(([name]: [string]) => name === 'full_state'),
+      ).toBe(false)
+      expect(state(player.id).boards).toEqual([])
+    }
+    expect(state().newBoards).toHaveLength(1)
+    expect(state().pendingEffect).toBeNull()
+  })
+
   it.each(['E04', 'E06', 'E10'])(
     '%s remains explicitly unsupported without blocking advance',
     (effectId) => {

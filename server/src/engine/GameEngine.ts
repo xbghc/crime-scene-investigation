@@ -725,7 +725,14 @@ export class GameEngine {
     } else if (!this.pendingEffect) {
       this.finishAdvancePhase()
     }
-    this.broadcastGameState()
+    if (effectCard?.id === 'E07') {
+      // Connected players keep their previously public boards as face-down backs.
+      // A redacted full snapshot would erase those backs. The effect event hides
+      // them, while refresh/request_state still returns no hidden board contents.
+      this.emitToPlayer(witness, 'full_state', this.getGameStateForPlayer(witness.id))
+    } else {
+      this.broadcastGameState()
+    }
   }
 
   handleWitnessReplaceBoard(
